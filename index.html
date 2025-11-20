@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>狗狗前世是你的什麼人？</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <audio id="bg-music" loop></audio>
+  <div class="background">
+    <div class="bg-overlay"></div>
+  </div>
+  <header class="hero">
+    <div class="hero-content">
+      <p class="eyebrow">Dofi & Ritò Lab.</p>
+      <h1>狗狗前世是你的什麼人？</h1>
+      <p class="lede">用可愛的小測驗，解鎖你與毛孩的前世緣分！</p>
+      <button class="primary" id="start-btn">我想知道！</button>
+    </div>
+    <div class="hero-illustration" aria-hidden="true">
+      <div class="scribble"></div>
+      <svg viewBox="0 0 240 180" role="presentation">
+        <g fill="none" stroke="#1e1b29" stroke-linecap="round" stroke-linejoin="round" stroke-width="3">
+          <path d="M30 140c10-45 40-75 85-80s75 10 95 60" fill="#fce8dc"/>
+          <path d="M95 70c-8-18 7-32 23-27 12 4 16 18 10 32" fill="#fff7f0"/>
+          <path d="M94 74c-7 6-7 17 2 19 9 2 14-6 11-16" fill="#fdd6a7"/>
+          <path d="M138 71c-2-6 2-12 8-11 5 0 8 6 6 12" fill="#dff5f2"/>
+          <path d="M138 73c-5 2-7 9-1 11 5 1 8-4 6-9" fill="#fff"/>
+          <path d="M166 88c8-7 20-2 22 8 2 9-6 18-16 17" fill="#fff3e8"/>
+          <path d="M164 88c-7-2-13 3-11 11 1 7 10 9 16 5" fill="#faf0d0"/>
+        </g>
+        <circle cx="120" cy="150" r="8" fill="#1e1b29"/>
+        <path d="M84 148c-3 7-11 14-21 11" stroke="#1e1b29" stroke-width="3"/>
+        <path d="M154 148c3 7 11 14 21 11" stroke="#1e1b29" stroke-width="3"/>
+      </svg>
+    </div>
+  </header>
+
+  <main>
+    <section class="modal" id="quiz-modal" aria-hidden="true" role="dialog" aria-labelledby="quiz-title">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">暖心測驗</p>
+            <h2 id="quiz-title">告訴我們你的狗狗</h2>
+          </div>
+          <button class="ghost" id="close-modal" aria-label="關閉">✕</button>
+        </div>
+        <div class="progress">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div id="question-area"></div>
+      </div>
+    </section>
+
+    <section class="modal" id="loading-modal" aria-hidden="true" role="dialog" aria-live="polite">
+      <div class="modal-card loading-card">
+        <div class="mini-illustration" aria-hidden="true">
+          <svg viewBox="0 0 220 120">
+            <g stroke="#1f1a2b" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 100c20-40 60-60 100-48 24 7 43 25 60 52" fill="#fce8dc"/>
+              <path d="M90 88c-14-22 12-42 28-24" fill="#fff"/>
+              <path d="M120 80c16-18 36-2 34 14-1 13-12 20-26 18" fill="#fdd6a7"/>
+              <path d="M70 80c-5 10-18 18-30 10"/>
+              <path d="M156 92c3 8 12 16 26 12"/>
+              <path d="M105 72q8-3 14 4"/>
+              <path d="M133 70q9-2 12 7"/>
+            </g>
+            <circle cx="100" cy="104" r="6" fill="#1f1a2b"/>
+            <circle cx="140" cy="104" r="6" fill="#1f1a2b"/>
+            <path d="M78 62c-10-8-20-12-28 2" stroke="#1f1a2b" stroke-width="3"/>
+            <path d="M150 60c8-10 22-10 26 6" stroke="#1f1a2b" stroke-width="3"/>
+          </svg>
+        </div>
+        <p class="lede">幫你們尋找前世記憶中...</p>
+        <p class="caption">可愛的遊戲畫面即將出現，別走開！</p>
+        <div class="loading-dots" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="modal" id="result-modal" aria-hidden="true" role="dialog" aria-labelledby="result-title">
+      <div class="modal-card result-card">
+        <div class="result-heading">
+          <div>
+            <p class="eyebrow">前世連結</p>
+            <h2 id="result-title">前世角色揭曉！</h2>
+            <p class="lede" id="result-subtitle"></p>
+          </div>
+          <button class="ghost" id="restart-btn">再玩一次</button>
+        </div>
+        <div class="result-grid">
+          <div class="result-image" id="result-illustration" aria-hidden="true"></div>
+          <div class="result-info">
+            <h3 id="result-label"></h3>
+            <p id="result-desc"></p>
+            <div class="contour-block">
+              <p class="eyebrow">你的狗狗輪廓</p>
+              <div class="contour-wrap">
+                <img id="dog-outline" alt="狗狗輪廓" />
+              </div>
+            </div>
+            <div class="share">
+              <p class="eyebrow">分享給朋友</p>
+              <div class="share-actions">
+                <button class="secondary" data-share="fb">分享到 Facebook</button>
+                <button class="secondary" data-share="ig">分享到 Instagram</button>
+                <button class="secondary" data-share="more">更多社群</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
