@@ -1,0 +1,13 @@
+# Dori & Rito Email Automation Dependencies
+
+# HTTP requests
+requests>=2.31.0
+
+# Anthropic Claude API (for Flow 2)
+anthropic>=0.39.0
+
+# Optional: For image processing from Telegram
+# Pillow>=10.0.0
+
+# Optional: For better async handling
+# aiohttp>=3.9.0
