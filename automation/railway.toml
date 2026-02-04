@@ -1,5 +1,0 @@
-[build]
-builder = "nixpacks"
-
-[deploy]
-startCommand = "python flow2_telegram_bot.py"
