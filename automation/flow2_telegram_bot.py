@@ -1,38 +1,50 @@
 """
-Dori & Rito Email Automation - Flow 2
-=====================================
-流程二：Telegram Bot → Claude API → Notion → Telegram 通知
+Dori & Rito Automation Bot - Flow 2
+====================================
+功能一：Telegram Bot → Claude API → Notion → Telegram 通知 (Email 自動化)
+功能二：Telegram Bot → PDF 生成 → Notion 客戶頁面 (報價單自動化)
 
-這個腳本會持續運行，監聽 Telegram 訊息，
-收到內容請求後自動產生 email 並發布到 Notion。
+這個腳本會持續運行，監聯 Telegram 訊息，
+根據指令自動產生 email 或報價單。
 
 使用方式：
     python flow2_telegram_bot.py
 
-訊息格式（發送給 Bot）：
+訊息格式（Email）：
     主題: [你的主題]
     格式: [nurture_email / social_post]
     CTA: [你想要的 CTA]
     參考: [參考資料或靈感]
 
-範例：
-    主題: 冬天如何讓狗狗在室內消耗精力
-    格式: nurture_email
-    CTA: 推廣居家行為課
-    參考: 可以用嗅聞遊戲
+訊息格式（報價單）：
+    1-1 訓犬服務報價
+    客戶姓名：[姓名]
+    地址：[地址]
+    電話：[電話]
+    數量：[6 或 8]
+    單價：[單價]
+    訓犬師：[Eric Pan / Pennee Tan]
 
 部署選項：
     1. 本地運行: python flow2_telegram_bot.py
     2. 雲端部署: Railway, Render, AWS Lambda 等
 """
 
+import os
+import sys
 import time
 import re
 from typing import Optional
 import anthropic
-from notion_client import NotionClient
+from notion_client import NotionClient, QuotationNotionClient
 from telegram_client import TelegramClient
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, ANTHROPIC_API_KEY, SKILL_FILE_PATH
+
+# Add quotation generator path
+QUOTATION_DIR = os.path.join(os.path.dirname(__file__), "..", "1 on 1 service", "quotations")
+sys.path.append(QUOTATION_DIR)
+
+from quotation_generator import QuotationGenerator, parse_quotation_request, is_quotation_request
 
 
 class DoriRitoBot:
@@ -41,6 +53,8 @@ class DoriRitoBot:
     def __init__(self):
         self.telegram = TelegramClient(TELEGRAM_BOT_TOKEN)
         self.notion = NotionClient()
+        self.quotation_notion = QuotationNotionClient()
+        self.quotation_generator = QuotationGenerator()
         self.claude = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
         self.last_update_id = 0
         self.skill_prompt = self._load_skill()
@@ -177,11 +191,15 @@ CTA 目標: {request.get('cta', '軟性推廣課程')}
         # 檢查是否是命令
         if text.startswith("/start"):
             self.telegram.send_message(
-                text="""👋 嗨！我是 Dori & Rito Email 自動化 Bot！
+                text="""👋 嗨！我是 Dori & Rito 自動化 Bot！
 
-發送訊息給我，我會幫你產生高品質的 email 內容。
+我可以幫你：
+1️⃣ 產生高品質的 email 內容
+2️⃣ 建立專業報價單
 
-📝 *訊息格式：*
+---
+
+📧 *Email 格式：*
 ```
 主題: 你想寫的主題
 格式: nurture_email 或 social_post
@@ -189,15 +207,20 @@ CTA: 你想要的行動呼籲
 參考: 任何參考資料
 ```
 
-📌 *範例：*
+---
+
+📄 *報價單格式：*
 ```
-主題: 冬天讓狗狗在室內消耗精力的方法
-格式: nurture_email
-CTA: 推廣居家行為課
-參考: 嗅聞遊戲、解謎玩具
+1-1 訓犬服務報價
+客戶姓名：客戶名字
+地址：完整地址
+電話：電話號碼
+數量：6
+單價：2,800
+訓犬師：Eric Pan
 ```
 
-你也可以直接發送主題，我會自動產生！""",
+輸入 /help 查看更多說明！""",
                 chat_id=chat_id,
                 parse_mode="Markdown"
             )
@@ -207,15 +230,48 @@ CTA: 推廣居家行為課
             self.telegram.send_message(
                 text="""📚 *使用說明*
 
+*📧 Email 自動化*
 1️⃣ 發送主題或完整請求
-2️⃣ 我會用 Claude AI 產生 email
+2️⃣ Claude AI 產生 email
 3️⃣ 自動儲存到 Notion
-4️⃣ 完成後通知你
+
+*📄 報價單自動化*
+1️⃣ 發送報價指令
+2️⃣ 自動生成 PDF 報價單
+3️⃣ 上傳到客戶 Notion 頁面
+
+---
 
 *指令：*
 /start - 開始使用
 /help - 顯示說明
-/status - 檢查服務狀態""",
+/status - 檢查服務狀態
+/quotation - 報價單範本""",
+                chat_id=chat_id,
+                parse_mode="Markdown"
+            )
+            return
+
+        if text.startswith("/quotation"):
+            self.telegram.send_message(
+                text="""📄 *報價單指令範本*
+
+複製以下範本，填入客戶資料後發送：
+
+```
+1-1 訓犬服務報價
+客戶姓名：
+地址：
+電話：
+數量：6
+單價：2,800
+訓犬師：Eric Pan
+```
+
+*注意事項：*
+• 數量只能填 6 或 8
+• 訓犬師：Eric Pan 或 Pennee Tan
+• 客戶必須已存在於 Notion 客戶資料庫""",
                 chat_id=chat_id,
                 parse_mode="Markdown"
             )
@@ -227,16 +283,113 @@ CTA: 推廣居家行為課
                 text=f"""📊 *服務狀態*
 
 Claude API: {status}
-Notion: ✅ 已連接
+Notion Email: ✅ 已連接
+Notion 客戶管理: ✅ 已連接
+報價單生成器: ✅ 就緒
 Telegram: ✅ 運作中""",
                 chat_id=chat_id,
                 parse_mode="Markdown"
             )
             return
 
-        # 解析請求
+        # 檢查是否為報價單請求
+        if is_quotation_request(text):
+            self._handle_quotation(chat_id, text, user)
+            return
+
+        # 否則處理 Email 請求
+        self._handle_email(chat_id, text, user)
+
+    def _handle_quotation(self, chat_id: str, text: str, user: str) -> None:
+        """處理報價單請求"""
         try:
-            # 發送「處理中」訊息
+            self.telegram.send_message(
+                text="⏳ 正在生成報價單...",
+                chat_id=chat_id
+            )
+
+            # 解析報價單資料
+            data = parse_quotation_request(text)
+            print(f"   報價單資料: {data}")
+
+            # 檢查必要欄位
+            required = ['customer_name', 'address', 'phone', 'quantity', 'unit_price', 'trainer']
+            missing = [f for f in required if f not in data or not data[f]]
+            if missing:
+                self.telegram.send_message(
+                    text=f"❌ 缺少必要欄位：{', '.join(missing)}\n\n請使用 /quotation 查看正確格式",
+                    chat_id=chat_id
+                )
+                return
+
+            # 生成 PDF
+            result = self.quotation_generator.generate(data)
+            
+            if not result["success"]:
+                self.telegram.send_message(
+                    text=f"❌ 報價單生成失敗：{result['error']}",
+                    chat_id=chat_id
+                )
+                return
+
+            print(f"   報價單生成成功: {result['quotation_number']}")
+
+            # 上傳到 Notion 客戶頁面
+            notion_result = self.quotation_notion.add_quotation_to_customer(
+                customer_name=data['customer_name'],
+                file_path=result['file_path'],
+                quotation_number=result['quotation_number'],
+                grand_total=result['grand_total']
+            )
+
+            if notion_result["success"]:
+                self.telegram.send_message(
+                    text=f"""✅ *報價單已建立完成！*
+
+📄 *編號：* {result['quotation_number']}
+👤 *客戶：* {data['customer_name']}
+💰 *金額：* TWD {result['grand_total']:,}
+🧑‍🏫 *訓犬師：* {data['trainer']}
+
+📁 *檔案位置：*
+`{result['file_path']}`
+
+🔗 *Notion 客戶頁面：*
+{notion_result.get('page_url', '已更新')}
+
+---
+_Dori & Rito 報價單自動化系統_""",
+                    chat_id=chat_id,
+                    parse_mode="Markdown"
+                )
+            else:
+                # PDF 生成成功但 Notion 上傳失敗
+                self.telegram.send_message(
+                    text=f"""⚠️ *報價單已生成，但 Notion 上傳失敗*
+
+📄 *編號：* {result['quotation_number']}
+📁 *檔案位置：*
+`{result['file_path']}`
+
+❌ *Notion 錯誤：* {notion_result.get('error', '未知錯誤')}
+
+請手動上傳報價單到客戶頁面。""",
+                    chat_id=chat_id,
+                    parse_mode="Markdown"
+                )
+
+        except Exception as e:
+            print(f"❌ 報價單錯誤: {e}")
+            import traceback
+            traceback.print_exc()
+            self.telegram.send_message(
+                text=f"❌ 處理報價單時發生錯誤: {str(e)}",
+                chat_id=chat_id
+            )
+
+    def _handle_email(self, chat_id: str, text: str, user: str) -> None:
+        """處理 Email 請求"""
+        try:
             self.telegram.send_message(
                 text="⏳ 正在產生 email 內容...",
                 chat_id=chat_id

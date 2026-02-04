@@ -18,6 +18,10 @@ NOTION_API_TOKEN = os.getenv("NOTION_API_TOKEN", "")
 NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID", "2f117e11503d805987beebbe6f2fe216")
 NOTION_API_VERSION = "2022-06-28"
 
+# Notion Quotation Configuration (客戶管理 database)
+NOTION_QUOTATION_TOKEN = os.getenv("NOTION_QUOTATION_TOKEN", "")
+NOTION_CUSTOMER_DATABASE_ID = os.getenv("NOTION_CUSTOMER_DATABASE_ID", "22a17e11503d80eea2b5ccbe69a16c59")
+
 # Telegram Configuration
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
@@ -25,8 +29,9 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
 # Claude API Configuration (for Flow 2)
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
-# Skill file path
+# Skill file paths
 SKILL_FILE_PATH = os.path.join(os.path.dirname(__file__), "..", "dori-rito-copywriter-skill.md")
+QUOTATION_SKILL_PATH = os.path.join(os.path.dirname(__file__), "..", "1 on 1 service", "quotations", "quotation-generator-skill.md")
 
 
 def validate_config():
