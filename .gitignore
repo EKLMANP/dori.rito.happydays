@@ -1,46 +1,13 @@
-# Environment variables (contains secrets)
+# Ignore sensitive files
 .env
-*.env
-!.env.example
-
-# Python
+**/.env
+**/.DS_Store
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual environments
 venv/
 ENV/
-env/
-.venv/
-
-# IDE
-.idea/
 .vscode/
-*.swp
-*.swo
-*~
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
+# Ignore generated PDFs if desired, but user seems to want to keep them?
+# keeping them for now as proof of work
