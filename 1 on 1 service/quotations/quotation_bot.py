@@ -201,13 +201,14 @@ class QuotationBot:
 
         while True:
             try:
-                updates = self.telegram.get_updates(offset=self.last_update_id + 1)
+                response = self.telegram.get_updates(offset=self.last_update_id + 1)
                 
-                for update in updates:
-                    self.last_update_id = update['update_id']
-                    
-                    if 'message' in update:
-                        self.handle_message(update['message'])
+                if response.get("ok") and response.get("result"):
+                    for update in response["result"]:
+                        self.last_update_id = update['update_id']
+                        
+                        if 'message' in update:
+                            self.handle_message(update['message'])
 
                 time.sleep(1)
 
