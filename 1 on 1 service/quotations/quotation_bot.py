@@ -42,7 +42,15 @@ class QuotationBot:
         self.telegram = TelegramClient(TELEGRAM_BOT_TOKEN)
         self.notion = QuotationNotionClient()
         self.generator = QuotationGenerator()
-        self.drive = GoogleDriveClient()
+        
+        # Google Drive 客戶端(允許失敗以不阻塞 Bot)
+        try:
+            self.drive = GoogleDriveClient()
+            print("✅ Google Drive 連線成功")
+        except Exception as e:
+            print(f"⚠️ Google Drive 初始化失敗: {e}")
+            self.drive = None
+        
         self.last_update_id = 0
 
     def start_command(self, chat_id: str) -> None:
@@ -145,18 +153,21 @@ class QuotationBot:
                 self.telegram.send_message(chat_id, f"❌ 生成失敗：{result.get('error')}")
                 return
 
-            # 上傳到 Google Drive
-            self.telegram.send_message(chat_id, "📤 正在上傳到 Google Drive...")
-            drive_result = self.drive.upload_quotation(
-                file_path=result['file_path'],
-                quotation_number=result['quotation_number'],
-                customer_name=data['customer_name'],
-                date_str=result.get('date_str', '')
-            )
-            
+            # 上傳到 Google Drive（如果可用）
+            drive_result = {"success": False, "error": "Drive 未初始化"}
             drive_link = None
-            if drive_result.get('success'):
-                drive_link = drive_result.get('web_view_link', '')
+            
+            if self.drive:
+                self.telegram.send_message(chat_id, "📤 正在上傳到 Google Drive...")
+                drive_result = self.drive.upload_quotation(
+                    file_path=result['file_path'],
+                    quotation_number=result['quotation_number'],
+                    customer_name=data['customer_name'],
+                    date_str=result.get('date_str', '')
+                )
+                
+                if drive_result.get('success'):
+                    drive_link = drive_result.get('web_view_link', '')
             
             # 上傳到 Notion（包含 Drive 連結）
             notion_result = self.notion.add_quotation_to_customer(
