@@ -222,10 +222,16 @@ class QuotationBot:
                 response = self.telegram.get_updates(offset=self.last_update_id + 1)
                 
                 if response.get("ok") and response.get("result"):
+                    # DEBUG: Print update count
+                    update_count = len(response["result"])
+                    if update_count > 0:
+                        print(f"📩 收到 {update_count} 則更新")
+
                     for update in response["result"]:
                         self.last_update_id = update['update_id']
                         
                         if 'message' in update:
+                            print(f"   處理訊息 ID: {update['message'].get('message_id')}")
                             self.handle_message(update['message'])
 
                 time.sleep(1)
