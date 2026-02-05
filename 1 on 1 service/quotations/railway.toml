@@ -3,4 +3,5 @@ builder = "nixpacks"
 
 [deploy]
 startCommand = "python quotation_bot.py"
+# Updated for redeploy check
 
