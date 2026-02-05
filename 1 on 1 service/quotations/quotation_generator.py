@@ -252,6 +252,7 @@ class QuotationGenerator:
                 "quotation_number": quotation_id,
                 "customer_name": data['customer_name'],
                 "grand_total": grand_total,
+                "date_str": today.strftime('%Y%m%d'),
                 "message": f"報價單 {quotation_id} 已生成"
             }
             

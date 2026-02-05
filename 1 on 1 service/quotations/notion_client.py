@@ -261,7 +261,7 @@ class QuotationNotionClient:
                 "message": f"查詢失敗：{response.text}"
             }
 
-    def upload_file_to_page(self, page_id: str, file_path: str, file_name: str = None) -> dict:
+    def upload_file_to_page(self, page_id: str, file_path: str, file_name: str = None, drive_link: str = None) -> dict:
         """
         上傳檔案到客戶頁面（作為 block 附件）
         
@@ -272,6 +272,7 @@ class QuotationNotionClient:
             page_id: Notion 頁面 ID
             file_path: 本地檔案路徑
             file_name: 顯示的檔案名稱
+            drive_link: Google Drive 分享連結
         
         Returns:
             dict: 上傳結果
@@ -320,8 +321,33 @@ class QuotationNotionClient:
                         "text": {"content": f"建立時間：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"}
                     }]
                 }
-            },
-            {
+            }
+        ]
+        
+        # 如果有 Google Drive 連結，加入連結區塊
+        if drive_link:
+            blocks.append({
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {
+                    "rich_text": [
+                        {
+                            "type": "text",
+                            "text": {"content": "📎 "},
+                        },
+                        {
+                            "type": "text",
+                            "text": {
+                                "content": "Google Drive 下載連結",
+                                "link": {"url": drive_link}
+                            },
+                            "annotations": {"bold": True, "color": "blue"}
+                        }
+                    ]
+                }
+            })
+        else:
+            blocks.append({
                 "object": "block",
                 "type": "paragraph",
                 "paragraph": {
@@ -330,8 +356,7 @@ class QuotationNotionClient:
                         "text": {"content": f"本地路徑：{file_path}"}
                     }]
                 }
-            }
-        ]
+            })
         
         response = requests.patch(
             f"{self.base_url}/blocks/{page_id}/children",
@@ -343,7 +368,8 @@ class QuotationNotionClient:
             return {
                 "success": True,
                 "message": f"報價單記錄已新增到客戶頁面",
-                "file_name": file_name
+                "file_name": file_name,
+                "drive_link": drive_link
             }
         else:
             return {
@@ -353,7 +379,7 @@ class QuotationNotionClient:
                 "message": f"上傳失敗：{response.text}"
             }
 
-    def add_quotation_to_customer(self, customer_name: str, file_path: str, quotation_number: str, grand_total: int) -> dict:
+    def add_quotation_to_customer(self, customer_name: str, file_path: str, quotation_number: str, grand_total: int, drive_link: str = None) -> dict:
         """
         完整流程：搜尋客戶 → 上傳報價單記錄
         
@@ -362,6 +388,7 @@ class QuotationNotionClient:
             file_path: PDF 檔案路徑
             quotation_number: 報價單編號
             grand_total: 總金額
+            drive_link: Google Drive 分享連結
         
         Returns:
             dict: 完整結果
@@ -375,13 +402,14 @@ class QuotationNotionClient:
         
         # 2. 上傳報價單記錄
         file_name = f"報價單 {quotation_number} - TWD {grand_total:,}"
-        upload_result = self.upload_file_to_page(page_id, file_path, file_name)
+        upload_result = self.upload_file_to_page(page_id, file_path, file_name, drive_link)
         
         if upload_result["success"]:
             return {
                 "success": True,
                 "page_id": page_id,
                 "page_url": customer_result["page_url"],
+                "drive_link": drive_link,
                 "message": f"報價單 {quotation_number} 已新增到客戶 {customer_name} 的頁面"
             }
         else:
@@ -395,10 +423,10 @@ def create_email_in_notion(subject: str, content: str) -> dict:
     return client.create_email_page(subject, content)
 
 
-def add_quotation_to_customer(customer_name: str, file_path: str, quotation_number: str, grand_total: int) -> dict:
+def add_quotation_to_customer(customer_name: str, file_path: str, quotation_number: str, grand_total: int, drive_link: str = None) -> dict:
     """新增報價單到客戶頁面的便捷函數"""
     client = QuotationNotionClient()
-    return client.add_quotation_to_customer(customer_name, file_path, quotation_number, grand_total)
+    return client.add_quotation_to_customer(customer_name, file_path, quotation_number, grand_total, drive_link)
 
 
 if __name__ == "__main__":

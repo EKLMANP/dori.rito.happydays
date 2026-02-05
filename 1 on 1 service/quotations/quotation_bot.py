@@ -25,6 +25,7 @@ from typing import Optional
 from telegram_client import TelegramClient
 from notion_client import QuotationNotionClient
 from quotation_generator import QuotationGenerator, parse_quotation_request, is_quotation_request
+from google_drive_client import GoogleDriveClient
 
 # 環境變數
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -41,6 +42,7 @@ class QuotationBot:
         self.telegram = TelegramClient(TELEGRAM_BOT_TOKEN)
         self.notion = QuotationNotionClient()
         self.generator = QuotationGenerator()
+        self.drive = GoogleDriveClient()
         self.last_update_id = 0
 
     def start_command(self, chat_id: str) -> None:
@@ -143,12 +145,26 @@ class QuotationBot:
                 self.telegram.send_message(chat_id, f"❌ 生成失敗：{result.get('error')}")
                 return
 
-            # 上傳到 Notion
+            # 上傳到 Google Drive
+            self.telegram.send_message(chat_id, "📤 正在上傳到 Google Drive...")
+            drive_result = self.drive.upload_quotation(
+                file_path=result['file_path'],
+                quotation_number=result['quotation_number'],
+                customer_name=data['customer_name'],
+                date_str=result.get('date_str', '')
+            )
+            
+            drive_link = None
+            if drive_result.get('success'):
+                drive_link = drive_result.get('web_view_link', '')
+            
+            # 上傳到 Notion（包含 Drive 連結）
             notion_result = self.notion.add_quotation_to_customer(
                 customer_name=data['customer_name'],
                 file_path=result['file_path'],
                 quotation_number=result['quotation_number'],
-                grand_total=result['grand_total']
+                grand_total=result['grand_total'],
+                drive_link=drive_link
             )
 
             # 組合回覆訊息
@@ -158,10 +174,12 @@ class QuotationBot:
 • 編號：`{result['quotation_number']}`
 • 客戶：{data['customer_name']}
 • 金額：TWD {result['grand_total']:,}
-
-📁 *檔案路徑*
-`{result['file_path']}`
 """
+            if drive_result.get('success'):
+                success_msg += f"\n📎 [Google Drive 連結]({drive_link})"
+            else:
+                success_msg += f"\n⚠️ Drive 上傳失敗：{drive_result.get('error', '未知錯誤')}"
+            
             if notion_result.get('success'):
                 success_msg += "\n✅ 已同步到 Notion 客戶頁面"
             else:
