@@ -228,12 +228,17 @@ class QuotationBot:
         print("🤖 報價單自動化 Bot 啟動中...")
         print("   按 Ctrl+C 停止\n")
 
+        poll_count = 0
         while True:
             try:
                 response = self.telegram.get_updates(offset=self.last_update_id + 1)
+                poll_count += 1
+                
+                # 每 60 次輪詢顯示心跳訊息（約每分鐘）
+                if poll_count % 60 == 0:
+                    print(f"💓 Bot 運行中... (已輪詢 {poll_count} 次)")
                 
                 if response.get("ok") and response.get("result"):
-                    # DEBUG: Print update count
                     update_count = len(response["result"])
                     if update_count > 0:
                         print(f"📩 收到 {update_count} 則更新")
@@ -242,8 +247,18 @@ class QuotationBot:
                         self.last_update_id = update['update_id']
                         
                         if 'message' in update:
-                            print(f"   處理訊息 ID: {update['message'].get('message_id')}")
-                            self.handle_message(update['message'])
+                            msg_id = update['message'].get('message_id')
+                            chat_id = update['message'].get('chat', {}).get('id')
+                            text_preview = update['message'].get('text', '')[:30]
+                            print(f"   📝 訊息 ID:{msg_id} Chat:{chat_id} 內容:{text_preview}...")
+                            
+                            try:
+                                self.handle_message(update['message'])
+                                print(f"   ✅ 訊息 {msg_id} 處理完成")
+                            except Exception as e:
+                                print(f"   ❌ 訊息 {msg_id} 處理失敗: {e}")
+                                import traceback
+                                traceback.print_exc()
 
                 time.sleep(1)
 
@@ -251,7 +266,9 @@ class QuotationBot:
                 print("\n👋 Bot 已停止")
                 break
             except Exception as e:
-                print(f"❌ 錯誤: {e}")
+                print(f"❌ 主迴圈錯誤: {e}")
+                import traceback
+                traceback.print_exc()
                 time.sleep(5)
 
 
