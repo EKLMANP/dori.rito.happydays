@@ -22,6 +22,10 @@ import time
 import re
 from typing import Optional
 
+# 禁用 stdout 緩衝（確保 Railway logs 即時顯示）
+sys.stdout.reconfigure(line_buffering=True)
+sys.stderr.reconfigure(line_buffering=True)
+
 from telegram_client import TelegramClient
 from notion_client import QuotationNotionClient
 from quotation_generator import QuotationGenerator, parse_quotation_request, is_quotation_request

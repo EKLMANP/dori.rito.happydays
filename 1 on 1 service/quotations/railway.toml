@@ -2,6 +2,8 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "python quotation_bot.py"
-# Updated for redeploy check
+startCommand = "python -u quotation_bot.py"
+
+[env]
+PYTHONUNBUFFERED = "1"
 
