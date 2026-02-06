@@ -231,12 +231,21 @@ class QuotationBot:
         """啟動 Bot"""
         print("🤖 報價單自動化 Bot 啟動中...")
         print("   按 Ctrl+C 停止\n")
+        print("🔄 準備進入輪詢迴圈...")
 
         poll_count = 0
         while True:
             try:
+                # 第一次輪詢時顯示訊息
+                if poll_count == 0:
+                    print("📡 正在連接 Telegram API...")
+                
                 response = self.telegram.get_updates(offset=self.last_update_id + 1)
                 poll_count += 1
+                
+                # 第一次成功後立即顯示
+                if poll_count == 1:
+                    print(f"✅ Telegram API 連線成功！開始監聽訊息...")
                 
                 # 每 60 次輪詢顯示心跳訊息（約每分鐘）
                 if poll_count % 60 == 0:
