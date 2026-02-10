@@ -140,7 +140,7 @@ class QuotationGenerator:
                 return True
         return False
 
-    def _redact_and_replace(self, page, rect, new_text, fontsize=12, fontname="helv", color=(0, 0, 0), baseline_offset=3):
+    def _redact_and_replace(self, page, rect, new_text, fontsize=12, fontname="helv", fontfile=None, color=(0, 0, 0), baseline_offset=3):
         """
         在指定區域清除原有文字並插入新文字
         """
@@ -149,17 +149,19 @@ class QuotationGenerator:
         page.add_redact_annot(redact_rect, fill=(1, 1, 1))  # 白色填充
         page.apply_redactions()
         
-        # 如果文字包含 CJK 字元，使用支援中文的字體
-        if self._has_cjk(new_text):
+        # 如果文字包含 CJK 字元且目前是預設字體，才切換到 china-t
+        # 如果已經指定了 fontfile 或 custom fontname 則不需要切換
+        if self._has_cjk(new_text) and fontname == "helv" and not fontfile:
             fontname = "china-t"
         
-        # 插入新文字 - 從 rect 底部往上偏移
+        # 插入新文字
         text_point = fitz.Point(rect[0], rect[3] - baseline_offset)
         page.insert_text(
             text_point,
             new_text,
             fontsize=fontsize,
             fontname=fontname,
+            fontfile=fontfile,
             color=color
         )
 
@@ -168,7 +170,7 @@ class QuotationGenerator:
         生成報價單 PDF
         """
         try:
-            # 驗證資料
+            # (省略前面的驗證邏輯...)
             required_fields = ['customer_name', 'address', 'phone', 'quantity', 'unit_price', 'trainer']
             for field in required_fields:
                 if field not in data:
@@ -207,26 +209,30 @@ class QuotationGenerator:
             doc = fitz.open(str(TEMPLATE_PATH))
             page = doc[0]
             
+            # 定義字體路徑
+            noto_path = str(QUOTATION_DIR / "resources" / "fonts" / "NotoSansTC-Regular.ttf")
+            dancing_path = str(QUOTATION_DIR / "resources" / "fonts" / "DancingScript-Regular.ttf")
+            
             # === 修改報價單編號 ===
             pos = TEXT_POSITIONS['quotation_id']
             self._redact_and_replace(page, pos['rect'], quotation_id, fontsize=pos['fontsize'])
             
-            # === 修改客戶資料（統一使用 china-t 字體確保一致性）===
+            # === 修改客戶資料（使用 Noto Sans TC）===
             pos = TEXT_POSITIONS['customer_name']
-            self._redact_and_replace(page, pos['rect'], data['customer_name'], fontsize=pos['fontsize'], fontname="china-t")
+            self._redact_and_replace(page, pos['rect'], data['customer_name'], fontsize=pos['fontsize'], fontname="noto", fontfile=noto_path)
             
             pos = TEXT_POSITIONS['customer_address']
-            self._redact_and_replace(page, pos['rect'], data['address'], fontsize=pos['fontsize'], fontname="china-t")
+            self._redact_and_replace(page, pos['rect'], data['address'], fontsize=pos['fontsize'], fontname="noto", fontfile=noto_path)
             
             pos = TEXT_POSITIONS['customer_phone']
-            self._redact_and_replace(page, pos['rect'], data['phone'], fontsize=pos['fontsize'], fontname="china-t")
+            self._redact_and_replace(page, pos['rect'], data['phone'], fontsize=pos['fontsize'], fontname="noto", fontfile=noto_path)
             
             # === 修改日期 ===
             pos = TEXT_POSITIONS['quote_date']
-            self._redact_and_replace(page, pos['rect'], quote_date, fontsize=pos['fontsize'])
+            self._redact_and_replace(page, pos['rect'], quote_date, fontsize=pos['fontsize'], fontname="noto", fontfile=noto_path)
             
             pos = TEXT_POSITIONS['valid_date']
-            self._redact_and_replace(page, pos['rect'], valid_date, fontsize=pos['fontsize'])
+            self._redact_and_replace(page, pos['rect'], valid_date, fontsize=pos['fontsize'], fontname="noto", fontfile=noto_path)
             
             # === 修改項目內容 (根據數量選擇行) ===
             if quantity == 6:
@@ -264,10 +270,25 @@ class QuotationGenerator:
             self._redact_and_replace(page, pos['rect'], f"TWD {self._format_price(grand_total)}", fontsize=pos['fontsize'])
             
             # === 修改訓犬師簽名 ===
-            # 只有當訓犬師不是 Eric Pan 時才需要修改（因為模板已有 Eric Pan 簽名）
-            if trainer != "Eric Pan":
-                pos = TEXT_POSITIONS['trainer_signature']
-                self._redact_and_replace(page, pos['rect'], trainer, fontsize=pos['fontsize'], baseline_offset=15)
+            pos = TEXT_POSITIONS['trainer_signature']
+            
+            # 先清除原有簽名區域
+            page.add_redact_annot(fitz.Rect(pos['rect']), fill=(1, 1, 1))
+            page.apply_redactions()
+
+            if trainer == "Eric Pan":
+                # 插入 Eric Pan 簽名圖片
+                sig_path = QUOTATION_DIR / "resources" / "signature_eric.png"
+                if sig_path.exists():
+                    rect = fitz.Rect(pos['rect'])
+                    # 調整圖片位置 (稍微置中或底部對齊)
+                    page.insert_image(rect, filename=str(sig_path))
+                else:
+                    # 找不到圖片則用 Script 字體
+                    self._redact_and_replace(page, pos['rect'], trainer, fontsize=32, fontname="dancing", fontfile=dancing_path, baseline_offset=15)
+            else:
+                # 其他教練使用 Script 字體
+                self._redact_and_replace(page, pos['rect'], trainer, fontsize=32, fontname="dancing", fontfile=dancing_path, baseline_offset=15)
             
             # 儲存
             doc.save(str(filepath))
