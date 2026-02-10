@@ -211,15 +211,15 @@ class QuotationGenerator:
             pos = TEXT_POSITIONS['quotation_id']
             self._redact_and_replace(page, pos['rect'], quotation_id, fontsize=pos['fontsize'])
             
-            # === 修改客戶資料 ===
+            # === 修改客戶資料（統一使用 china-t 字體確保一致性）===
             pos = TEXT_POSITIONS['customer_name']
-            self._redact_and_replace(page, pos['rect'], data['customer_name'], fontsize=pos['fontsize'])
+            self._redact_and_replace(page, pos['rect'], data['customer_name'], fontsize=pos['fontsize'], fontname="china-t")
             
             pos = TEXT_POSITIONS['customer_address']
-            self._redact_and_replace(page, pos['rect'], data['address'], fontsize=pos['fontsize'])
+            self._redact_and_replace(page, pos['rect'], data['address'], fontsize=pos['fontsize'], fontname="china-t")
             
             pos = TEXT_POSITIONS['customer_phone']
-            self._redact_and_replace(page, pos['rect'], data['phone'], fontsize=pos['fontsize'])
+            self._redact_and_replace(page, pos['rect'], data['phone'], fontsize=pos['fontsize'], fontname="china-t")
             
             # === 修改日期 ===
             pos = TEXT_POSITIONS['quote_date']
