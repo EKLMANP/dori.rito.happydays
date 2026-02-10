@@ -282,6 +282,9 @@ class QuotationNotionClient:
         
         # 由於 Notion API 無法直接上傳檔案，我們在頁面新增一個區塊記錄
         from datetime import datetime
+        from zoneinfo import ZoneInfo
+        
+        taipei_time = datetime.now(ZoneInfo('Asia/Taipei'))
         
         blocks = [
             {
@@ -318,7 +321,7 @@ class QuotationNotionClient:
                 "paragraph": {
                     "rich_text": [{
                         "type": "text",
-                        "text": {"content": f"建立時間：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"}
+                        "text": {"content": f"建立時間：{taipei_time.strftime('%Y-%m-%d %H:%M:%S')}"}
                     }]
                 }
             }

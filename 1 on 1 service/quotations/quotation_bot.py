@@ -21,7 +21,9 @@ import sys
 import time
 import re
 import socket
+from pathlib import Path
 from typing import Optional
+import html
 
 # 禁用 stdout 緩衝（確保 Railway logs 即時顯示）
 sys.stdout.reconfigure(line_buffering=True)
@@ -259,22 +261,23 @@ class QuotationBot:
                 notion_result = {"success": False, "message": str(e)}
 
             # 組合成功回覆訊息
-            success_msg = f"""✅ *報價單建立完成！*
+            safe_name = html.escape(data['customer_name'])
+            success_msg = f"""✅ <b>報價單建立完成！</b>
 
-📋 *報價單資訊*
-• 編號：`{result['quotation_number']}`
-• 客戶：{data['customer_name']}
+📋 <b>報價單資訊</b>
+• 編號：<code>{result['quotation_number']}</code>
+• 客戶：{safe_name}
 • 金額：TWD {result['grand_total']:,}
 """
             if drive_link:
-                success_msg += f"\n📎 *Google Drive 連結：*\n{drive_link}"
+                success_msg += f"\n📎 <b>Google Drive 連結：</b>\n{drive_link}"
             
             if notion_result.get('success'):
                 success_msg += "\n✅ 已同步到 Notion 客戶頁面"
             else:
-                success_msg += f"\n⚠️ Notion 同步失敗：{notion_result.get('message', '未知錯誤')}"
+                success_msg += f"\n⚠️ Notion 同步失敗：{html.escape(notion_result.get('message', '未知錯誤'))}"
 
-            self._safe_send(chat_id, success_msg, parse_mode="Markdown")
+            self._safe_send(chat_id, success_msg, parse_mode="HTML")
 
         except Exception as e:
             import traceback
