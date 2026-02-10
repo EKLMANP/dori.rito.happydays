@@ -2,6 +2,7 @@
 Dori & Rito - Google Drive Client
 ==================================
 處理報價單 PDF 上傳到 Google Drive
+支援 OAuth 2.0 (個人帳戶) 和 Service Account 兩種模式
 """
 
 import os
@@ -9,11 +10,15 @@ import json
 from typing import Optional
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-from google.oauth2 import service_account
 
 # 設定
 GOOGLE_DRIVE_FOLDER_ID = os.getenv("GOOGLE_DRIVE_FOLDER_ID", "1jAWh2nSgfIrxdDK2O06oNQL5wxy_58Ru")
 GOOGLE_SERVICE_ACCOUNT_FILE = os.path.join(os.path.dirname(__file__), "Quotation automation_Google Drive API Key.json")
+
+# OAuth 設定
+GOOGLE_OAUTH_CLIENT_ID = os.getenv("GOOGLE_OAUTH_CLIENT_ID", "")
+GOOGLE_OAUTH_CLIENT_SECRET = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET", "")
+GOOGLE_OAUTH_REFRESH_TOKEN = os.getenv("GOOGLE_OAUTH_REFRESH_TOKEN", "")
 
 # API 範圍
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
@@ -27,38 +32,48 @@ class GoogleDriveClient:
         self.folder_id = GOOGLE_DRIVE_FOLDER_ID
 
     def _build_service(self):
-        """建立 Google Drive API 服務"""
-        # 嘗試從檔案讀取憑證
+        """建立 Google Drive API 服務（優先使用 OAuth）"""
+        
+        # 方式 1: OAuth 2.0（個人帳戶，優先）
+        if GOOGLE_OAUTH_REFRESH_TOKEN and GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET:
+            print("   🔑 使用 OAuth 2.0 憑證連線 Google Drive")
+            from google.oauth2.credentials import Credentials
+            credentials = Credentials(
+                token=None,
+                refresh_token=GOOGLE_OAUTH_REFRESH_TOKEN,
+                client_id=GOOGLE_OAUTH_CLIENT_ID,
+                client_secret=GOOGLE_OAUTH_CLIENT_SECRET,
+                token_uri="https://oauth2.googleapis.com/token",
+                scopes=SCOPES
+            )
+            return build('drive', 'v3', credentials=credentials)
+        
+        # 方式 2: Service Account（備用）
+        from google.oauth2 import service_account
+        
         if os.path.exists(GOOGLE_SERVICE_ACCOUNT_FILE):
+            print("   🔑 使用 Service Account 憑證連線 Google Drive")
             credentials = service_account.Credentials.from_service_account_file(
                 GOOGLE_SERVICE_ACCOUNT_FILE,
                 scopes=SCOPES
             )
         else:
-            # 嘗試從環境變數讀取 JSON
             json_str = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "")
             if json_str:
+                print("   🔑 使用環境變數 Service Account 連線 Google Drive")
                 info = json.loads(json_str)
                 credentials = service_account.Credentials.from_service_account_info(
                     info,
                     scopes=SCOPES
                 )
             else:
-                raise ValueError("找不到 Google Service Account 憑證")
+                raise ValueError("找不到 Google Drive 憑證（OAuth 或 Service Account）")
         
         return build('drive', 'v3', credentials=credentials)
 
     def upload_file(self, file_path: str, file_name: str, folder_id: Optional[str] = None) -> dict:
         """
         上傳檔案到 Google Drive
-        
-        Args:
-            file_path: 本地檔案路徑
-            file_name: 在 Drive 上的檔案名稱
-            folder_id: 目標資料夾 ID（預設使用設定的資料夾）
-        
-        Returns:
-            dict: 包含 file_id, web_view_link 等資訊
         """
         try:
             folder_id = folder_id or self.folder_id
@@ -115,34 +130,13 @@ class GoogleDriveClient:
             print(f"⚠️ 設定權限失敗: {e}")
 
     def upload_quotation(self, file_path: str, quotation_number: str, customer_name: str, date_str: str) -> dict:
-        """
-        上傳報價單 PDF（便捷函數）
-        
-        Args:
-            file_path: PDF 檔案路徑
-            quotation_number: 流水編號 (例如: #0000001)
-            customer_name: 客戶姓名
-            date_str: 日期字串 (例如: 20260205)
-        
-        Returns:
-            dict: 上傳結果
-        """
-        # 格式化檔案名稱: 流水號_客戶姓名_報價日期.pdf
+        """上傳報價單 PDF"""
         clean_number = quotation_number.replace('#', '')
         file_name = f"{clean_number}_{customer_name}_{date_str}.pdf"
-        
         return self.upload_file(file_path, file_name)
 
 
-# 便捷函數
-def upload_quotation_to_drive(file_path: str, quotation_number: str, customer_name: str, date_str: str) -> dict:
-    """上傳報價單到 Google Drive 的便捷函數"""
-    client = GoogleDriveClient()
-    return client.upload_quotation(file_path, quotation_number, customer_name, date_str)
-
-
 if __name__ == "__main__":
-    # 測試
     print("測試 Google Drive 連線...")
     try:
         client = GoogleDriveClient()

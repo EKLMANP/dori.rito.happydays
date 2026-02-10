@@ -238,13 +238,25 @@ class QuotationBot:
                     print(f"   ⚠️ Google Drive 異常: {e}")
 
             # 上傳到 Notion
-            notion_result = self.notion.add_quotation_to_customer(
-                customer_name=data['customer_name'],
-                file_path=result['file_path'],
-                quotation_number=result['quotation_number'],
-                grand_total=result['grand_total'],
-                drive_link=drive_link
-            )
+            notion_result = {"success": False, "message": "未執行"}
+            try:
+                print(f"   📝 Notion 同步中... 客戶: {data['customer_name']}")
+                notion_result = self.notion.add_quotation_to_customer(
+                    customer_name=data['customer_name'],
+                    file_path=result['file_path'],
+                    quotation_number=result['quotation_number'],
+                    grand_total=result['grand_total'],
+                    drive_link=drive_link
+                )
+                if notion_result.get('success'):
+                    print(f"   ✅ Notion 同步成功")
+                else:
+                    print(f"   ⚠️ Notion 同步失敗: {notion_result.get('message', '未知')}")
+            except Exception as e:
+                print(f"   ❌ Notion 異常: {e}")
+                import traceback
+                traceback.print_exc()
+                notion_result = {"success": False, "message": str(e)}
 
             # 組合成功回覆訊息
             success_msg = f"""✅ *報價單建立完成！*
@@ -259,6 +271,8 @@ class QuotationBot:
             
             if notion_result.get('success'):
                 success_msg += "\n✅ 已同步到 Notion 客戶頁面"
+            else:
+                success_msg += f"\n⚠️ Notion 同步失敗：{notion_result.get('message', '未知錯誤')}"
 
             self._safe_send(chat_id, success_msg, parse_mode="Markdown")
 
