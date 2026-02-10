@@ -20,11 +20,17 @@ import os
 import sys
 import time
 import re
+import socket
 from typing import Optional
 
 # 禁用 stdout 緩衝（確保 Railway logs 即時顯示）
 sys.stdout.reconfigure(line_buffering=True)
 sys.stderr.reconfigure(line_buffering=True)
+
+# 強制使用 IPv4（解決 Railway IPv6 "Network is unreachable" 問題）
+import urllib3.util.connection as urllib3_cn
+urllib3_cn.allowed_gai_family = lambda: socket.AF_INET
+print("🌐 已強制使用 IPv4 連線")
 
 from telegram_client import TelegramClient
 from notion_client import QuotationNotionClient
@@ -140,10 +146,26 @@ class QuotationBot:
 """
         self.telegram.send_message(chat_id, template, parse_mode="Markdown")
 
+    def _safe_send(self, chat_id: str, text: str, parse_mode: str = None) -> dict:
+        """安全發送訊息（帶重試和日誌）"""
+        for attempt in range(3):
+            try:
+                result = self.telegram.send_message(chat_id, text, parse_mode=parse_mode or "Markdown")
+                if result.get('success'):
+                    print(f"   📤 訊息發送成功")
+                else:
+                    print(f"   ⚠️ 訊息發送失敗: {result.get('error', '未知錯誤')[:100]}")
+                return result
+            except Exception as e:
+                print(f"   ⚠️ 發送重試 {attempt+1}/3: {e}")
+                time.sleep(2 ** attempt)
+        print(f"   ❌ 訊息發送失敗（已重試 3 次）")
+        return {"success": False, "error": "發送失敗（已重試 3 次）"}
+
     def handle_quotation(self, chat_id: str, text: str, user: str) -> None:
         """處理報價單請求"""
         # 發送處理中訊息
-        self.telegram.send_message(chat_id, "⏳ 正在生成報價單...")
+        self._safe_send(chat_id, "⏳ 正在生成報價單...", parse_mode=None)
 
         try:
             # 解析請求
@@ -173,7 +195,7 @@ class QuotationBot:
             result = self.generator.generate(data)
             
             if not result.get('success'):
-                self.telegram.send_message(
+                self._safe_send(
                     chat_id,
                     "❌ 報價單產生錯誤，請重新提供報價資訊\n\n"
                     f"錯誤原因：{result.get('error')}\n\n"
@@ -186,7 +208,7 @@ class QuotationBot:
             drive_link = None
             
             if self.drive:
-                self.telegram.send_message(chat_id, "📤 正在上傳到 Google Drive...")
+                self._safe_send(chat_id, "📤 正在上傳到 Google Drive...", parse_mode=None)
                 drive_result = self.drive.upload_quotation(
                     file_path=result['file_path'],
                     quotation_number=result['quotation_number'],
@@ -224,13 +246,16 @@ class QuotationBot:
             else:
                 success_msg += f"\n⚠️ Notion 同步失敗：{notion_result.get('message', '未知錯誤')}"
 
-            self.telegram.send_message(chat_id, success_msg, parse_mode="Markdown")
+            self._safe_send(chat_id, success_msg, parse_mode="Markdown")
 
         except Exception as e:
-            self.telegram.send_message(
+            import traceback
+            traceback.print_exc()
+            self._safe_send(
                 chat_id,
                 "❌ 報價單產生錯誤，請重新提供報價資訊\n\n"
-                f"錯誤原因：{str(e)}"
+                f"錯誤原因：{str(e)}",
+                parse_mode=None
             )
 
     def handle_message(self, message: dict) -> None:
@@ -308,15 +333,20 @@ class QuotationBot:
                                 traceback.print_exc()
 
                 time.sleep(1)
+                # 連線成功，重置錯誤計數
+                error_count = 0
 
             except KeyboardInterrupt:
                 print("\n👋 Bot 已停止")
                 break
             except Exception as e:
-                print(f"❌ 主迴圈錯誤: {e}")
+                error_count += 1
+                wait_time = min(30, 5 * error_count)  # 最多等 30 秒
+                print(f"❌ 主迴圈錯誤 (第 {error_count} 次): {e}")
+                print(f"   等待 {wait_time} 秒後重試...")
                 import traceback
                 traceback.print_exc()
-                time.sleep(5)
+                time.sleep(wait_time)
 
 
 if __name__ == "__main__":
