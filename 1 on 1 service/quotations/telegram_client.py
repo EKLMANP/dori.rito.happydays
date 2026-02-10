@@ -55,6 +55,47 @@ class TelegramClient:
         else:
             return {"success": False, "error": response.text}
 
+    def send_document(
+        self,
+        file_path: str,
+        chat_id: str = TELEGRAM_CHAT_ID,
+        caption: str = ""
+    ) -> dict:
+        """
+        發送檔案到指定的 chat
+
+        Args:
+            file_path: 本地檔案路徑
+            chat_id: Telegram chat ID
+            caption: 檔案說明文字
+
+        Returns:
+            Telegram API response
+        """
+        if not chat_id:
+            return {"success": False, "error": "未設定 TELEGRAM_CHAT_ID"}
+
+        try:
+            with open(file_path, 'rb') as f:
+                files = {'document': f}
+                data = {'chat_id': chat_id}
+                if caption:
+                    data['caption'] = caption
+                    data['parse_mode'] = 'Markdown'
+                
+                response = requests.post(
+                    f"{self.base_url}/sendDocument",
+                    data=data,
+                    files=files
+                )
+
+            if response.status_code == 200:
+                return {"success": True, "result": response.json()}
+            else:
+                return {"success": False, "error": response.text}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
     def send_notification(
         self,
         subject: str,

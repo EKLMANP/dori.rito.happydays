@@ -204,23 +204,40 @@ class QuotationBot:
                 )
                 return
 
-            # 上傳到 Google Drive（如果可用）
-            drive_result = {"success": False, "error": "Drive 未初始化"}
-            drive_link = None
-            
-            if self.drive:
-                self._safe_send(chat_id, "📤 正在上傳到 Google Drive...", parse_mode=None)
-                drive_result = self.drive.upload_quotation(
+            # 直接透過 Telegram 發送 PDF 檔案
+            print(f"   📄 發送 PDF 檔案: {result['file_path']}")
+            try:
+                pdf_result = self.telegram.send_document(
                     file_path=result['file_path'],
-                    quotation_number=result['quotation_number'],
-                    customer_name=data['customer_name'],
-                    date_str=result.get('date_str', '')
+                    chat_id=chat_id,
+                    caption=f"📋 報價單 {result['quotation_number']} - {data['customer_name']} - TWD {result['grand_total']:,}"
                 )
-                
-                if drive_result.get('success'):
-                    drive_link = drive_result.get('web_view_link', '')
-            
-            # 上傳到 Notion（包含 Drive 連結）
+                if pdf_result.get('success'):
+                    print(f"   📤 PDF 發送成功")
+                else:
+                    print(f"   ⚠️ PDF 發送失敗: {pdf_result.get('error', '未知')[:100]}")
+            except Exception as e:
+                print(f"   ⚠️ PDF 發送異常: {e}")
+
+            # 嘗試上傳到 Google Drive（可選）
+            drive_link = None
+            if self.drive:
+                try:
+                    drive_result = self.drive.upload_quotation(
+                        file_path=result['file_path'],
+                        quotation_number=result['quotation_number'],
+                        customer_name=data['customer_name'],
+                        date_str=result.get('date_str', '')
+                    )
+                    if drive_result.get('success'):
+                        drive_link = drive_result.get('web_view_link', '')
+                        print(f"   ☁️ Google Drive 上傳成功")
+                    else:
+                        print(f"   ⚠️ Google Drive 上傳失敗: {drive_result.get('error', '未知')[:100]}")
+                except Exception as e:
+                    print(f"   ⚠️ Google Drive 異常: {e}")
+
+            # 上傳到 Notion
             notion_result = self.notion.add_quotation_to_customer(
                 customer_name=data['customer_name'],
                 file_path=result['file_path'],
@@ -237,15 +254,11 @@ class QuotationBot:
 • 客戶：{data['customer_name']}
 • 金額：TWD {result['grand_total']:,}
 """
-            if drive_result.get('success') and drive_link:
-                success_msg += f"\n📎 *PDF 下載連結：*\n{drive_link}"
-            else:
-                success_msg += f"\n⚠️ Google Drive 上傳失敗：{drive_result.get('error', '未知錯誤')}"
+            if drive_link:
+                success_msg += f"\n📎 *Google Drive 連結：*\n{drive_link}"
             
             if notion_result.get('success'):
                 success_msg += "\n✅ 已同步到 Notion 客戶頁面"
-            else:
-                success_msg += f"\n⚠️ Notion 同步失敗：{notion_result.get('message', '未知錯誤')}"
 
             self._safe_send(chat_id, success_msg, parse_mode="Markdown")
 
