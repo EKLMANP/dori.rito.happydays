@@ -68,7 +68,8 @@ class NotionClient:
         response = requests.post(
             f"{self.base_url}/pages",
             headers=self.headers,
-            json=payload
+            json=payload,
+            timeout=30
         )
 
         if response.status_code == 200:
@@ -195,7 +196,8 @@ class NotionClient:
         """取得 database 結構資訊"""
         response = requests.get(
             f"{self.base_url}/databases/{database_id}",
-            headers=self.headers
+            headers=self.headers,
+            timeout=30
         )
         return response.json()
 
@@ -234,7 +236,8 @@ class QuotationNotionClient:
         response = requests.post(
             f"{self.base_url}/databases/{NOTION_CUSTOMER_DATABASE_ID}/query",
             headers=self.headers,
-            json=payload
+            json=payload,
+            timeout=30
         )
         
         if response.status_code == 200:
@@ -364,7 +367,8 @@ class QuotationNotionClient:
         response = requests.patch(
             f"{self.base_url}/blocks/{page_id}/children",
             headers=self.headers,
-            json={"children": blocks}
+            json={"children": blocks},
+            timeout=30
         )
         
         if response.status_code == 200:

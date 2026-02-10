@@ -47,7 +47,8 @@ class TelegramClient:
 
         response = requests.post(
             f"{self.base_url}/sendMessage",
-            json=payload
+            json=payload,
+            timeout=30
         )
 
         if response.status_code == 200:
@@ -63,12 +64,12 @@ class TelegramClient:
     ) -> dict:
         """
         發送檔案到指定的 chat
-
+        
         Args:
             file_path: 本地檔案路徑
             chat_id: Telegram chat ID
             caption: 檔案說明文字
-
+            
         Returns:
             Telegram API response
         """
@@ -81,12 +82,14 @@ class TelegramClient:
                 data = {'chat_id': chat_id}
                 if caption:
                     data['caption'] = caption
-                    data['parse_mode'] = 'Markdown'
+                    data['parse_mode'] = 'HTML'
                 
+                # 設定較長的 timeout 給檔案上傳 (60秒)
                 response = requests.post(
                     f"{self.base_url}/sendDocument",
                     data=data,
-                    files=files
+                    files=files,
+                    timeout=60
                 )
 
             if response.status_code == 200:
@@ -104,7 +107,7 @@ class TelegramClient:
     ) -> dict:
         """
         發送 email 建立完成通知
-
+        
         Args:
             subject: Email 主旨
             notion_url: Notion 頁面連結
@@ -137,9 +140,11 @@ _Dori & Rito 自動化系統_"""
         if offset:
             params["offset"] = offset
 
+        # requests timeout 必須比 API timeout稍長，否則會提前斷開
         response = requests.get(
             f"{self.base_url}/getUpdates",
-            params=params
+            params=params,
+            timeout=timeout + 10
         )
 
         if response.status_code == 200:
