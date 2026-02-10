@@ -194,8 +194,17 @@ class QuotationBot:
                 )
                 return
 
+            # 嘗試從 Google Drive 取得流水號 (確保連貫性)
+            quotation_number = None
+            if self.drive:
+                try:
+                    quotation_number = self.drive.get_next_quotation_number()
+                except Exception as e:
+                    print(f"⚠️ 無法從 Drive 取得流水號: {e}")
+
             # 生成報價單
-            result = self.generator.generate(data)
+            print(f"   📄 生成 PDF 報價單... (流水號: {quotation_number if quotation_number else 'local'})")
+            result = self.generator.generate(data, quotation_number=quotation_number)
             
             if not result.get('success'):
                 self._safe_send(

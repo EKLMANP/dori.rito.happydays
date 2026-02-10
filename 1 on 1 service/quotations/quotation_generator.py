@@ -165,7 +165,7 @@ class QuotationGenerator:
             color=color
         )
 
-    def generate(self, data: dict) -> dict:
+    def generate(self, data: dict, quotation_number: Optional[int] = None) -> dict:
         """
         生成報價單 PDF
         """
@@ -192,7 +192,9 @@ class QuotationGenerator:
             grand_total = subtotal
             
             # 取得流水編號
-            quotation_number = self._get_next_number()
+            if quotation_number is None:
+                quotation_number = self._get_next_number()
+            
             quotation_id = self._format_number(quotation_number)
             
             # 日期（使用台灣時區）

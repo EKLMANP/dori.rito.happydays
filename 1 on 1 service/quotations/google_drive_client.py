@@ -7,9 +7,10 @@ Dori & Rito - Google Drive Client
 
 import os
 import json
+import io
 from typing import Optional
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
+from googleapiclient.http import MediaFileUpload, MediaIoBaseUpload
 
 # 設定
 GOOGLE_DRIVE_FOLDER_ID = os.getenv("GOOGLE_DRIVE_FOLDER_ID", "1jAWh2nSgfIrxdDK2O06oNQL5wxy_58Ru")
@@ -134,6 +135,79 @@ class GoogleDriveClient:
         clean_number = quotation_number.replace('#', '')
         file_name = f"{clean_number}_{customer_name}_{date_str}.pdf"
         return self.upload_file(file_path, file_name)
+
+    def get_next_quotation_number(self) -> int:
+        """
+        從 Google Drive 取得並更新下一個流水號
+        使用檔案名稱儲存計數 (Pattern: quotation_sequence_<NUMBER>)
+        Workaround: 避免 update/delete/read content 的潛在 hang 問題
+        """
+        PREFIX = "quotation_seq_"
+        
+        try:
+            # 1. 搜尋 sequence 檔案
+            query = f"name contains '{PREFIX}' and '{self.folder_id}' in parents and trashed = false"
+            results = self.service.files().list(
+                q=query, 
+                spaces='drive', 
+                fields='files(id, name)'
+            ).execute()
+            files = results.get('files', [])
+            
+            current_number = 0
+            old_files = []
+            
+            # 解析現有編號
+            for f in files:
+                name = f['name']
+                if name.startswith(PREFIX):
+                    try:
+                        num = int(name.replace(PREFIX, ''))
+                        if num > current_number:
+                            current_number = num
+                    except:
+                        pass
+                    old_files.append(f)
+            
+            # 2. 建立新檔案
+            next_number = current_number + 1
+            new_name = f"{PREFIX}{next_number:07d}" # e.g. quotation_sequence_0000001
+            
+            file_metadata = {
+                'name': new_name,
+                'parents': [self.folder_id]
+            }
+            self.service.files().create(
+                body=file_metadata,
+                fields='id'
+            ).execute()
+            
+            # 3. 嘗試清理舊檔案 (Best effort)
+            # 如果 delete 會 hang，這裡可能會卡住，所以我們放在 create 之後
+            # 或者我們可以略過清理，等待定期維護
+            # 為了測試，我們先試著不清理，或者非同步清理？
+            # 這裡選擇: 嘗試清理第一個舊檔案，如果失敗/慢就放棄?
+            # 為了避免卡住 Response，我們先不執行清理，或者只印出 log
+            # print(f"   (待清理舊檔案: {len(old_files)} 個)") 
+            
+            # 為了避免檔案過多，嘗試刪除上一個最大的 (或者全部)
+            # 但若 delete hang，會導致回傳延遲。
+            # 暫時不刪除，除非確認 delete 不會 hang。
+            # 之前的測試 delete 似乎也 hang？或者 create hang？
+            # 我們假設 create 沒 hang (第一次 test 成功 returned 1)。
+            # 第二次 test 沒 return 2。
+            # 第二次 test 的步驟：
+            # 1. Search (Found)
+            # 2. Delete (Wait...) -> Hang?
+            # 所以 delete 可能是兇手。
+            # 我們在這裡 **不執行 delete**。只 Create。
+            # 這樣雖然會累積檔案，但功能正常。
+            
+            return next_number
+            
+        except Exception as e:
+            print(f"⚠️ Google Drive Flow Number Error: {e}")
+            return None
 
 
 if __name__ == "__main__":
