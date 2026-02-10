@@ -32,8 +32,27 @@ from quotation_generator import QuotationGenerator, parse_quotation_request, is_
 from google_drive_client import GoogleDriveClient
 
 # 環境變數
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+
+# 啟動時診斷 Token
+print(f"🔑 Token 前 15 字元: '{TELEGRAM_BOT_TOKEN[:15]}...'")
+print(f"🔑 Token 長度: {len(TELEGRAM_BOT_TOKEN)}")
+print(f"🔑 Token repr: {repr(TELEGRAM_BOT_TOKEN[:20])}")
+
+# 直接用 requests 測試 Token
+import requests as _req
+try:
+    _test_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getMe"
+    print(f"🔗 測試 URL: {_test_url[:60]}...")
+    _test_resp = _req.get(_test_url, timeout=10)
+    _test_json = _test_resp.json()
+    if _test_json.get("ok"):
+        print(f"✅ Token 驗證成功! Bot: @{_test_json['result']['username']}")
+    else:
+        print(f"❌ Token 驗證失敗! 回應: {_test_json}")
+except Exception as _e:
+    print(f"❌ Token 測試連線失敗: {_e}")
 
 
 class QuotationBot:
@@ -243,9 +262,15 @@ class QuotationBot:
                 response = self.telegram.get_updates(offset=self.last_update_id + 1)
                 poll_count += 1
                 
+                # 前 3 次輪詢印出完整回應
+                if poll_count <= 3:
+                    print(f"📋 第 {poll_count} 次輪詢回應: ok={response.get('ok')}, result_count={len(response.get('result', []))}")
+                    if response.get('result'):
+                        print(f"   原始回應: {str(response)[:200]}")
+                
                 # 第一次成功後立即顯示
                 if poll_count == 1:
-                    print(f"✅ Telegram API 連線成功！開始監聽訊息...")
+                    print(f"✅ Telegram API 連線成功！開始監聯訊息...")
                 
                 # 每 60 次輪詢顯示心跳訊息（約每分鐘）
                 if poll_count % 60 == 0:
