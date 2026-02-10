@@ -32,7 +32,7 @@ from quotation_generator import QuotationGenerator, parse_quotation_request, is_
 from google_drive_client import GoogleDriveClient
 
 # 環境變數
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip().lstrip("=").strip()
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
 
 # 啟動時診斷 Token
