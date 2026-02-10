@@ -173,7 +173,12 @@ class QuotationBot:
             result = self.generator.generate(data)
             
             if not result.get('success'):
-                self.telegram.send_message(chat_id, f"❌ 生成失敗：{result.get('error')}")
+                self.telegram.send_message(
+                    chat_id,
+                    "❌ 報價單產生錯誤，請重新提供報價資訊\n\n"
+                    f"錯誤原因：{result.get('error')}\n\n"
+                    "請使用 /template 查看正確格式"
+                )
                 return
 
             # 上傳到 Google Drive（如果可用）
@@ -201,18 +206,18 @@ class QuotationBot:
                 drive_link=drive_link
             )
 
-            # 組合回覆訊息
-            success_msg = f"""✅ *報價單生成成功！*
+            # 組合成功回覆訊息
+            success_msg = f"""✅ *報價單建立完成！*
 
 📋 *報價單資訊*
 • 編號：`{result['quotation_number']}`
 • 客戶：{data['customer_name']}
 • 金額：TWD {result['grand_total']:,}
 """
-            if drive_result.get('success'):
-                success_msg += f"\n📎 [Google Drive 連結]({drive_link})"
+            if drive_result.get('success') and drive_link:
+                success_msg += f"\n📎 *PDF 下載連結：*\n{drive_link}"
             else:
-                success_msg += f"\n⚠️ Drive 上傳失敗：{drive_result.get('error', '未知錯誤')}"
+                success_msg += f"\n⚠️ Google Drive 上傳失敗：{drive_result.get('error', '未知錯誤')}"
             
             if notion_result.get('success'):
                 success_msg += "\n✅ 已同步到 Notion 客戶頁面"
@@ -222,7 +227,11 @@ class QuotationBot:
             self.telegram.send_message(chat_id, success_msg, parse_mode="Markdown")
 
         except Exception as e:
-            self.telegram.send_message(chat_id, f"❌ 處理錯誤：{str(e)}")
+            self.telegram.send_message(
+                chat_id,
+                "❌ 報價單產生錯誤，請重新提供報價資訊\n\n"
+                f"錯誤原因：{str(e)}"
+            )
 
     def handle_message(self, message: dict) -> None:
         """處理收到的訊息"""

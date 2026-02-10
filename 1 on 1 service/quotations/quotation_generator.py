@@ -21,6 +21,7 @@ import os
 import json
 import re
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Optional
 
@@ -50,6 +51,11 @@ COMPANY_INFO = {
 TEXT_POSITIONS = {
     # 報價單編號 - 調整 y 座標對齊 "報價單" 文字 (y:90.5)
     'quotation_id': {'rect': (130.7, 90.5, 231.8, 111.3), 'fontsize': 20.78, 'align': 'left'},
+    
+    # 客戶資料
+    'customer_name': {'rect': (73.0, 187.0, 300.0, 205.0), 'fontsize': 12.0, 'align': 'left'},
+    'customer_address': {'rect': (73.0, 204.0, 380.0, 221.0), 'fontsize': 12.0, 'align': 'left'},
+    'customer_phone': {'rect': (73.0, 221.0, 300.0, 238.0), 'fontsize': 12.0, 'align': 'left'},
     
     # 日期
     'quote_date': {'rect': (459.6, 205.9, 522.5, 220.7), 'fontsize': 12.0, 'align': 'left'},
@@ -127,6 +133,13 @@ class QuotationGenerator:
             return price_str
         return int(str(price_str).replace(',', '').replace(' ', ''))
 
+    def _has_cjk(self, text: str) -> bool:
+        """檢查文字是否包含 CJK 字元"""
+        for char in text:
+            if '\u4e00' <= char <= '\u9fff' or '\u3400' <= char <= '\u4dbf':
+                return True
+        return False
+
     def _redact_and_replace(self, page, rect, new_text, fontsize=12, fontname="helv", color=(0, 0, 0), baseline_offset=3):
         """
         在指定區域清除原有文字並插入新文字
@@ -135,6 +148,10 @@ class QuotationGenerator:
         redact_rect = fitz.Rect(rect)
         page.add_redact_annot(redact_rect, fill=(1, 1, 1))  # 白色填充
         page.apply_redactions()
+        
+        # 如果文字包含 CJK 字元，使用支援中文的字體
+        if self._has_cjk(new_text):
+            fontname = "china-t"
         
         # 插入新文字 - 從 rect 底部往上偏移
         text_point = fitz.Point(rect[0], rect[3] - baseline_offset)
@@ -176,8 +193,8 @@ class QuotationGenerator:
             quotation_number = self._get_next_number()
             quotation_id = self._format_number(quotation_number)
             
-            # 日期
-            today = datetime.now()
+            # 日期（使用台灣時區）
+            today = datetime.now(ZoneInfo('Asia/Taipei'))
             quote_date = today.strftime('%m/%d/%Y')
             valid_date = (today + timedelta(days=3)).strftime('%m/%d/%Y')
             
@@ -193,6 +210,16 @@ class QuotationGenerator:
             # === 修改報價單編號 ===
             pos = TEXT_POSITIONS['quotation_id']
             self._redact_and_replace(page, pos['rect'], quotation_id, fontsize=pos['fontsize'])
+            
+            # === 修改客戶資料 ===
+            pos = TEXT_POSITIONS['customer_name']
+            self._redact_and_replace(page, pos['rect'], data['customer_name'], fontsize=pos['fontsize'])
+            
+            pos = TEXT_POSITIONS['customer_address']
+            self._redact_and_replace(page, pos['rect'], data['address'], fontsize=pos['fontsize'])
+            
+            pos = TEXT_POSITIONS['customer_phone']
+            self._redact_and_replace(page, pos['rect'], data['phone'], fontsize=pos['fontsize'])
             
             # === 修改日期 ===
             pos = TEXT_POSITIONS['quote_date']

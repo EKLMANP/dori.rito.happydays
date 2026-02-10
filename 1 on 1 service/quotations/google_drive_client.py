@@ -78,7 +78,8 @@ class GoogleDriveClient:
             file = self.service.files().create(
                 body=file_metadata,
                 media_body=media,
-                fields='id, name, webViewLink, webContentLink'
+                fields='id, name, webViewLink, webContentLink',
+                supportsAllDrives=True
             ).execute()
             
             # 設定為任何人都可以檢視（取得分享連結）
