@@ -150,7 +150,8 @@ class QuotationBot:
         """安全發送訊息（帶重試和日誌）"""
         for attempt in range(3):
             try:
-                result = self.telegram.send_message(chat_id, text, parse_mode=parse_mode or "Markdown")
+                # 使用 keyword arguments 確保參數對應正確
+                result = self.telegram.send_message(text=text, chat_id=chat_id, parse_mode=parse_mode or "Markdown")
                 if result.get('success'):
                     print(f"   📤 訊息發送成功")
                 else:
