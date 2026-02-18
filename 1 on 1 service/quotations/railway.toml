@@ -1,0 +1,9 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "python -u quotation_bot.py"
+
+[env]
+PYTHONUNBUFFERED = "1"
+

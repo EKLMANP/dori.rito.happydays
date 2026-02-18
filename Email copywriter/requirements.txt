@@ -1,0 +1,10 @@
+# Dori & Rito Email Automation Dependencies
+
+# HTTP requests
+requests>=2.31.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Anthropic Claude API (for Email Generation)
+anthropic>=0.39.0
