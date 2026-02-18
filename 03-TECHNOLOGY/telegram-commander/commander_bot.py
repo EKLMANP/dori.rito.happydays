@@ -2,6 +2,7 @@
 Dori & Rito - Telegram 遠端指揮中心 Bot
 =========================================
 讓 Eric & Pennee 在外時透過 Telegram 指揮 AI 虛擬團隊
+AI 引擎：Google AI Studio (Gemini 2.0 Flash) — DR_Virtual Team
 
 虛擬團隊成員：
   /head      - 負責人（戰略決策）
@@ -27,16 +28,19 @@ import os
 import sys
 import time
 import requests
-import anthropic
 from pathlib import Path
 from dotenv import load_dotenv
+from google import genai
+from google.genai import types
 
 # 載入 .env
 load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "").strip()
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
+TELEGRAM_CHAT_ID   = os.getenv("TELEGRAM_CHAT_ID", "").strip()
+GOOGLE_AI_API_KEY  = os.getenv("GOOGLE_AI_API_KEY", "").strip()
+
+GEMINI_MODEL = "gemini-2.0-flash"
 
 PROMPTS_DIR = Path(__file__).parent.parent.parent / "04-TEAM" / "prompts"
 
@@ -87,16 +91,16 @@ class TelegramCommander:
     def __init__(self):
         if not TELEGRAM_BOT_TOKEN:
             raise ValueError("請設定 TELEGRAM_BOT_TOKEN 環境變數")
-        if not ANTHROPIC_API_KEY:
-            raise ValueError("請設定 ANTHROPIC_API_KEY 環境變數")
+        if not GOOGLE_AI_API_KEY:
+            raise ValueError("請設定 GOOGLE_AI_API_KEY 環境變數")
 
         self.token = TELEGRAM_BOT_TOKEN
         self.allowed_chat_id = TELEGRAM_CHAT_ID
-        self.claude = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        self.gemini = genai.Client(api_key=GOOGLE_AI_API_KEY)
         self.last_update_id = 0
         self._prompts_cache = {}
 
-        print(f"✅ Claude API 已連接")
+        print(f"✅ Google AI Studio (Gemini) 已連接 — 模型: {GEMINI_MODEL}")
         print(f"🔒 授權 Chat ID: {self.allowed_chat_id}")
 
     # ── Telegram API helpers ──────────────────────────────────────
@@ -212,20 +216,19 @@ class TelegramCommander:
         self.send(chat_id, msg)
 
     def cmd_status(self, chat_id: str) -> None:
-        # 測試 Claude 連線
+        # 測試 Gemini 連線
         try:
-            self.claude.messages.create(
-                model="claude-opus-4-6",
-                max_tokens=10,
-                messages=[{"role": "user", "content": "ping"}]
+            self.gemini.models.generate_content(
+                model=GEMINI_MODEL,
+                contents="ping"
             )
-            claude_status = "✅ 正常"
+            gemini_status = f"✅ 正常（{GEMINI_MODEL}）"
         except Exception as e:
-            claude_status = f"❌ 異常：{str(e)[:40]}"
+            gemini_status = f"❌ 異常：{str(e)[:40]}"
 
         msg = f"""📊 *系統狀態*
 
-🤖 Claude AI：{claude_status}
+🤖 Google Gemini AI：{gemini_status}
 📱 Telegram Bot：✅ 運作中
 👥 虛擬團隊：✅ {len(TEAM_MEMBERS)} 位成員就緒
 📁 Prompts 目錄：{'✅ 找到' if PROMPTS_DIR.exists() else '❌ 找不到'}
@@ -255,14 +258,16 @@ class TelegramCommander:
 
         try:
             self.send_typing(chat_id)
-            response = self.claude.messages.create(
-                model="claude-opus-4-6",
-                max_tokens=2000,
-                system=system_prompt,
-                messages=[{"role": "user", "content": task}]
+            response = self.gemini.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=task,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    max_output_tokens=2000,
+                    temperature=0.7,
+                )
             )
-            answer = response.content[0].text
-            # 在回覆前加上角色標頭
+            answer = response.text
             header = f"{info['emoji']} *{info['name']} 的回覆：*\n\n"
             self.send(chat_id, header + answer)
 
@@ -274,7 +279,7 @@ class TelegramCommander:
     def _is_authorized(self, chat_id: str) -> bool:
         """只允許授權的 Chat ID"""
         if not self.allowed_chat_id:
-            return True  # 未設定時允許所有人（開發模式）
+            return True
         return str(chat_id) == str(self.allowed_chat_id)
 
     def handle_message(self, message: dict) -> None:
