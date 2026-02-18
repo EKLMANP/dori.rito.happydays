@@ -1,0 +1,29 @@
+# 敏感文件 - 絕對不推送
+.env
+**/.env
+**/credentials.json
+**/token.json
+**/*API*Key*.json
+**/Google*API*Key*.json
+**/*service_account*.json
+
+# macOS 系統文件
+.DS_Store
+**/.DS_Store
+
+# Python 緩存
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+venv/
+ENV/
+.venv/
+
+# 開發工具
+.vscode/
+.idea/
+
+# 產生的報價 PDF（保留模板，排除含客戶資料的正式報價單）
+01-BUSINESS/1-on-1-service/quotations/Quotation_*.pdf

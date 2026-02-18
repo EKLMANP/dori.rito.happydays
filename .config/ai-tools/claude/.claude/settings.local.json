@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(curl -s \"https://api.telegram.org/bot***REMOVED_TELEGRAM_TOKEN***/sendMessage\" -d \"chat_id=882308403\" -d \"text=✅ Dori & Rito 虛擬團隊通知系統已啟動！這是測試訊息。\")",
+      "Bash(python3:*)",
+      "Bash(curl:*)"
+    ]
+  }
+}
