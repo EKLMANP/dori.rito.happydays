@@ -1,0 +1,15 @@
+# Dori & Rito Quotation Bot Dependencies
+
+# HTTP requests
+requests>=2.31.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# PDF Generation
+pymupdf>=1.23.0
+
+# Google Drive API
+google-api-python-client>=2.100.0
+google-auth>=2.20.0
+

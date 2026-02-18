@@ -1,0 +1,14 @@
+# Ignore sensitive files
+.env
+**/.env
+**/.DS_Store
+**/Google*API*Key*.json
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+ENV/
+.vscode/
+
+# Ignore generated PDFs if desired, but user seems to want to keep them?
+# keeping them for now as proof of work
