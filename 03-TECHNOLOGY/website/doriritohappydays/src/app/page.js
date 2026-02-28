@@ -278,7 +278,7 @@ export default async function HomePage() {
       </section>
 
       {/* 呼籲行動 */}
-      <section className="py-24 bg-orange-500 relative overflow-hidden text-white text-center px-6">
+      <section className="py-24 bg-primary relative overflow-hidden text-white text-center px-6">
         <div className="absolute -bottom-20 -right-20 opacity-10 rotate-12 animate-float pointer-events-none">
           <svg width="400" height="400" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zM3 9c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z" />
