@@ -1,0 +1,418 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Dancing+Script:wght@600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =====================================================
+   Brand Design Tokens — Dori & Rito Happydays
+   Palette sourced from existing landing page
+   ===================================================== */
+:root {
+  /* Colors */
+  --color-primary: #D4A373;
+  /* 暖棕金 — CTA 按鈕 */
+  --color-primary-hover: #C4935F;
+  --color-primary-light: #F0D9BF;
+  --color-sage: #CCD5AE;
+  /* 鼠尾草綠 — 區塊背景 */
+  --color-sage-dark: #A8B887;
+  --color-sand: #DEDBD2;
+  /* 暖沙色 — 過渡區 */
+  --color-cream: #FAEDCD;
+  /* 淡奶油 — 主背景 */
+  --color-cream-dark: #F5E4B0;
+  --color-text: #4A4A38;
+  /* 深橄欖灰 — 主文字 */
+  --color-text-muted: #7A7A65;
+  /* 輔助文字 */
+  --color-white: #FFFFFF;
+  --color-border: #E8E4D8;
+
+  /* Typography */
+  --font-primary: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+
+  /* Spacing */
+  --section-padding: 5rem 1.5rem;
+  --section-padding-sm: 3rem 1.5rem;
+
+  /* Borders */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 2px 8px rgba(74, 74, 56, 0.08);
+  --shadow-md: 0 4px 20px rgba(74, 74, 56, 0.12);
+  --shadow-lg: 0 8px 40px rgba(74, 74, 56, 0.16);
+
+  /* Transitions */
+  --transition: all 0.25s ease;
+}
+
+/* =====================================================
+   Base Reset & Typography
+   ===================================================== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: var(--font-primary);
+  background-color: var(--color-cream);
+  color: var(--color-text);
+  line-height: 1.7;
+  font-size: 1rem;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-text);
+}
+
+h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 900;
+}
+
+h2 {
+  font-size: clamp(1.5rem, 3.5vw, 2.5rem);
+}
+
+h3 {
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+button {
+  cursor: pointer;
+  font-family: var(--font-primary);
+}
+
+/* =====================================================
+   Layout Utilities
+   ===================================================== */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.section {
+  padding: var(--section-padding);
+}
+
+.section-sm {
+  padding: var(--section-padding-sm);
+}
+
+/* =====================================================
+   Buttons
+   ===================================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  border-radius: var(--radius-full);
+  font-weight: 700;
+  font-size: 1rem;
+  transition: var(--transition);
+  border: 2px solid transparent;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--color-white);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--color-text);
+  border-color: var(--color-sand);
+}
+
+.btn-outline:hover {
+  background: var(--color-sand);
+  transform: translateY(-2px);
+}
+
+.btn-lg {
+  padding: 1.125rem 2.5rem;
+  font-size: 1.125rem;
+}
+
+/* =====================================================
+   Cards
+   ===================================================== */
+.card {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  transition: var(--transition);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-4px);
+}
+
+/* =====================================================
+   Tags / Badges
+   ===================================================== */
+.tag {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--color-sage);
+  color: var(--color-text);
+}
+
+/* =====================================================
+   Form Elements
+   ===================================================== */
+.input {
+  width: 100%;
+  padding: 0.875rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--color-border);
+  background: var(--color-white);
+  color: var(--color-text);
+  font-family: var(--font-primary);
+  font-size: 1rem;
+  transition: var(--transition);
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* =====================================================
+   Section Backgrounds
+   ===================================================== */
+.bg-cream {
+  background-color: var(--color-cream);
+}
+
+.bg-sage {
+  background-color: var(--color-sage);
+}
+
+.bg-sand {
+  background-color: var(--color-sand);
+}
+
+.bg-white {
+  background-color: var(--color-white);
+}
+
+.bg-primary {
+  background-color: var(--color-primary);
+}
+
+/* =====================================================
+   Animations
+   ===================================================== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease both;
+}
+
+/* =====================================================
+   Ghost Content Styles (文章內頁渲染)
+   ===================================================== */
+.ghost-content h2 {
+  margin: 2rem 0 1rem;
+}
+
+.ghost-content h3 {
+  margin: 1.5rem 0 0.75rem;
+}
+
+.ghost-content p {
+  margin-bottom: 1.25rem;
+}
+
+.ghost-content ul,
+.ghost-content ol {
+  margin: 1rem 0 1rem 1.5rem;
+}
+
+.ghost-content li {
+  margin-bottom: 0.5rem;
+}
+
+.ghost-content blockquote {
+  border-left: 4px solid var(--color-primary);
+  padding: 1rem 1.5rem;
+  margin: 2rem 0;
+  background: var(--color-cream-dark);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  font-style: italic;
+}
+
+.ghost-content img {
+  border-radius: var(--radius-md);
+  margin: 1.5rem 0;
+}
+
+.ghost-content a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.ghost-content a:hover {
+  color: var(--color-primary-hover);
+}
+
+/* =====================================================
+   Responsive Utilities
+   ===================================================== */
+@media (max-width: 768px) {
+  :root {
+    --section-padding: 3rem 1.25rem;
+  }
+}
+
+/* =====================================================
+   Dori & Rito Custom Styles (from redesign)
+   ===================================================== */
+.bg-paw-texture {
+  background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11.62 18.34c-1.3-.2-2.6.54-3.03 1.76-.43 1.23.12 2.58 1.3 3.17 1.18.6 2.6.2 3.28-.93.68-1.12.38-2.58-.93-3.4-.2-.13-.43-.3-.62-.6zm16.76 0c.2-.3.43-.47.62-.6 1.3-.82 1.6-2.28.93-3.4-.68-1.13-2.1-1.53-3.28-.93-1.18.6-1.73 1.94-1.3 3.17.43 1.22 1.73 1.96 3.03 1.76zm-8.38 4.34c2.8 0 5.4-2.1 5.4-5.34 0-2.3-1.4-4.32-3.4-5.1-1.3-.5-2.7-.5-4 0-2 .78-3.4 2.8-3.4 5.1 0 3.24 2.6 5.34 5.4 5.34z' fill='%23FF7043' fill-opacity='0.03'/%3E%3C/svg%3E");
+}
+
+.hero-bg {
+  background-color: #F3F4F6;
+  position: relative;
+}
+
+.btn-orange {
+  background-color: #FF7043;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.btn-orange:hover {
+  background-color: #E65100;
+  transform: scale(1.05) translateY(-2px);
+  box-shadow: 0 10px 20px rgba(255, 112, 67, 0.3);
+}
+
+.signature {
+  font-family: 'Dancing Script', cursive;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.wave-divider {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 80px;
+  fill: #FFFFFF;
+}
+
+.review-card {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.review-card:hover {
+  transform: translateY(-8px);
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
