@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+
+# Allow AI engines to crawl for AEO/GEO
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+Sitemap: https://doriritohappydays.com/sitemap.xml
