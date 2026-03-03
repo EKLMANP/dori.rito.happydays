@@ -286,7 +286,7 @@ export default async function HomePage() {
         </div>
 
         <div className="container mx-auto relative z-10">
-          <h2 className="text-4xl md:text-6xl font-black mb-10 leading-tight">準備好與您的狗狗<br />開啟新關係了嗎？</h2>
+          <h2 className="text-4xl md:text-6xl font-black mb-10 leading-tight text-white">準備好與您的狗狗<br />開啟新關係了嗎？</h2>
           <p className="text-xl md:text-2xl mb-14 opacity-90 max-w-2xl mx-auto text-center font-medium">現在預約專業行為諮詢，讓我們協助您找回輕鬆自在的相處時光。</p>
           <a href={TALLY.consultUrl} target="_blank" rel="noopener noreferrer" className="inline-block bg-white text-brand-orange px-16 py-6 rounded-full font-black text-2xl shadow-2xl hover:bg-orange-50 hover:-translate-y-2 transition-all text-center">
             預約諮詢 ➔
