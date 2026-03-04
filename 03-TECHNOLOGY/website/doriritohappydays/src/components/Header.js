@@ -39,7 +39,7 @@ export default function Header() {
                     <a href={TALLY.consultUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary flex items-center justify-center shadow-md scale-75 origin-right transition-all">
                         預約諮詢
                     </a>
-                    <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2 text-[#D4A373]">
+                    <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2 text-[#F75000]">
                         {mobileOpen ? '✕' : (
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7" />
