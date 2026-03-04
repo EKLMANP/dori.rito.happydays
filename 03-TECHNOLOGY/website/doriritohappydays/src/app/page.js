@@ -65,8 +65,8 @@ export default async function HomePage() {
             </div>
 
             <div className="flex flex-wrap justify-center md:justify-start gap-4 w-full">
-              <a href={TALLY.consultUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary text-white px-12 py-5 rounded-full font-black shadow-xl text-lg tracking-wide w-full sm:w-auto text-center cursor-pointer">
-                立即預約
+              <a href={TALLY.consultUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary text-white px-10 py-4 rounded-full font-black shadow-xl text-lg tracking-wide text-center cursor-pointer">
+                預約諮詢
               </a>
             </div>
           </div>
