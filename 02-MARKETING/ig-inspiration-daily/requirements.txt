@@ -1,0 +1,19 @@
+# Dori & Rito IG 靈感日報 — Dependencies
+
+# HTTP requests
+requests>=2.31.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Anthropic Claude API
+anthropic>=0.40.0
+
+# Apify client for IG scraping
+apify-client>=1.6.0
+
+# Scheduler
+schedule>=1.2.0
+
+# Timezone support
+pytz>=2024.1

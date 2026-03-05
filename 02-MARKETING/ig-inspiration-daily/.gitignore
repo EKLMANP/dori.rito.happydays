@@ -1,0 +1,16 @@
+# Environment
+.env
+
+# Runtime data
+data/
+*.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
