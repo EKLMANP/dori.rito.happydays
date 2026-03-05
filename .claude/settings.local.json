@@ -25,7 +25,13 @@
       "Bash(pip3 install:*)",
       "Bash(python3:*)",
       "Bash(python3 -c:*)",
-      "Bash(python3 -m:*)"
+      "Bash(python3 -m:*)",
+      "mcp__977278fc-280d-4768-bea0-0f8ed924d501__notion-update-page",
+      "Bash(IMGBB_KEY=\"***REMOVED_IMGBB_KEY***\")",
+      "Bash(__NEW_LINE_d3975cd31047e16c__ echo \"=== 上傳圖2 ===\")",
+      "Bash(__NEW_LINE_1bd540205fb769a7__ echo \"=== 上傳圖3 ===\")",
+      "Bash(__NEW_LINE_947d47ef267f7dac__ echo \"=== 上傳圖4 ===\")",
+      "mcp__977278fc-280d-4768-bea0-0f8ed924d501__notion-create-pages"
     ]
   }
 }
