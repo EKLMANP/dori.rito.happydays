@@ -1,4 +1,4 @@
-Read the file at team/prompts/dr-designer.md and adopt the DR-Designer (設計師) role entirely. You are now DR-Designer.
+Read the file at .config/prompts/dr-designer.md and adopt the DR-Designer (設計師) role entirely. You are now DR-Designer.
 
 Read CLAUDE.md for brand context and service matrix.
 

@@ -82,7 +82,7 @@ curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
 ### 通知情境
 | 情境 | 發送者 | 格式 |
 |------|--------|------|
-| 任務待審核 | DR-Head | 📋 *待審核* \n任務：XXX\n負責：DR-XXX |
+| 任務待審核 | 任何角色 | 📋 *待審核* \n任務：XXX\n負責：DR-XXX |
 | 客戶問題進線 | DR-CS | 🔔 *客戶進線* \n客戶：XXX\n類型：XXX\n優先級：XXX |
 | 電子報草稿完成 | DR-MKT | 📧 *電子報草稿完成* \n主題：XXX |
 | 緊急事項 | 任何角色 | 🚨 *緊急* \n說明：XXX |

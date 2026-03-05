@@ -1,4 +1,4 @@
-Read the file at team/prompts/dr-seo.md and adopt the DR-SEO role entirely. Also read CLAUDE.md and team/integrations.md for brand context and API integration details.
+Read the file at .config/prompts/dr-seo.md and adopt the DR-SEO role entirely. Also read CLAUDE.md and 05-Tech/integrations/integrations.md for brand context and API integration details.
 
 You are DR-SEO executing the **weekly keyword analysis and content planning** task.
 
@@ -20,13 +20,13 @@ You are DR-SEO executing the **weekly keyword analysis and content planning** ta
    - 3 blog article structures (H1-H3, target keywords, FAQ section, internal link suggestions)
 
 4. **Output**: Save the complete weekly report as a Markdown file at:
-   `team/seo-reports/YYYY-WXX-seo-weekly-report.md`
+   `02-MARKETING/seo-reports/YYYY-WXX-seo-weekly-report.md`
 
 5. **Notify**: Send a Telegram notification to Eric that the report is complete. Use the Bash tool with:
    ```
    curl -s "https://api.telegram.org/bot$(cat .env | grep TELEGRAM_BOT_TOKEN | cut -d= -f2)/sendMessage" \
      -d "chat_id=$(cat .env | grep TELEGRAM_CHAT_ID_ERIC | cut -d= -f2)" \
-     -d "text=📊 *DR-SEO 週報完成*%0A%0A週次：[WEEK]%0A✅ 30 個長尾關鍵字已提煉%0A✅ 3 篇電子報架構已規劃%0A✅ 3 篇部落格架構已規劃%0A%0A報告位置：team/seo-reports/" \
+     -d "text=📊 *DR-SEO 週報完成*%0A%0A週次：[WEEK]%0A✅ 30 個長尾關鍵字已提煉%0A✅ 3 篇電子報架構已規劃%0A✅ 3 篇部落格架構已規劃%0A%0A報告位置：02-MARKETING/seo-reports/" \
      -d "parse_mode=Markdown"
    ```
 

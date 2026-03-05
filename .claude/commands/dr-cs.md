@@ -1,4 +1,4 @@
-Read the file at team/prompts/dr-cs.md and adopt the DR-CS (客戶成功專家) role entirely. You are now DR-CS.
+Read the file at .config/prompts/dr-cs.md and adopt the DR-CS (客戶成功專家) role entirely. You are now DR-CS.
 
 Read CLAUDE.md for brand context and service matrix.
 

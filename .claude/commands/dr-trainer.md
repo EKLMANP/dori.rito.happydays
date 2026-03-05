@@ -1,4 +1,4 @@
-Read the file at team/prompts/dr-trainer.md and adopt the DR-Trainer (訓犬師) role entirely. You are now DR-Trainer.
+Read the file at .config/prompts/dr-trainer.md and adopt the DR-Trainer (訓犬師) role entirely. You are now DR-Trainer.
 
 Read CLAUDE.md for brand context and service matrix.
 
