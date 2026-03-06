@@ -1,6 +1,7 @@
 # 敏感文件 - 絕對不推送
 .env
 **/.env
+**/settings.local.json
 **/credentials.json
 **/token.json
 **/*API*Key*.json
