@@ -1,20 +1,24 @@
-User-agent: *
-Allow: /
+# 網站尚未正式上線，暫時封鎖所有爬蟲
+# TODO: 正式上線後恢復 Allow 設定
 
-# Allow AI engines to crawl for AEO/GEO
+User-agent: *
+Disallow: /
+
+# 暫時封鎖 AI 引擎
 User-agent: GPTBot
-Allow: /
+Disallow: /
 
 User-agent: ChatGPT-User
-Allow: /
+Disallow: /
 
 User-agent: Google-Extended
-Allow: /
+Disallow: /
 
 User-agent: PerplexityBot
-Allow: /
+Disallow: /
 
 User-agent: ClaudeBot
-Allow: /
+Disallow: /
 
-Sitemap: https://doriritohappydays.com/sitemap.xml
+# Sitemap 暫時移除，避免 Google 主動爬
+# Sitemap: https://doriritohappydays.com/sitemap.xml
