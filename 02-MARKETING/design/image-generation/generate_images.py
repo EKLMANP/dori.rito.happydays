@@ -11,6 +11,12 @@ import sys
 import time
 import os
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv not installed, relying on shell environment
+
 GOOGLE_API_KEY = os.environ.get("GOOGLE_AI_STUDIO_API_KEY")
 IMGBB_API_KEY = os.environ.get("IMGBB_API_KEY")
 
