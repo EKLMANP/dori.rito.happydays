@@ -25,13 +25,13 @@ class TelegramClient:
         self,
         text: str,
         chat_id: str = TELEGRAM_CHAT_ID,
-        parse_mode: str = "HTML",
+        parse_mode: str = "",
         retry_count: int = 3,
         retry_delay: float = 5.0,
     ) -> dict:
         """
         Send message with retry logic.
-        Uses HTML parse mode by default for more reliable formatting.
+        Uses plain text mode (no parse_mode) to avoid markdown/HTML conflicts.
         """
         for attempt in range(retry_count):
             try:
@@ -80,7 +80,7 @@ class TelegramClient:
         self,
         text: str,
         chat_id: str = TELEGRAM_CHAT_ID,
-        parse_mode: str = "HTML",
+        parse_mode: str = "",
     ) -> list[dict]:
         """
         Send a long message by splitting it into chunks.

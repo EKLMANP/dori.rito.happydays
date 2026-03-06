@@ -159,6 +159,8 @@ class AIAnalyzer:
             lines.append(f"- **帳號:** @{post['account']}")
             lines.append(f"- **類型:** {post.get('post_type', 'Unknown')}")
             lines.append(f"- **互動:** {post.get('likes', 0)} likes, {post.get('comments', 0)} comments")
+            if post.get("url"):
+                lines.append(f"- **URL:** {post['url']}")
             if hashtags:
                 lines.append(f"- **Hashtags:** {hashtags}")
             lines.append(f"- **內容:** {caption}")
