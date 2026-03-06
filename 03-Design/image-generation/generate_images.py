@@ -11,8 +11,13 @@ import sys
 import time
 import os
 
-GOOGLE_API_KEY = os.environ.get("GOOGLE_AI_STUDIO_API_KEY", "AIzaSyCOK86o99vA1MQQe4RgGkaL2GLUH4LZXz4")
-IMGBB_API_KEY = os.environ.get("IMGBB_API_KEY", "96048280db73aff42bcd80f12356c3f3")
+GOOGLE_API_KEY = os.environ.get("GOOGLE_AI_STUDIO_API_KEY")
+IMGBB_API_KEY = os.environ.get("IMGBB_API_KEY")
+
+if not GOOGLE_API_KEY or not IMGBB_API_KEY:
+    print("Error: GOOGLE_AI_STUDIO_API_KEY and IMGBB_API_KEY environment variables are required.")
+    print("Set them in your .env file or export them in your shell.")
+    sys.exit(1)
 
 
 def generate_image_imagen(prompt, aspect_ratio="16:9"):
