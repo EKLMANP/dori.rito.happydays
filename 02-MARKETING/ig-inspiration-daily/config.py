@@ -6,10 +6,10 @@ Dori & Rito IG 靈感日報 — Configuration
 
 import os
 
-# 嘗試載入 .env 檔案
+# 嘗試載入 .env 檔案（override=True 確保 .env 覆蓋系統既有的空值）
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    load_dotenv(override=True)
 except ImportError:
     pass  # python-dotenv 未安裝，使用系統環境變數
 
