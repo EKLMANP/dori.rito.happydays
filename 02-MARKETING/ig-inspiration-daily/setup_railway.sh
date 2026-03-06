@@ -2,9 +2,54 @@
 # IG 靈感日報 — Railway 環境變數設定腳本
 # 使用前請先執行：railway login
 # 然後執行：bash setup_railway.sh
+#
+# 前置條件：同目錄下需有 .env 檔案，包含以下變數：
+#   IG_DAILY_TELEGRAM_BOT_TOKEN
+#   IG_DAILY_TELEGRAM_CHAT_ID
+#   APIFY_API_TOKEN
+#   ANTHROPIC_API_KEY
+#   NOTION_API_TOKEN
 
 set -e
 
+# ── 讀取 .env ────────────────────────────────────────────────────
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="$SCRIPT_DIR/.env"
+
+if [[ ! -f "$ENV_FILE" ]]; then
+  echo "❌ 找不到 .env 檔案：$ENV_FILE"
+  echo "   請先建立 .env（可參考 .env.template）"
+  exit 1
+fi
+
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+
+# ── 必填變數檢查 ─────────────────────────────────────────────────
+REQUIRED_VARS=(
+  "IG_DAILY_TELEGRAM_BOT_TOKEN"
+  "IG_DAILY_TELEGRAM_CHAT_ID"
+  "APIFY_API_TOKEN"
+  "ANTHROPIC_API_KEY"
+  "NOTION_API_TOKEN"
+)
+
+MISSING=()
+for VAR in "${REQUIRED_VARS[@]}"; do
+  if [[ -z "${!VAR}" ]]; then
+    MISSING+=("$VAR")
+  fi
+done
+
+if [[ ${#MISSING[@]} -gt 0 ]]; then
+  echo "❌ .env 缺少以下必填變數："
+  for VAR in "${MISSING[@]}"; do
+    echo "   - $VAR"
+  done
+  exit 1
+fi
+
+# ── Railway 部署 ─────────────────────────────────────────────────
 PROJECT_ID="53ddb958-82de-4448-9bab-79843a7d0e9a"
 SERVICE_ID="162db91e-7da0-4403-87e6-2925d7347856"
 
@@ -17,11 +62,11 @@ railway link --project "$PROJECT_ID" --service "$SERVICE_ID"
 echo "📦 設定環境變數..."
 
 railway variables set \
-  IG_DAILY_TELEGRAM_BOT_TOKEN="***REMOVED_TELEGRAM_TOKEN***" \
-  IG_DAILY_TELEGRAM_CHAT_ID="-5153182461" \
-  APIFY_API_TOKEN="***REMOVED_APIFY_TOKEN***" \
-  ANTHROPIC_API_KEY="***REMOVED_ANTHROPIC_KEY_PARTIAL***XdBNZHl2wvRQbaNjsaTLdyZYWveY8rIJcGmuV3H5vpC93I4pDvG4kOz9f_KX440HuNb7pqilOuyz_MQ-QLfFGQAA" \
-  NOTION_API_TOKEN="***REMOVED_NOTION_TOKEN***" \
+  IG_DAILY_TELEGRAM_BOT_TOKEN="$IG_DAILY_TELEGRAM_BOT_TOKEN" \
+  IG_DAILY_TELEGRAM_CHAT_ID="$IG_DAILY_TELEGRAM_CHAT_ID" \
+  APIFY_API_TOKEN="$APIFY_API_TOKEN" \
+  ANTHROPIC_API_KEY="$ANTHROPIC_API_KEY" \
+  NOTION_API_TOKEN="$NOTION_API_TOKEN" \
   TZ="Asia/Taipei"
 
 echo "✅ 環境變數設定完成！"
