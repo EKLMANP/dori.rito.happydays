@@ -104,6 +104,7 @@ class IGInspirationBot:
 
             now = datetime.now(self.tz)
             date_str = now.strftime("%Y/%m/%d")
+            report_date = now.strftime("%Y-%m-%d")  # 鎖定日期，避免跨日後 record_report_sent 記錯日
 
             # Step 1: Scrape IG posts
             logger.info("Step 1/4: 抓取 IG 貼文...")
@@ -152,6 +153,7 @@ class IGInspirationBot:
                 self.data_store.record_report_sent(
                     insights_count=NUM_INSIGHTS,
                     accounts_scraped=len(accounts),
+                    report_date=report_date,
                 )
                 logger.info("✅ 每日靈感日報傳送成功！")
             else:
@@ -197,6 +199,16 @@ class IGInspirationBot:
     def check_missed_report(self):
         """啟動時檢查是否錯過今天的報告（以台北時間的 scrape 時間為基準）"""
         now = datetime.now(self.tz)
+
+        # 深夜（22:00 後）不補送：避免抓取過程跨日導致日期混亂
+        # 例：23:50 啟動，抓取花 20 分鐘，00:10 記錄成「明天」的報告，
+        # 導致今天 07:00 的排程被跳過。
+        if now.hour >= 22:
+            logger.info(
+                f"啟動時間 {now.strftime('%H:%M')} 台北超過 22:00，"
+                "跳過補送檢查（等候隔日 07:00 排程）"
+            )
+            return
 
         # 使用排程的 scrape 時間（06:50 台北）作為基準，而非目標送達時間（07:00）
         scrape_tw_hour = REPORT_HOUR if REPORT_MINUTE >= 10 else REPORT_HOUR - 1

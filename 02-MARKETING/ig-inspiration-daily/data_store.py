@@ -350,17 +350,20 @@ class DataStore:
         return row is not None
 
     def record_report_sent(
-        self, insights_count: int, accounts_scraped: int
+        self, insights_count: int, accounts_scraped: int, report_date: Optional[str] = None
     ) -> None:
         """Record that today's report was successfully sent.
 
         Args:
             insights_count: Number of insights included in the report.
             accounts_scraped: Number of IG accounts scraped for this report.
+            report_date: YYYY-MM-DD string to record as the report date.
+                If omitted, uses current Taipei date. Pass the date captured
+                at the *start* of report generation to avoid cross-midnight drift.
         """
         conn = self._get_conn()
         now_str = _now_taipei().isoformat()
-        today = _today_str()
+        today = report_date or _today_str()
 
         conn.execute(
             """
