@@ -55,7 +55,7 @@ class AIAnalyzer:
             date_str: 日期字串（YYYY/MM/DD）
 
         Returns:
-            AI 產出的完整靈感報告（Markdown 格式）
+            AI 產出的完整靈感報告（純文字格式）
         """
         if not posts:
             logger.warning("沒有貼文可分析")
@@ -155,15 +155,15 @@ class AIAnalyzer:
         for i, post in enumerate(posts, 1):
             caption = post.get("caption", "")[:500]  # truncate to 500 chars
             hashtags = ", ".join(post.get("hashtags", [])[:10])
-            lines.append(f"### 貼文 {i}")
-            lines.append(f"- **帳號:** @{post['account']}")
-            lines.append(f"- **類型:** {post.get('post_type', 'Unknown')}")
-            lines.append(f"- **互動:** {post.get('likes', 0)} likes, {post.get('comments', 0)} comments")
+            lines.append(f"貼文 {i}")
+            lines.append(f"- 帳號：@{post['account']}")
+            lines.append(f"- 類型：{post.get('post_type', 'Unknown')}")
+            lines.append(f"- 互動：{post.get('likes', 0)} likes, {post.get('comments', 0)} comments")
             if post.get("url"):
-                lines.append(f"- **URL:** {post['url']}")
+                lines.append(f"- URL：{post['url']}")
             if hashtags:
-                lines.append(f"- **Hashtags:** {hashtags}")
-            lines.append(f"- **內容:** {caption}")
+                lines.append(f"- Hashtags：{hashtags}")
+            lines.append(f"- 內容：{caption}")
             lines.append("")
 
         count = end_n - start_n + 1

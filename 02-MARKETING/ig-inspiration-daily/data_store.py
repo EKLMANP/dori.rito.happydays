@@ -176,6 +176,7 @@ class DataStore:
                 post.get("hashtags", []), ensure_ascii=False
             )
             try:
+                before = conn.total_changes
                 conn.execute(
                     """
                     INSERT OR IGNORE INTO posts
@@ -195,7 +196,7 @@ class DataStore:
                         post.get("scraped_at", now_str),
                     ),
                 )
-                if conn.total_changes:
+                if conn.total_changes > before:
                     inserted += 1
             except sqlite3.IntegrityError:
                 # Duplicate post ID, skip silently
@@ -237,6 +238,9 @@ class DataStore:
                 post["hashtags"] = []
             # Convert analyzed int to bool
             post["analyzed"] = bool(post["analyzed"])
+            # Reconstruct URL from post ID (not stored in DB)
+            post_id = post.get("id", "")
+            post["url"] = f"https://www.instagram.com/p/{post_id}/" if post_id else ""
             results.append(post)
 
         logger.debug("Retrieved %d posts from last %d days", len(results), days)
