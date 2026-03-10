@@ -35,6 +35,7 @@ from config import (
     TIMEZONE,
     APIFY_MONTHLY_LIMIT,
     NUM_INSIGHTS,
+    AUTHORIZED_USERS,
     validate_config,
 )
 from telegram_client import TelegramClient
@@ -74,6 +75,9 @@ class IGInspirationBot:
         self.daily_errors = 0
         self.daily_tasks_created = 0
 
+        # Concurrency guard for report generation
+        self._report_lock = threading.Lock()
+
         # Graceful shutdown
         signal.signal(signal.SIGINT, self._shutdown)
         signal.signal(signal.SIGTERM, self._shutdown)
@@ -83,20 +87,41 @@ class IGInspirationBot:
         logger.info("收到關閉信號，正在停止...")
         self.running = False
 
+    def _is_authorized(self, user_id: str) -> bool:
+        """檢查使用者是否有權限執行特權指令
+
+        若 AUTHORIZED_USERS 為空（未設定），則允許所有人（向下相容）。
+        """
+        if not AUTHORIZED_USERS:
+            return True
+        return str(user_id) in AUTHORIZED_USERS
+
     # ──────────────────────────────────────
     # Daily Report Generation
     # ──────────────────────────────────────
 
-    def generate_daily_report(self):
+    def generate_daily_report(self, notify_chat_id: str = ""):
         """
         產生並推送每日靈感日報
-        此方法由排程器在每天 06:50 觸發
+        此方法由排程器或 /report 指令觸發（可能在 daemon thread 中執行）
+
+        Args:
+            notify_chat_id: 若由 /report 觸發，傳入使用者 chat_id 以回覆進度
         """
-        logger.info("=" * 60)
-        logger.info("開始產生每日靈感日報...")
-        logger.info("=" * 60)
+        acquired = self._report_lock.acquire(blocking=False)
+        if not acquired:
+            logger.warning("報告產生中，跳過重複觸發")
+            if notify_chat_id:
+                self.telegram.send_message(
+                    "⏳ 報告正在產生中，請稍候...", notify_chat_id
+                )
+            return
 
         try:
+            logger.info("=" * 60)
+            logger.info("開始產生每日靈感日報...")
+            logger.info("=" * 60)
+
             # Check if report was already sent today (crash recovery)
             if self.data_store.is_report_sent_today():
                 logger.info("今日報告已送出，跳過")
@@ -168,6 +193,8 @@ class IGInspirationBot:
                 self.telegram.send_message(msg, TELEGRAM_CHAT_ID)
             except Exception:
                 logger.exception("傳送錯誤通知也失敗了")
+        finally:
+            self._report_lock.release()
 
     def send_health_report(self):
         """推送每日系統健康報告（23:00）"""
@@ -230,25 +257,32 @@ class IGInspirationBot:
         text = message.get("text", "")
         chat_id = str(message.get("chat", {}).get("id", ""))
         user = message.get("from", {})
+        user_id = str(user.get("id", ""))
         username = user.get("username", user.get("first_name", "Unknown"))
 
         if not text:
             return
 
-        logger.info(f"收到訊息 from @{username}: {text[:50]}...")
+        logger.info(f"收到訊息 from @{username} (uid:{user_id}): {text[:50]}...")
 
         # Commands
         if text.startswith("/"):
-            self._handle_command(text, chat_id, username)
+            self._handle_command(text, chat_id, username, user_id)
             return
 
-        # Task commands
+        # Task commands (requires authorization)
         task = parse_task_command(text)
         if task:
+            if not self._is_authorized(user_id):
+                logger.warning(f"未授權的任務建立嘗試：uid={user_id} @{username}")
+                self.telegram.send_message(
+                    "⛔ 你沒有權限建立任務。請聯繫管理員。", chat_id
+                )
+                return
             self._handle_task(task, chat_id)
             return
 
-    def _handle_command(self, text: str, chat_id: str, username: str):
+    def _handle_command(self, text: str, chat_id: str, username: str, user_id: str = ""):
         """處理 Bot 指令"""
         command = text.split()[0].lower().split("@")[0]  # Handle /command@botname
 
@@ -301,10 +335,18 @@ class IGInspirationBot:
             self.telegram.send_message(status, chat_id)
 
         elif command == "/report":
+            if not self._is_authorized(user_id):
+                logger.warning(f"未授權的 /report 嘗試：uid={user_id} @{username}")
+                self.telegram.send_message(
+                    "⛔ 你沒有權限觸發報告。請聯繫管理員。", chat_id
+                )
+                return
             self.telegram.send_message("⏳ 正在產生靈感日報，請稍候...", chat_id)
             # Run in a thread so it doesn't block polling
             thread = threading.Thread(
-                target=self.generate_daily_report, daemon=True
+                target=self.generate_daily_report,
+                args=(chat_id,),
+                daemon=True,
             )
             thread.start()
 
@@ -473,7 +515,14 @@ class IGInspirationBot:
         scrape_utc_str = f"{scrape_utc_h:02d}:{scrape_utc_m:02d}"
         health_utc_str = f"{health_utc_h:02d}:{health_utc_m:02d}"
 
-        schedule.every().day.at(scrape_utc_str).do(self.generate_daily_report)
+        def _threaded_report():
+            """在 daemon thread 中執行報告，避免阻塞主迴圈 5-15 分鐘"""
+            thread = threading.Thread(
+                target=self.generate_daily_report, daemon=True
+            )
+            thread.start()
+
+        schedule.every().day.at(scrape_utc_str).do(_threaded_report)
         schedule.every().day.at(health_utc_str).do(self.send_health_report)
 
         report_time_tw = f"{REPORT_HOUR:02d}:{REPORT_MINUTE:02d}"

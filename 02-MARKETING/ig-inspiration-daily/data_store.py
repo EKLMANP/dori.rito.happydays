@@ -55,7 +55,7 @@ class DataStore:
     def _get_conn(self) -> sqlite3.Connection:
         """Return (or create) a persistent SQLite connection."""
         if self._conn is None:
-            self._conn = sqlite3.connect(self.db_path)
+            self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
             self._conn.row_factory = sqlite3.Row
             self._conn.execute("PRAGMA journal_mode=WAL")
             self._conn.execute("PRAGMA foreign_keys=ON")

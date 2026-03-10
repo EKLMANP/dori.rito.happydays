@@ -96,7 +96,8 @@ os.makedirs(DATA_DIR, exist_ok=True)
 # ──────────────────────────────────────
 # Authorized Users (Telegram user IDs)
 # ──────────────────────────────────────
-AUTHORIZED_USERS = os.getenv("IG_DAILY_AUTHORIZED_USERS", "").split(",")
+_raw_auth = os.getenv("IG_DAILY_AUTHORIZED_USERS", "")
+AUTHORIZED_USERS = [uid.strip() for uid in _raw_auth.split(",") if uid.strip()]
 
 # ──────────────────────────────────────
 # Brand Info (for AI prompts)
