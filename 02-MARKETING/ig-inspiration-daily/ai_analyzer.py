@@ -147,7 +147,7 @@ class AIAnalyzer:
             end_n = NUM_INSIGHTS
 
         lines = [
-            f"## 今日 IG 數據（{date_str}）",
+            f"今日 IG 數據（{date_str}）",
             f"共分析 {len(posts)} 則貼文，來自 {account_count} 個帳號",
             "",
         ]
@@ -155,36 +155,36 @@ class AIAnalyzer:
         for i, post in enumerate(posts, 1):
             caption = post.get("caption", "")[:500]  # truncate to 500 chars
             hashtags = ", ".join(post.get("hashtags", [])[:10])
+            url = post.get("url", "")
             lines.append(f"貼文 {i}")
-            lines.append(f"- 帳號：@{post['account']}")
-            lines.append(f"- 類型：{post.get('post_type', 'Unknown')}")
-            lines.append(f"- 互動：{post.get('likes', 0)} likes, {post.get('comments', 0)} comments")
-            if post.get("url"):
-                lines.append(f"- URL：{post['url']}")
+            lines.append(f"  帳號：@{post['account']}")
+            lines.append(f"  類型：{post.get('post_type', 'Unknown')}")
+            lines.append(f"  互動：{post.get('likes', 0)} likes, {post.get('comments', 0)} comments")
+            lines.append(f"  URL：{url if url else '無'}")
             if hashtags:
-                lines.append(f"- Hashtags：{hashtags}")
-            lines.append(f"- 內容：{caption}")
+                lines.append(f"  Hashtags：{hashtags}")
+            lines.append(f"  內容：{caption}")
             lines.append("")
 
         count = end_n - start_n + 1
         if include_trends:
             lines.append(
-                f"## 重要：你必須產出恰好 {count} 則靈感，從 {start_n}/{NUM_INSIGHTS} 到 {end_n}/{NUM_INSIGHTS}，不多不少。"
+                f"[重要] 你必須產出恰好 {count} 則靈感，從 {start_n}/{NUM_INSIGHTS} 到 {end_n}/{NUM_INSIGHTS}，不多不少。"
                 f"並在所有靈感之後加上「📈 趨勢觀察」和「🎯 本週行動建議」。"
             )
         else:
             lines.append(
-                f"## 重要：你必須產出恰好 {count} 則靈感，從 {start_n}/{NUM_INSIGHTS} 到 {end_n}/{NUM_INSIGHTS}，不多不少。"
+                f"[重要] 你必須產出恰好 {count} 則靈感，從 {start_n}/{NUM_INSIGHTS} 到 {end_n}/{NUM_INSIGHTS}，不多不少。"
                 f"不需要趨勢觀察或行動建議（將由第二批次補充）。"
             )
         lines.append(
-            f"請嚴格遵守系統提示中的輸出格式，確保每則靈感（{start_n}/10 到 {end_n}/10）"
+            f"\n請嚴格遵守系統提示中「正確示範」的輸出格式，確保每則靈感（{start_n}/10 到 {end_n}/10）"
             f"都有完整的 🎬 IG Reel 腳本、📑 Carousel 架構、📧 電子報標題、📝 部落格標題和 💰 變現建議。"
             f"不得省略任何一則靈感。\n\n"
-            f"## 格式要求（務必遵守）\n"
-            f"1. 每則靈感必須包含「來源：@帳號」和「🔗 貼文URL」（從上方貼文數據中取用對應的 URL）\n"
-            f"2. 禁止使用任何 Markdown 語法（禁止 **粗體**、禁止 # 標題、禁止 *斜體*），直接輸出純文字\n"
-            f"3. 使用 emoji 作為段落分隔符號（如 📌 🔍 🎬 📑 📧 📝 💰），不使用 # 或 ** 做標記"
+            f"格式提醒（違反就算失敗）：\n"
+            f"1. 每則靈感必須包含「來源：@帳號」和「🔗 貼文URL」，URL 直接從上方貼文數據的 URL 欄位複製貼上\n"
+            f"2. 絕對禁止使用 ** 符號，不可出現任何 Markdown，只用純文字\n"
+            f"3. 段落標題只用 emoji 開頭（📌 🔍 🎬 📑 📧 📝 💰），不加任何特殊格式符號"
         )
 
         return "\n".join(lines)
