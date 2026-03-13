@@ -1,4 +1,4 @@
-import { TALLY } from '@/lib/constants';
+import ContactForm from '@/components/ContactForm';
 
 export const metadata = {
     title: '合作洽詢',
@@ -20,7 +20,7 @@ export default function ContactPage() {
                 <div className="container mx-auto max-w-2xl relative z-10">
                     <h1 className="text-4xl md:text-5xl font-black mb-4 text-gray-900">合作洽詢</h1>
                     <p className="text-gray-600 text-lg leading-relaxed font-medium">
-                        歡迎各類合作提案！請填寫以下表單，我們將在 2 個工作天內回覆。
+                        歡迎各類合作提案！請填寫以下表單，我們將在 3 個工作天內回覆。
                     </p>
                 </div>
             </section>
@@ -28,24 +28,8 @@ export default function ContactPage() {
             {/* Collaboration Form */}
             <section className="bg-white py-16 px-6 relative z-10">
                 <div className="container mx-auto max-w-4xl">
-                    {/* Tally Form Embed */}
-                    <div className="bg-gray-50 rounded-[48px] px-8 pb-6 md:px-12 md:pb-8 pt-0 border border-gray-100 flex flex-col w-full md:w-1/2 mx-auto relative overflow-hidden">
-                        <div className="relative w-full mt-0 md:-mt-4">
-                            <iframe
-                                src={`${TALLY.partnerUrl}?transparentBackground=1`}
-                                width="100%"
-                                height="750"
-                                frameBorder="0"
-                                marginHeight="0"
-                                marginWidth="0"
-                                title="合作洽詢表單"
-                                id="contact-tally-form"
-                                className="rounded-2xl border-none"
-                                loading="lazy"
-                            />
-                            {/* Overlay to hide Tally watermark */}
-                            <div className="absolute bottom-0 left-0 w-full h-[50px] bg-gray-50 pointer-events-none z-10" aria-hidden="true"></div>
-                        </div>
+                    <div className="bg-gray-50 rounded-[48px] px-8 py-10 md:px-12 md:py-12 border border-gray-100 w-full md:w-1/2 mx-auto">
+                        <ContactForm />
                     </div>
                 </div>
             </section>
