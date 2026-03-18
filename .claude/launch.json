@@ -6,8 +6,8 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000,
-      "cwd": "/Users/ericpan/Dori & Rito Happydays (Dog training)/.claude/worktrees/fervent-kilby/05-Tech/website",
-      "autoPort": true
+      "autoPort": false,
+      "cwd": "05-Tech/website"
     }
   ]
 }

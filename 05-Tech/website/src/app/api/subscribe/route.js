@@ -128,7 +128,7 @@ async function sendConfirmationEmail(recipientEmail) {
     const confirmUrl = `${siteUrl}/api/subscribe/confirm?email=${encodeURIComponent(recipientEmail)}&expires=${expires}&token=${token}`;
 
     const fromAddress = `Dori & Rito Happydays <hello@${MAILGUN_DOMAIN}>`;
-    const subject = '嗨，請確認你的訂閱 — Dori & Rito';
+    const subject = '嗨，請確認你的訂閱 — Dori & Rito Happydays';
 
     // Plain text version
     const textBody = `嗨～

@@ -38,7 +38,84 @@ function queryDS(dataSourceId, options = {}) {
 }
 
 // ============================================================
-// Helpers
+// Generic helpers (re-exported for other modules)
+// ============================================================
+
+/** Check if Notion API key is configured */
+export function isNotionConfigured() {
+    return !!process.env.NOTION_API_KEY;
+}
+
+/** Get the singleton Notion client */
+export function getNotionClient() {
+    return getClient();
+}
+
+/**
+ * Generic database query with auto-pagination (uses databases.query for backward compat).
+ * Prefer the typed functions (listCustomers, listOrders, etc.) for CRM operations.
+ */
+export async function queryDatabase(dbId, filter = undefined, sorts = undefined, maxPages = 3) {
+    const notion = getClient();
+    const results = [];
+    let cursor = undefined;
+    let pageCount = 0;
+
+    do {
+        const response = await notion.databases.query({
+            database_id: dbId,
+            filter,
+            sorts,
+            start_cursor: cursor,
+            page_size: 100,
+        });
+        results.push(...response.results);
+        cursor = response.has_more ? response.next_cursor : undefined;
+        pageCount++;
+    } while (cursor && pageCount < maxPages);
+
+    return results;
+}
+
+/** Generic page creation */
+export async function createPage(dbId, properties) {
+    return getClient().pages.create({
+        parent: { database_id: dbId },
+        properties,
+    });
+}
+
+/** Extract a property value from a Notion page by name */
+export function getPropValue(page, propName) {
+    const prop = page.properties?.[propName];
+    if (!prop) return null;
+
+    switch (prop.type) {
+        case 'title':
+            return prop.title.map(t => t.plain_text).join('');
+        case 'rich_text':
+            return prop.rich_text.map(t => t.plain_text).join('');
+        case 'number':
+            return prop.number;
+        case 'select':
+            return prop.select?.name || null;
+        case 'multi_select':
+            return prop.multi_select.map(s => s.name);
+        case 'date':
+            return prop.date?.start || null;
+        case 'email':
+            return prop.email || null;
+        case 'status':
+            return prop.status?.name || null;
+        case 'relation':
+            return prop.relation.map(r => r.id);
+        default:
+            return null;
+    }
+}
+
+// ============================================================
+// Internal Helpers
 // ============================================================
 
 /** Extract plain text from a Notion rich_text array */
