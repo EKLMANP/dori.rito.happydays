@@ -2,11 +2,10 @@ import { NextResponse } from 'next/server';
 import { validateAdminPin } from '@/lib/admin-auth';
 import { isNotionConfigured, queryDatabase, getPropValue } from '@/lib/notion';
 
-const CRM_DB_ID = process.env.NOTION_CRM_DB_ID || '22a17e11503d80eea2b5ccbe69a16c59';
+const CRM_DB_ID = process.env.NOTION_CRM_DB_ID || process.env.NOTION_CUSTOMER_DB_ID;
 
 /**
  * GET /api/admin/customers?search=xxx
- * 取得客戶列表（供下拉選單）
  */
 export async function GET(request) {
     const auth = validateAdminPin(request);

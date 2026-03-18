@@ -35,7 +35,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 export default function MonthlyChart({ data }) {
     if (!data?.length) {
         return (
-            <div className="bg-white rounded-2xl border border-gray-100 p-6 text-center text-gray-400 text-sm">
+            <div className="bg-white rounded-xl border border-gray-200 p-6 text-center text-gray-400 text-sm">
                 尚無數據
             </div>
         );
@@ -49,7 +49,7 @@ export default function MonthlyChart({ data }) {
     }));
 
     return (
-        <div className="bg-white rounded-2xl border border-gray-100 p-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h3 className="text-sm font-semibold text-gray-700 mb-3">月趨勢</h3>
             <ResponsiveContainer width="100%" height={280}>
                 <ComposedChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>

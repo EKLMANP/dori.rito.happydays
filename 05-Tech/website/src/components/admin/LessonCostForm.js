@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useAdminAuth } from './AdminAuthGate';
+import { useAdminPin } from './AdminPinGate';
 
 const TRAINERS = ['Eric Pan', 'Pennee Tan'];
 const TRANSPORT_TYPES = ['捷運', '客運', '其他'];
@@ -12,7 +12,7 @@ function getTodayStr() {
 }
 
 export default function LessonCostForm() {
-    const { adminFetch } = useAdminAuth();
+    const { adminFetch } = useAdminPin();
     const [form, setForm] = useState({
         trainer: '',
         customerId: '',
@@ -128,7 +128,7 @@ export default function LessonCostForm() {
 
     if (status === 'success' && summary) {
         return (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center">
+            <div className="bg-white rounded-xl border border-gray-200 p-6 text-center max-w-lg mx-auto">
                 <div className="text-4xl mb-3">✅</div>
                 <h3 className="text-lg font-bold text-gray-900 mb-4">成本已記錄！</h3>
                 <div className="bg-gray-50 rounded-xl p-4 text-left space-y-2 text-sm mb-6">
@@ -155,7 +155,7 @@ export default function LessonCostForm() {
                 </div>
                 <button
                     onClick={resetForm}
-                    className="w-full py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold transition"
+                    className="w-full py-3 rounded-xl bg-brand-orange hover:bg-orange-600 text-white font-bold transition"
                 >
                     再記一筆
                 </button>
@@ -166,7 +166,7 @@ export default function LessonCostForm() {
     const inputClass = "w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition";
 
     return (
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-6 space-y-5 max-w-lg mx-auto">
             {/* 訓練師 */}
             <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -352,7 +352,7 @@ export default function LessonCostForm() {
             <button
                 type="submit"
                 disabled={status === 'loading' || !form.trainer || !form.date}
-                className="w-full py-3.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-base transition disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full py-3.5 rounded-xl bg-brand-orange hover:bg-orange-600 text-white font-bold text-base transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
                 {status === 'loading' ? '送出中...' : '記錄成本'}
             </button>

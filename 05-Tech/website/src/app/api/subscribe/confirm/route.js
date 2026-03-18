@@ -27,11 +27,13 @@ export async function GET(request) {
     }
 
     try {
-        // Update Ghost member: add「已確認」label
-        await updateGhostMemberLabel(email);
+        // Update Ghost member: add「已確認」label (returns false if already confirmed)
+        const isFirstConfirmation = await updateGhostMemberLabel(email);
 
-        // Send the actual welcome email
-        await sendWelcomeEmail(email);
+        // Only send welcome email on the FIRST confirmation (idempotency guard)
+        if (isFirstConfirmation) {
+            await sendWelcomeEmail(email);
+        }
 
         return NextResponse.redirect(`${siteUrl}/thank-you?status=success`);
     } catch (err) {
@@ -42,12 +44,14 @@ export async function GET(request) {
 
 /**
  * Update Ghost member to add「已確認」label.
+ * Returns true if this is the FIRST confirmation (label was newly added),
+ * false if the member was already confirmed (idempotency guard).
  */
 async function updateGhostMemberLabel(email) {
     const GHOST_URL = process.env.GHOST_URL;
     const GHOST_ADMIN_API_KEY = process.env.GHOST_ADMIN_API_KEY;
 
-    if (!GHOST_URL || !GHOST_ADMIN_API_KEY) return;
+    if (!GHOST_URL || !GHOST_ADMIN_API_KEY) return true; // No Ghost → send email anyway
 
     const [id, secret] = GHOST_ADMIN_API_KEY.split(':');
     const { createHmac } = await import('crypto');
@@ -72,19 +76,25 @@ async function updateGhostMemberLabel(email) {
 
     if (!searchRes.ok) {
         console.error('Ghost member search failed:', await searchRes.text());
-        return;
+        return true; // Ghost error → send email as fallback
     }
 
     const searchData = await searchRes.json();
     const member = searchData?.members?.[0];
     if (!member) {
         console.warn(`Member not found for email: ${email}`);
-        return;
+        return true; // Member missing → send email anyway
     }
 
-    // Update member with「已確認」label
+    // Idempotency check: if already confirmed, skip welcome email
     const existingLabels = (member.labels || []).map((l) => ({ name: l.name }));
-    const updatedLabels = [...existingLabels, { name: '已確認' }];
+    if (existingLabels.some((l) => l.name === '已確認')) {
+        console.log(`⏭️ Already confirmed, skipping welcome email: ${email}`);
+        return false;
+    }
+
+    // First confirmation — add「已確認」label
+    const updatedLabels = [...existingLabels.map((l) => ({ name: l.name })), { name: '已確認' }];
 
     const updateRes = await fetch(`${GHOST_URL}/ghost/api/admin/members/${member.id}/`, {
         method: 'PUT',
@@ -103,6 +113,8 @@ async function updateGhostMemberLabel(email) {
     } else {
         console.error('Ghost member update failed:', await updateRes.text());
     }
+
+    return true; // First confirmation → send welcome email
 }
 
 /**
@@ -118,29 +130,28 @@ async function sendWelcomeEmail(recipientEmail) {
         return;
     }
 
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://doriritohappydays.com';
     const fromAddress = `Dori & Rito Happydays <hello@${MAILGUN_DOMAIN}>`;
-    const subject = '歡迎加入，一起打造你與毛孩的理想生活';
+    const subject = '歡迎加入Dori & Rito Happydays電子報社群，一起打造你與毛孩的理想生活！';
 
     const textBody = `嗨！
 
-感謝你確認訂閱 Dori & Rito Happydays 電子報！
+感謝你訂閱 Dori & Rito Happydays 電子報！
 
 從現在起，我們每週會和你分享：
 - 在陪伴毛孩的過程中，可以用哪些心態和方法來調整毛孩的行為
-- 解決吠叫、焦慮、暴衝等常見問題的具體步驟
-- 提升毛孩福祉的科學資訊
-
-如果你的毛孩有任何行為問題需要專業協助，歡迎先填寫表單，預約線上諮詢：
-https://tally.so/r/KY55Bg
+- 解決吠叫、焦慮、暴衝、啃咬等常見問題的具體步驟
+- 提升毛孩生活的科學資訊
 
 一起打造你與毛孩的理想生活 🐶
 
 Dori & Rito Happydays
-KPA 認證正向訓犬師
 
 ---
 官方網站：https://doriritohappydays.com
 Instagram：https://www.instagram.com/dori.rito.happydays/
+
+你收到這封信是因為你確認訂閱了我們的電子報。
 `;
 
     const htmlBody = `<!DOCTYPE html>
@@ -151,28 +162,22 @@ Instagram：https://www.instagram.com/dori.rito.happydays/
 
 <p>嗨！</p>
 
-<p>感謝你確認訂閱 Dori & Rito Happydays 電子報！</p>
+<p>感謝你訂閱 Dori & Rito Happydays 電子報！</p>
 
 <p>從現在起，我們每週會和你分享：</p>
 <ul style="padding-left:20px;color:#333;">
 <li>在陪伴毛孩的過程中，可以用哪些心態和方法來調整毛孩的行為</li>
-<li>解決吠叫、焦慮、暴衝等常見問題的具體步驟</li>
-<li>提升毛孩福祉的科學資訊</li>
+<li>解決吠叫、焦慮、暴衝、啃咬等常見問題的具體步驟</li>
+<li>提升毛孩生活的科學資訊</li>
 </ul>
-
-<p>如果你的毛孩有任何行為問題需要專業協助，歡迎先填寫表單，預約線上諮詢：<br>
-<a href="https://tally.so/r/KY55Bg" style="color:#c5a97a;">https://tally.so/r/KY55Bg</a></p>
 
 <p>一起打造你與毛孩的理想生活 🐶</p>
 
-<p style="margin-top:24px;">
-Dori & Rito Happydays<br>
-<span style="color:#888;font-size:14px;">KPA 認證正向訓犬師</span>
-</p>
+<p style="margin-top:24px;">Dori & Rito Happydays</p>
 
 <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
 <p style="font-size:13px;color:#999;">
-<a href="https://doriritohappydays.com" style="color:#999;">官方網站</a> · 
+<a href="https://doriritohappydays.com" style="color:#999;">官方網站</a> ｜
 <a href="https://www.instagram.com/dori.rito.happydays/" style="color:#999;">Instagram</a><br>
 你收到這封信是因為你確認訂閱了我們的電子報。
 </p>

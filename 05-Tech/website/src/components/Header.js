@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { NAV_LINKS, TALLY } from '@/lib/constants';
+import { NAV_LINKS } from '@/lib/constants';
 
 export default function Header() {
     const [scrolled, setScrolled] = useState(false);
@@ -31,14 +31,14 @@ export default function Header() {
                             {link.label}
                         </Link>
                     ))}
-                    <a href={TALLY.consultUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary flex items-center justify-center shadow-md scale-90 origin-right transition-all">
+                    <Link href="/booking" className="btn btn-primary flex items-center justify-center shadow-md scale-90 origin-right transition-all">
                         預約諮詢
-                    </a>
+                    </Link>
                 </div>
                 <div className="md:hidden flex items-center gap-4">
-                    <a href={TALLY.consultUrl} target="_blank" rel="noopener noreferrer" className="btn btn-primary flex items-center justify-center shadow-md scale-75 origin-right transition-all">
+                    <Link href="/booking" className="btn btn-primary flex items-center justify-center shadow-md scale-75 origin-right transition-all">
                         預約諮詢
-                    </a>
+                    </Link>
                     <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2 text-[#F75000]">
                         {mobileOpen ? '✕' : (
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">

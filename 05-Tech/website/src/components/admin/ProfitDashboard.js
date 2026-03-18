@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { useAdminAuth } from './AdminAuthGate';
+import { useAdminPin } from './AdminPinGate';
 
 const MonthlyChart = dynamic(() => import('./MonthlyChart'), { ssr: false });
 
@@ -23,7 +23,7 @@ function SummaryCard({ label, value, subtext, color = 'gray' }) {
 }
 
 export default function ProfitDashboard() {
-    const { adminFetch } = useAdminAuth();
+    const { adminFetch } = useAdminPin();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -31,7 +31,7 @@ export default function ProfitDashboard() {
     useEffect(() => {
         async function fetchData() {
             try {
-                const res = await adminFetch('/api/admin/dashboard?months=6');
+                const res = await adminFetch('/api/admin/profit-dashboard?months=6');
                 if (!res.ok) throw new Error('Failed to fetch');
                 const json = await res.json();
                 setData(json);
@@ -46,7 +46,7 @@ export default function ProfitDashboard() {
 
     if (loading) {
         return (
-            <div className="text-center py-12 text-gray-400">
+            <div className="text-center py-8 text-gray-400 text-sm">
                 載入營運數據中...
             </div>
         );
@@ -54,7 +54,7 @@ export default function ProfitDashboard() {
 
     if (error) {
         return (
-            <div className="text-center py-12 text-red-500">
+            <div className="text-center py-8 text-red-500 text-sm">
                 載入失敗：{error}
             </div>
         );
@@ -65,7 +65,7 @@ export default function ProfitDashboard() {
 
     if (!current) {
         return (
-            <div className="text-center py-12 text-gray-400">
+            <div className="text-center py-8 text-gray-400 text-sm">
                 尚無營運數據
             </div>
         );
@@ -76,7 +76,7 @@ export default function ProfitDashboard() {
     return (
         <div className="space-y-4">
             {/* 摘要卡片 */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <SummaryCard
                     label="本月營收"
                     value={current.revenue}
@@ -101,7 +101,7 @@ export default function ProfitDashboard() {
 
             {/* 訓練師拆分 */}
             {trainers.length > 0 && (
-                <div className="bg-white rounded-2xl border border-gray-100 p-4">
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
                     <h3 className="text-sm font-semibold text-gray-700 mb-3">訓練師拆分（本月）</h3>
                     <div className="space-y-3">
                         {trainers.map(([name, stats]) => (
@@ -122,7 +122,7 @@ export default function ProfitDashboard() {
 
             {/* 成本明細 */}
             {current.totalCosts > 0 && (
-                <div className="bg-white rounded-2xl border border-gray-100 p-4">
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
                     <h3 className="text-sm font-semibold text-gray-700 mb-3">成本明細（本月）</h3>
                     <div className="space-y-2 text-sm">
                         <CostRow label="停車費" value={current.costBreakdown.parking} total={current.totalCosts} />
@@ -136,7 +136,7 @@ export default function ProfitDashboard() {
             )}
 
             {/* 課堂數 */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-4 text-center">
+            <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
                 <p className="text-xs text-gray-400 mb-1">本月課堂數</p>
                 <p className="text-3xl font-bold text-gray-900">{current.lessonCount}</p>
             </div>
