@@ -1,7 +1,6 @@
 import './globals.css';
 import Script from 'next/script';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import PublicShell from '@/components/PublicShell';
 import { BRAND } from '@/lib/constants';
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
@@ -63,11 +62,9 @@ export default function RootLayout({ children }) {
         )}
       </head>
       <body>
-        <Header />
-        <main>
+        <PublicShell>
           {children}
-        </main>
-        <Footer />
+        </PublicShell>
       </body>
     </html>
   );
