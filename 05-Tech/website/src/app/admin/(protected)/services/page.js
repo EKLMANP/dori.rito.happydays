@@ -1,210 +1,368 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { SEED_SERVICES } from '@/lib/seed-data';
+
+const SERVICE_TYPES = ['Offline', 'Online', 'Product', 'Service'];
+const STATUS_OPTIONS = ['Live', 'In prep', 'Not started'];
+
+const TYPE_COLORS = {
+    'Offline': 'bg-blue-100 text-blue-700',
+    'Online': 'bg-purple-100 text-purple-700',
+    'Product': 'bg-orange-100 text-orange-700',
+    'Service': 'bg-green-100 text-green-700',
+};
+
+const STATUS_COLORS = {
+    'Live': 'bg-green-100 text-green-700',
+    'In prep': 'bg-yellow-100 text-yellow-700',
+    'Not started': 'bg-gray-100 text-gray-700',
+};
+
+// Display labels for Chinese UI
+const TYPE_LABELS = {
+    'Offline': '線下課程',
+    'Online': '線上課程',
+    'Product': '商品',
+    'Service': '服務',
+};
+
+const STATUS_LABELS = {
+    'Live': '上架中',
+    'In prep': '準備中',
+    'Not started': '未開始',
+};
+
+const EMPTY_FORM = {
+    name: '',
+    code: '',
+    type: 'Offline',
+    defaultSessions: '',
+    suggestedPrice: '',
+    status: 'Live',
+    description: '',
+};
+
+function formatTWD(value) {
+    if (value == null || value === '') return '-';
+    return `TWD ${Number(value).toLocaleString()}`;
+}
 
 export default function AdminServicesPage() {
     const [services, setServices] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [usingFallback, setUsingFallback] = useState(false);
-    const [editing, setEditing] = useState(null);
+    const [editingId, setEditingId] = useState(null);
+    const [editForm, setEditForm] = useState({});
+    const [showCreate, setShowCreate] = useState(false);
+    const [createForm, setCreateForm] = useState(EMPTY_FORM);
+    const [saving, setSaving] = useState(false);
 
-    const fetchServices = useCallback(async () => {
+    const fetchServices = useCallback(() => {
         setLoading(true);
-        try {
-            const res = await fetch('/api/admin/services');
-            if (!res.ok) throw new Error(`API returned ${res.status}`);
-            setServices(await res.json());
-            setUsingFallback(false);
-        } catch {
-            setServices(SEED_SERVICES);
-            setUsingFallback(true);
-        }
-        setLoading(false);
+        fetch('/api/admin/services')
+            .then((r) => {
+                if (!r.ok) throw new Error('API error');
+                return r.json();
+            })
+            .then((data) => setServices(data.services || []))
+            .catch(console.error)
+            .finally(() => setLoading(false));
     }, []);
 
-    useEffect(() => { fetchServices(); }, [fetchServices]);
+    useEffect(() => {
+        fetchServices();
+    }, [fetchServices]);
 
-    async function saveService(data) {
-        const isNew = !data._existing;
-        const url = isNew ? '/api/admin/services' : `/api/admin/services/${data.id}`;
-        const method = isNew ? 'POST' : 'PUT';
+    // --- Create ---
+    const handleCreate = async () => {
+        if (!createForm.name.trim()) return;
+        setSaving(true);
+        try {
+            const res = await fetch('/api/admin/services', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...createForm,
+                    defaultSessions: createForm.defaultSessions ? Number(createForm.defaultSessions) : null,
+                    suggestedPrice: createForm.suggestedPrice ? Number(createForm.suggestedPrice) : null,
+                }),
+            });
+            if (!res.ok) throw new Error('建立失敗');
+            setShowCreate(false);
+            setCreateForm(EMPTY_FORM);
+            fetchServices();
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setSaving(false);
+        }
+    };
 
-        await fetch(url, {
-            method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
+    // --- Edit ---
+    const startEdit = (service) => {
+        setEditingId(service.id);
+        setEditForm({
+            name: service.name || '',
+            code: service.code || '',
+            type: service.type || 'Offline',
+            defaultSessions: service.defaultSessions ?? '',
+            suggestedPrice: service.suggestedPrice ?? '',
+            status: service.status || 'Live',
+            description: service.description || '',
         });
-        setEditing(null);
-        fetchServices();
-    }
+    };
 
-    async function deleteService(id) {
-        if (!confirm('確定刪除此服務？相關的時段規則和問卷也會一起刪除。')) return;
-        await fetch(`/api/admin/services/${id}`, { method: 'DELETE' });
-        fetchServices();
-    }
+    const cancelEdit = () => {
+        setEditingId(null);
+        setEditForm({});
+    };
 
-    async function handleImageUpload(file) {
-        const formData = new FormData();
-        formData.append('file', file);
-        const res = await fetch('/api/admin/upload', { method: 'POST', body: formData });
-        const data = await res.json();
-        return data.url;
-    }
+    const handleSave = async (id) => {
+        setSaving(true);
+        try {
+            const res = await fetch(`/api/admin/services/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...editForm,
+                    defaultSessions: editForm.defaultSessions !== '' ? Number(editForm.defaultSessions) : null,
+                    suggestedPrice: editForm.suggestedPrice !== '' ? Number(editForm.suggestedPrice) : null,
+                }),
+            });
+            if (!res.ok) throw new Error('儲存失敗');
+            setEditingId(null);
+            fetchServices();
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setSaving(false);
+        }
+    };
 
-    if (loading) return <div className="text-gray-500">載入中...</div>;
+    if (loading) return <PageSkeleton />;
 
     return (
-        <div className="space-y-6">
-            {usingFallback && (
-                <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg px-4 py-3 text-sm">
-                    ⚠️ 資料庫未連線，目前顯示預設範本。連線 Neon 後即可編輯儲存。
-                </div>
-            )}
-
-            <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-gray-800">服務管理</h1>
+        <div>
+            <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl font-bold text-gray-900">服務管理</h1>
                 <button
-                    onClick={() => setEditing({ id: '', name: '', description: '', price: 0, duration: 30, is_active: true, sort_order: services.length })}
-                    className="px-4 py-2 bg-brand-orange text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
+                    onClick={() => setShowCreate((v) => !v)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
                 >
-                    + 新增服務
+                    {showCreate ? '取消新增' : '+ 新增服務'}
                 </button>
             </div>
 
-            {services.length === 0 && !editing && (
-                <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-500">
-                    尚未建立任何服務
+            {/* Create form */}
+            {showCreate && (
+                <div className="bg-white rounded-lg border border-blue-200 p-5 mb-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4">新增服務</h2>
+                    <ServiceForm
+                        form={createForm}
+                        onChange={setCreateForm}
+                    />
+                    <div className="flex gap-2 mt-4">
+                        <button
+                            onClick={handleCreate}
+                            disabled={saving || !createForm.name.trim()}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
+                        >
+                            {saving ? '儲存中...' : '建立服務'}
+                        </button>
+                        <button
+                            onClick={() => { setShowCreate(false); setCreateForm(EMPTY_FORM); }}
+                            className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm font-medium"
+                        >
+                            取消
+                        </button>
+                    </div>
                 </div>
             )}
 
-            <div className="space-y-4">
-                {services.map((svc) => (
-                    <div key={svc.id} className="bg-white rounded-xl border border-gray-200 p-6 flex items-start justify-between">
-                        <div className="flex gap-4">
-                            {svc.image_url && (
-                                <img src={svc.image_url} alt="" className="w-20 h-20 rounded-lg object-cover" />
-                            )}
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <h3 className="font-semibold text-gray-800">{svc.name}</h3>
-                                    <span className={`text-xs px-2 py-0.5 rounded-full ${svc.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                                        {svc.is_active ? '啟用' : '停用'}
-                                    </span>
-                                </div>
-                                <p className="text-sm text-gray-500 mt-1">{svc.description}</p>
-                                <div className="text-sm text-gray-600 mt-2">
-                                    NT${svc.price} · {svc.duration} 分鐘
+            {/* Service cards */}
+            {services.length === 0 ? (
+                <p className="text-center text-gray-500 py-12">目前沒有任何服務</p>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {services.map((service) =>
+                        editingId === service.id ? (
+                            <div key={service.id} className="bg-white rounded-lg border-2 border-blue-300 p-5">
+                                <h3 className="text-sm font-medium text-blue-600 mb-3">編輯服務</h3>
+                                <ServiceForm
+                                    form={editForm}
+                                    onChange={setEditForm}
+                                />
+                                <div className="flex gap-2 mt-4">
+                                    <button
+                                        onClick={() => handleSave(service.id)}
+                                        disabled={saving}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
+                                    >
+                                        {saving ? '儲存中...' : '儲存'}
+                                    </button>
+                                    <button
+                                        onClick={cancelEdit}
+                                        className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 text-sm font-medium"
+                                    >
+                                        取消
+                                    </button>
                                 </div>
                             </div>
-                        </div>
-                        <div className="flex gap-2 shrink-0">
-                            <button onClick={() => setEditing({ ...svc, _existing: true })} className="text-sm text-blue-500 hover:text-blue-700">編輯</button>
-                            <button onClick={() => deleteService(svc.id)} className="text-sm text-red-500 hover:text-red-700">刪除</button>
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {editing && (
-                <ServiceEditor
-                    service={editing}
-                    onSave={saveService}
-                    onCancel={() => setEditing(null)}
-                    onUpload={handleImageUpload}
-                />
+                        ) : (
+                            <ServiceCard key={service.id} service={service} onEdit={() => startEdit(service)} />
+                        )
+                    )}
+                </div>
             )}
         </div>
     );
 }
 
-function ServiceEditor({ service, onSave, onCancel, onUpload }) {
-    const [form, setForm] = useState({ ...service });
-    const [uploading, setUploading] = useState(false);
+// --- Sub-components ---
 
-    async function handleFile(e) {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        setUploading(true);
-        const url = await onUpload(file);
-        setForm({ ...form, image_url: url });
-        setUploading(false);
-    }
+function ServiceCard({ service, onEdit }) {
+    return (
+        <div className="bg-white rounded-lg border border-gray-200 p-5 hover:shadow-sm transition-shadow">
+            <div className="flex items-start justify-between mb-3">
+                <div>
+                    <h3 className="text-lg font-semibold text-gray-900">{service.name}</h3>
+                    {service.code && (
+                        <p className="text-sm text-gray-400 mt-0.5">{service.code}</p>
+                    )}
+                </div>
+                <button
+                    onClick={onEdit}
+                    className="px-3 py-1 text-sm text-blue-600 border border-blue-200 rounded-md hover:bg-blue-50"
+                >
+                    編輯
+                </button>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-3">
+                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${TYPE_COLORS[service.type] || 'bg-gray-100 text-gray-700'}`}>
+                    {TYPE_LABELS[service.type] || service.type || '-'}
+                </span>
+                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[service.status] || 'bg-gray-100 text-gray-700'}`}>
+                    {STATUS_LABELS[service.status] || service.status || '-'}
+                </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm mb-2">
+                <div>
+                    <span className="text-gray-500">預設堂數</span>
+                    <span className="ml-2 text-gray-900 font-medium">{service.defaultSessions ?? '-'}</span>
+                </div>
+                <div>
+                    <span className="text-gray-500">建議單價</span>
+                    <span className="ml-2 text-gray-900 font-medium">{formatTWD(service.suggestedPrice)}</span>
+                </div>
+            </div>
+
+            {service.orderCount != null && (
+                <p className="text-sm text-gray-500">
+                    訂單數量 <span className="text-gray-900 font-medium">{service.orderCount}</span>
+                </p>
+            )}
+
+            {service.description && (
+                <p className="text-sm text-gray-500 mt-2 line-clamp-2">{service.description}</p>
+            )}
+        </div>
+    );
+}
+
+function ServiceForm({ form, onChange }) {
+    const update = (field, value) => onChange({ ...form, [field]: value });
 
     return (
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">
-                {service._existing ? '編輯服務' : '新增服務'}
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                    <label className="text-sm text-gray-600 block mb-1">服務 ID（英文，建立後不可改）</label>
-                    <input
-                        type="text"
-                        value={form.id}
-                        onChange={(e) => setForm({ ...form, id: e.target.value })}
-                        disabled={service._existing}
-                        placeholder="online-consult"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm disabled:bg-gray-100"
-                    />
-                </div>
-                <div>
-                    <label className="text-sm text-gray-600 block mb-1">服務名稱</label>
-                    <input
-                        type="text"
-                        value={form.name}
-                        onChange={(e) => setForm({ ...form, name: e.target.value })}
-                        placeholder="一對一線上諮詢"
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                    />
-                </div>
-            </div>
-
-            <div className="mb-4">
-                <label className="text-sm text-gray-600 block mb-1">描述</label>
-                <textarea
-                    value={form.description || ''}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    rows={2}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="block">
+                <span className="text-sm text-gray-600">服務名稱 <span className="text-red-500">*</span></span>
+                <input
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => update('name', e.target.value)}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    placeholder="例：基礎服從訓練"
                 />
-            </div>
+            </label>
+            <label className="block">
+                <span className="text-sm text-gray-600">服務代碼</span>
+                <input
+                    type="text"
+                    value={form.code}
+                    onChange={(e) => update('code', e.target.value)}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    placeholder="例：BASIC-OBD"
+                />
+            </label>
+            <label className="block">
+                <span className="text-sm text-gray-600">服務類型</span>
+                <select
+                    value={form.type}
+                    onChange={(e) => update('type', e.target.value)}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                >
+                    {SERVICE_TYPES.map((t) => (
+                        <option key={t} value={t}>{TYPE_LABELS[t] || t}</option>
+                    ))}
+                </select>
+            </label>
+            <label className="block">
+                <span className="text-sm text-gray-600">預設堂數</span>
+                <input
+                    type="number"
+                    min="0"
+                    value={form.defaultSessions}
+                    onChange={(e) => update('defaultSessions', e.target.value)}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    placeholder="例：10"
+                />
+            </label>
+            <label className="block">
+                <span className="text-sm text-gray-600">建議單價 (TWD)</span>
+                <input
+                    type="number"
+                    min="0"
+                    value={form.suggestedPrice}
+                    onChange={(e) => update('suggestedPrice', e.target.value)}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    placeholder="例：2000"
+                />
+            </label>
+            <label className="block">
+                <span className="text-sm text-gray-600">服務狀態</span>
+                <select
+                    value={form.status}
+                    onChange={(e) => update('status', e.target.value)}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                >
+                    {STATUS_OPTIONS.map((s) => (
+                        <option key={s} value={s}>{STATUS_LABELS[s] || s}</option>
+                    ))}
+                </select>
+            </label>
+            <label className="block sm:col-span-2">
+                <span className="text-sm text-gray-600">服務說明</span>
+                <textarea
+                    value={form.description}
+                    onChange={(e) => update('description', e.target.value)}
+                    rows={3}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    placeholder="簡述服務內容..."
+                />
+            </label>
+        </div>
+    );
+}
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                <div>
-                    <label className="text-sm text-gray-600 block mb-1">價格（NT$）</label>
-                    <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: +e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" min="0" />
-                </div>
-                <div>
-                    <label className="text-sm text-gray-600 block mb-1">時長（分鐘）</label>
-                    <input type="number" value={form.duration} onChange={(e) => setForm({ ...form, duration: +e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" min="15" step="15" />
-                </div>
-                <div>
-                    <label className="text-sm text-gray-600 block mb-1">排序</label>
-                    <input type="number" value={form.sort_order || 0} onChange={(e) => setForm({ ...form, sort_order: +e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" min="0" />
-                </div>
-                <div className="flex items-end">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} className="w-4 h-4" />
-                        <span className="text-sm text-gray-600">啟用</span>
-                    </label>
-                </div>
-            </div>
-
-            <div className="mb-4">
-                <label className="text-sm text-gray-600 block mb-1">封面圖片</label>
-                <div className="flex items-center gap-4">
-                    {form.image_url && <img src={form.image_url} alt="" className="w-20 h-20 rounded-lg object-cover" />}
-                    <input type="file" accept="image/*" onChange={handleFile} className="text-sm" />
-                    {uploading && <span className="text-sm text-gray-400">上傳中...</span>}
-                </div>
-            </div>
-
-            <div className="flex gap-2">
-                <button onClick={() => onSave(form)} className="px-4 py-2 bg-brand-orange text-white rounded-lg text-sm font-medium hover:opacity-90">儲存</button>
-                <button onClick={onCancel} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300">取消</button>
+function PageSkeleton() {
+    return (
+        <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-36 mb-6" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[...Array(4)].map((_, i) => (
+                    <div key={i} className="h-48 bg-gray-200 rounded-lg" />
+                ))}
             </div>
         </div>
     );
