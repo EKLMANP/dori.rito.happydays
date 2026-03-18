@@ -9,11 +9,16 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
     "@notionhq/client": "^5.12.0",
     "@tryghost/content-api": "^1.12.3",
+    "@vercel/blob": "^2.3.1",
+    "isomorphic-dompurify": "^3.1.0",
     "next": "16.1.6",
+    "next-auth": "^5.0.0-beta.30",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "recharts": "^3.8.0"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.27",
