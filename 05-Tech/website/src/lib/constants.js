@@ -12,7 +12,6 @@ export const BRAND = {
 
 export const TALLY = {
     consultUrl: process.env.NEXT_PUBLIC_TALLY_CONSULT_URL || 'https://tally.so/r/KY55Bg',
-    partnerUrl: process.env.NEXT_PUBLIC_TALLY_PARTNER_URL || 'https://tally.so/r/442Jpd',
 };
 
 export const NAV_LINKS = [
