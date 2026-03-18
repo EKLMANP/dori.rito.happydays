@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BRAND, TALLY } from '@/lib/constants';
+import { BRAND } from '@/lib/constants';
 
 export default function Footer() {
     const year = new Date().getFullYear();

@@ -1,0 +1,457 @@
+/**
+ * Seed / fallback data for Dori & Rito admin pages.
+ * Used when DATABASE_URL is not configured (local dev) so admin pages
+ * render meaningful preview content instead of crashing.
+ */
+
+/* ───────── Services ───────── */
+export const SEED_SERVICES = [
+    {
+        id: 'online-consult',
+        name: '線上行為諮詢（30 分鐘）',
+        description:
+            '一對一 Google Meet 視訊，由正向訓練師針對您的狗狗行為問題提供專業建議與居家練習方向。',
+        price: 800,
+        duration: 30,
+        image_url: null,
+        is_active: true,
+        sort_order: 0,
+    },
+];
+
+/* ───────── Slot Rules ───────── */
+export const SEED_SLOT_RULES = [
+    {
+        id: 'seed-rule-1',
+        service_id: 'online-consult',
+        service_name: '線上行為諮詢（30 分鐘）',
+        available_days: [1, 2, 3, 4, 5, 6], // 週一 ~ 週六
+        start_hour: 10,
+        end_hour: 18,
+        slot_duration: 30,
+        buffer_minutes: 15,
+        advance_min_hours: 24,
+        advance_max_days: 30,
+    },
+];
+
+export const SEED_BLOCKED_DATES = [];
+
+/* ───────── Intake Form (問卷) — 6 sections / 24 fields matching Tally ───────── */
+export const SEED_FORM_SECTIONS = [
+    {
+        id: 'sec-basic',
+        service_id: 'online-consult',
+        title: '基本資料',
+        description: '請填寫你的基本資訊',
+        sort_order: 1,
+        fields: [
+            {
+                id: 'f-name',
+                section_id: 'sec-basic',
+                field_type: 'text',
+                label: '怎麼稱呼你',
+                placeholder: '你的名字或暱稱',
+                description: null,
+                is_required: true,
+                sort_order: 1,
+                options: null,
+            },
+            {
+                id: 'f-ig',
+                section_id: 'sec-basic',
+                field_type: 'text',
+                label: 'IG 名稱',
+                placeholder: '你的 Instagram 帳號',
+                description: null,
+                is_required: true,
+                sort_order: 2,
+                options: null,
+            },
+        ],
+    },
+    {
+        id: 'sec-dog',
+        service_id: 'online-consult',
+        title: '狗狗資訊',
+        description: '告訴我們你的毛孩',
+        sort_order: 2,
+        fields: [
+            {
+                id: 'f-dog-name',
+                section_id: 'sec-dog',
+                field_type: 'text',
+                label: '狗狗名字',
+                placeholder: '你的狗狗叫什麼名字？',
+                description: null,
+                is_required: true,
+                sort_order: 1,
+                options: null,
+            },
+            {
+                id: 'f-breed-age',
+                section_id: 'sec-dog',
+                field_type: 'text',
+                label: '品種 & 年齡',
+                placeholder: '例如：柴犬、3 歲',
+                description: null,
+                is_required: true,
+                sort_order: 2,
+                options: null,
+            },
+            {
+                id: 'f-gender',
+                section_id: 'sec-dog',
+                field_type: 'radio',
+                label: '性別',
+                placeholder: null,
+                description: null,
+                is_required: true,
+                sort_order: 3,
+                options: [
+                    { value: 'male', label: '男生' },
+                    { value: 'female', label: '女生' },
+                ],
+            },
+            {
+                id: 'f-neutered',
+                section_id: 'sec-dog',
+                field_type: 'radio',
+                label: '是否已結紮',
+                placeholder: null,
+                description: null,
+                is_required: true,
+                sort_order: 4,
+                options: [
+                    { value: 'yes', label: '是' },
+                    { value: 'no', label: '否' },
+                ],
+            },
+            {
+                id: 'f-adoption',
+                section_id: 'sec-dog',
+                field_type: 'textarea',
+                label: '來家裡報到的時間 & 來源',
+                placeholder: '什麼時候加入你的家庭？從哪裡來的？（收容所、繁殖場、朋友等）',
+                description: null,
+                is_required: true,
+                sort_order: 5,
+                options: null,
+            },
+            {
+                id: 'f-caregiver',
+                section_id: 'sec-dog',
+                field_type: 'text',
+                label: '主要照顧者',
+                placeholder: '誰是主要照顧狗狗的人？',
+                description: null,
+                is_required: true,
+                sort_order: 6,
+                options: null,
+            },
+        ],
+    },
+    {
+        id: 'sec-daily',
+        service_id: 'online-consult',
+        title: '日常生活',
+        description: '了解狗狗的日常作息',
+        sort_order: 3,
+        fields: [
+            {
+                id: 'f-walk-freq',
+                section_id: 'sec-daily',
+                field_type: 'text',
+                label: '一天散步幾次 / 多久',
+                placeholder: '例如：一天 2 次，每次 30 分鐘',
+                description: null,
+                is_required: true,
+                sort_order: 1,
+                options: null,
+            },
+            {
+                id: 'f-walk-place',
+                section_id: 'sec-daily',
+                field_type: 'text',
+                label: '散步地點',
+                placeholder: '通常在哪裡散步？',
+                description: null,
+                is_required: true,
+                sort_order: 2,
+                options: null,
+            },
+            {
+                id: 'f-home-space',
+                section_id: 'sec-daily',
+                field_type: 'text',
+                label: '家裡活動空間',
+                placeholder: '描述狗狗在家裡的活動空間',
+                description: null,
+                is_required: true,
+                sort_order: 3,
+                options: null,
+            },
+        ],
+    },
+    {
+        id: 'sec-behavior',
+        service_id: 'online-consult',
+        title: '行為問題',
+        description: '這是最重要的部分，請盡量詳細描述',
+        sort_order: 4,
+        fields: [
+            {
+                id: 'f-main-issue',
+                section_id: 'sec-behavior',
+                field_type: 'textarea',
+                label: '最希望解決的問題',
+                placeholder: '請描述你最希望改善的狗狗行為問題',
+                description: null,
+                is_required: true,
+                sort_order: 1,
+                options: null,
+            },
+            {
+                id: 'f-tried-methods',
+                section_id: 'sec-behavior',
+                field_type: 'textarea',
+                label: '嘗試過的方法',
+                placeholder: '你目前嘗試過哪些方式來解決這個問題？',
+                description: null,
+                is_required: true,
+                sort_order: 2,
+                options: null,
+            },
+            {
+                id: 'f-prev-trainer',
+                section_id: 'sec-behavior',
+                field_type: 'text',
+                label: '是否找過訓犬師',
+                placeholder: '之前有找過其他訓犬師嗎？效果如何？',
+                description: null,
+                is_required: true,
+                sort_order: 3,
+                options: null,
+            },
+            {
+                id: 'f-bite-history',
+                section_id: 'sec-behavior',
+                field_type: 'textarea',
+                label: '咬人 / 咬狗紀錄',
+                placeholder: '狗狗是否有咬人或咬狗的紀錄？請描述情況',
+                description: null,
+                is_required: true,
+                sort_order: 4,
+                options: null,
+            },
+            {
+                id: 'f-stress-situation',
+                section_id: 'sec-behavior',
+                field_type: 'textarea',
+                label: '壓力最大的情境',
+                placeholder: '什麼情境讓你的狗狗壓力最大？',
+                description: null,
+                is_required: true,
+                sort_order: 5,
+                options: null,
+            },
+            {
+                id: 'f-stress-reaction',
+                section_id: 'sec-behavior',
+                field_type: 'textarea',
+                label: '情境中的表現',
+                placeholder: '在那個情境中，狗狗會有什麼行為反應？',
+                description: null,
+                is_required: true,
+                sort_order: 6,
+                options: null,
+            },
+            {
+                id: 'f-desired-change',
+                section_id: 'sec-behavior',
+                field_type: 'textarea',
+                label: '期望改變 / 進步',
+                placeholder: '你希望狗狗能有什麼樣的改變？',
+                description: null,
+                is_required: true,
+                sort_order: 7,
+                options: null,
+            },
+            {
+                id: 'f-training-difficulty',
+                section_id: 'sec-behavior',
+                field_type: 'textarea',
+                label: '訓練上最大困難',
+                placeholder: '你在訓練狗狗時遇到的最大困難是什麼？',
+                description: null,
+                is_required: true,
+                sort_order: 8,
+                options: null,
+            },
+        ],
+    },
+    {
+        id: 'sec-health',
+        service_id: 'online-consult',
+        title: '健康狀況',
+        description: '了解狗狗的身體狀況',
+        sort_order: 5,
+        fields: [
+            {
+                id: 'f-health',
+                section_id: 'sec-health',
+                field_type: 'checkbox',
+                label: '身體狀況',
+                placeholder: null,
+                description: '請勾選狗狗目前或曾經有的身體狀況',
+                is_required: true,
+                sort_order: 1,
+                options: [
+                    { value: 'arthritis', label: '關節炎' },
+                    { value: 'ear-infection', label: '耳炎' },
+                    { value: 'vision-loss', label: '視力退化' },
+                    { value: 'hearing-loss', label: '聽力退化' },
+                    { value: 'pancreatitis', label: '胰臟炎' },
+                    { value: 'skin-allergy', label: '過敏性皮膚炎' },
+                    { value: 'none', label: '皆無' },
+                ],
+            },
+        ],
+    },
+    {
+        id: 'sec-contact',
+        service_id: 'online-consult',
+        title: '補充 & 聯絡方式',
+        description: '最後的補充資訊',
+        sort_order: 6,
+        fields: [
+            {
+                id: 'f-other',
+                section_id: 'sec-contact',
+                field_type: 'textarea',
+                label: '其他想分享的',
+                placeholder: '有沒有其他想讓我們知道的事情？',
+                description: null,
+                is_required: false,
+                sort_order: 1,
+                options: null,
+            },
+            {
+                id: 'f-email',
+                section_id: 'sec-contact',
+                field_type: 'email',
+                label: '聯絡 Email',
+                placeholder: 'your@email.com',
+                description: null,
+                is_required: true,
+                sort_order: 2,
+                options: null,
+            },
+            {
+                id: 'f-phone',
+                section_id: 'sec-contact',
+                field_type: 'text',
+                label: '聯絡手機',
+                placeholder: '0912-345-678',
+                description: null,
+                is_required: true,
+                sort_order: 3,
+                options: null,
+            },
+            {
+                id: 'f-address',
+                section_id: 'sec-contact',
+                field_type: 'text',
+                label: '地址',
+                placeholder: '上課地址（如需到府服務）',
+                description: null,
+                is_required: true,
+                sort_order: 4,
+                options: null,
+            },
+        ],
+    },
+];
+
+/* ───────── Email Templates ───────── */
+export const SEED_EMAIL_TEMPLATES = [
+    {
+        id: 'booking-confirmation',
+        subject: '【Dori & Rito】預約確認：{{service_name}}',
+        body_html: `<h2>Hi {{customer_name}}，你的預約已確認！</h2>
+
+<p>感謝你預約 <strong>Dori &amp; Rito Happydays</strong> 的「{{service_name}}」，以下是你的預約資訊：</p>
+
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+  <tr>
+    <td style="padding:10px 14px;border:1px solid #eee;background:#fafafa;font-weight:600;width:120px;">預約日期</td>
+    <td style="padding:10px 14px;border:1px solid #eee;">{{slot_date}}</td>
+  </tr>
+  <tr>
+    <td style="padding:10px 14px;border:1px solid #eee;background:#fafafa;font-weight:600;">預約時間</td>
+    <td style="padding:10px 14px;border:1px solid #eee;">{{slot_time}}</td>
+  </tr>
+  <tr>
+    <td style="padding:10px 14px;border:1px solid #eee;background:#fafafa;font-weight:600;">金額</td>
+    <td style="padding:10px 14px;border:1px solid #eee;">NT$ {{price}}</td>
+  </tr>
+  <tr>
+    <td style="padding:10px 14px;border:1px solid #eee;background:#fafafa;font-weight:600;">訂單編號</td>
+    <td style="padding:10px 14px;border:1px solid #eee;">{{order_no}}</td>
+  </tr>
+  <tr>
+    <td style="padding:10px 14px;border:1px solid #eee;background:#fafafa;font-weight:600;">Google Meet</td>
+    <td style="padding:10px 14px;border:1px solid #eee;"><a href="{{meet_link}}" style="color:#E8652B;text-decoration:underline;">點此加入會議</a></td>
+  </tr>
+</table>
+
+<p><strong>諮詢前小提醒：</strong></p>
+<ul style="padding-left:20px;margin:8px 0 16px;">
+  <li>請提前 5 分鐘點擊上方 Meet 連結加入會議</li>
+  <li>準備好狗狗平時的行為影片（如有），方便訓練師了解狀況</li>
+  <li>找一個安靜的空間，讓狗狗在你身邊</li>
+</ul>
+
+<p>如需改期或取消，請至少提前 24 小時聯繫我們。</p>
+<p>期待與你和 {{dog_name}} 見面！🐾</p>`,
+        header_image_url: '',
+        header_image_width: 600,
+        footer_html: null,
+    },
+    {
+        id: 'booking-reminder',
+        subject: '⏰ 明日預約提醒 — {{service_name}}',
+        body_html: `<h2>{{customer_name}} 您好！</h2>
+<p>溫馨提醒，您明天有一場預約：</p>
+
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+  <tr>
+    <td style="padding:8px 12px;border:1px solid #eee;background:#fafafa;font-weight:600;width:120px;">服務</td>
+    <td style="padding:8px 12px;border:1px solid #eee;">{{service_name}}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 12px;border:1px solid #eee;background:#fafafa;font-weight:600;">日期</td>
+    <td style="padding:8px 12px;border:1px solid #eee;">{{slot_date}}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 12px;border:1px solid #eee;background:#fafafa;font-weight:600;">時間</td>
+    <td style="padding:8px 12px;border:1px solid #eee;">{{slot_time}}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 12px;border:1px solid #eee;background:#fafafa;font-weight:600;">Meet 連結</td>
+    <td style="padding:8px 12px;border:1px solid #eee;"><a href="{{meet_link}}" style="color:#E8652B;">點此加入會議</a></td>
+  </tr>
+</table>
+
+<p>請記得提前準備好：</p>
+<ul>
+  <li>狗狗行為影片（如有）</li>
+  <li>安靜空間 + 讓 {{dog_name}} 在身邊</li>
+</ul>
+
+<p>明天見！🐾</p>`,
+        header_image_url: '',
+        header_image_width: 600,
+        footer_html: null,
+    },
+];
