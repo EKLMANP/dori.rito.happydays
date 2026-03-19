@@ -133,15 +133,21 @@ class TelegramCommander:
 
     def send(self, chat_id: str, text: str, parse_mode: str = "Markdown") -> None:
         """發送訊息（自動切割超過 4096 字元的長訊息）"""
+        # 組裝參數，parse_mode=None 時不傳（避免 Telegram API 收到 null）
+        msg_kwargs = {"chat_id": chat_id, "text": text}
+        if parse_mode:
+            msg_kwargs["parse_mode"] = parse_mode
+
         limit = 4000
         if len(text) <= limit:
-            self._tg("sendMessage", chat_id=chat_id, text=text, parse_mode=parse_mode)
+            self._tg("sendMessage", **msg_kwargs)
             return
         # 長訊息切割
         chunks = [text[i:i+limit] for i in range(0, len(text), limit)]
         for i, chunk in enumerate(chunks):
             suffix = f"\n\n_（{i+1}/{len(chunks)}）_" if len(chunks) > 1 else ""
-            self._tg("sendMessage", chat_id=chat_id, text=chunk + suffix, parse_mode=parse_mode)
+            chunk_kwargs = {**msg_kwargs, "text": chunk + suffix}
+            self._tg("sendMessage", **chunk_kwargs)
             time.sleep(0.3)
 
     def send_typing(self, chat_id: str) -> None:
