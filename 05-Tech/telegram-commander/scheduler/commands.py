@@ -533,10 +533,10 @@ class SchedulerCommands:
             if mode == "A":
                 changes = self.google.reschedule_mode_a(dog_name, target_week, new_date)
             elif mode == "B":
-                new_dt = datetime.combine(new_date, new_time)
+                new_dt = datetime.combine(new_date, new_time, tzinfo=TZ_TAIPEI)
                 changes = self.google.reschedule_mode_b(dog_name, target_week, new_dt)
             elif mode == "C":
-                new_dt = datetime.combine(new_date, new_time)
+                new_dt = datetime.combine(new_date, new_time, tzinfo=TZ_TAIPEI)
                 changes = self.google.reschedule_mode_c(dog_name, target_week, new_dt)
             else:
                 self.bot.send(chat_id, "❌ 不支援的模式", parse_mode=None)
@@ -630,7 +630,7 @@ class SchedulerCommands:
                     f"{new.month}/{new.day}（{wd}）{old.strftime('%H:%M')}"
                 )
         elif mode == "B":
-            new_dt = datetime.combine(new_date, new_time)
+            new_dt = datetime.combine(new_date, new_time, tzinfo=TZ_TAIPEI)
             time_diff = new_dt - target.start
             for e in target_events:
                 old = e.start
@@ -642,7 +642,7 @@ class SchedulerCommands:
                     f"{new.month}/{new.day}（{wd}）{new.strftime('%H:%M')}"
                 )
         elif mode == "C":
-            new_dt = datetime.combine(new_date, new_time)
+            new_dt = datetime.combine(new_date, new_time, tzinfo=TZ_TAIPEI)
             diff_days = (new_date - target.start.date()).days
             weeks_shift = round(diff_days / 7)
             for e in target_events:
