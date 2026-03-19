@@ -3,8 +3,11 @@
 """
 
 from dataclasses import dataclass, field
-from datetime import date, time, datetime
+from datetime import date, time, datetime, timezone, timedelta
 from typing import Optional
+
+# 台北時區 (UTC+8)
+TZ_TAIPEI = timezone(timedelta(hours=8))
 
 
 # Google Sheet 欄位對應（A~H）
@@ -111,7 +114,7 @@ class CalendarEvent:
 
     @property
     def is_past(self) -> bool:
-        return self.start < datetime.now()
+        return self.start < datetime.now(TZ_TAIPEI)
 
     @property
     def date_str(self) -> str:

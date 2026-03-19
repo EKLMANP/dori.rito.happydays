@@ -17,7 +17,7 @@ from typing import Optional
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 
-from .models import CourseRecord, CalendarEvent, SHEET_COLUMNS
+from .models import CourseRecord, CalendarEvent, TZ_TAIPEI, SHEET_COLUMNS
 
 # ── 環境變數 ──────────────────────────────────────────────
 
@@ -203,15 +203,15 @@ class GoogleClient:
     ) -> list[CalendarEvent]:
         """搜尋某隻狗的所有課程事件"""
         if time_min is None:
-            time_min = datetime(2024, 1, 1)
-        time_max = datetime.now() + timedelta(days=365)
+            time_min = datetime(2024, 1, 1, tzinfo=TZ_TAIPEI)
+        time_max = datetime.now(TZ_TAIPEI) + timedelta(days=365)
 
         events_result = (
             self.calendar.events()
             .list(
                 calendarId="primary",
-                timeMin=time_min.isoformat() + "+08:00",
-                timeMax=time_max.isoformat() + "+08:00",
+                timeMin=time_min.isoformat(),
+                timeMax=time_max.isoformat(),
                 singleEvents=True,
                 orderBy="startTime",
                 maxResults=100,

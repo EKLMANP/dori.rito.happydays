@@ -13,6 +13,7 @@ from .google_client import GoogleClient
 from .models import (
     CourseRecord,
     CalendarEvent,
+    TZ_TAIPEI,
     parse_user_date,
     parse_user_time,
     parse_user_datetime,
@@ -183,7 +184,7 @@ class SchedulerCommands:
 
         try:
             event_ids = self.google.create_course_events(course)
-            today_str = datetime.now().strftime("%-m/%-d/%Y")
+            today_str = datetime.now(TZ_TAIPEI).strftime("%-m/%-d/%Y")
             self.google.update_sheet_status(
                 course.row_index,
                 f"✅ 排課完成 ({today_str})",
@@ -317,7 +318,7 @@ class SchedulerCommands:
 
         try:
             event_ids = self.google.create_course_events(course, from_week=from_week)
-            today_str = datetime.now().strftime("%-m/%-d/%Y")
+            today_str = datetime.now(TZ_TAIPEI).strftime("%-m/%-d/%Y")
             self.google.update_sheet_status(
                 course.row_index,
                 f"✅ 補寄 W{from_week}-W{course.total_classes} ({today_str})",
@@ -595,7 +596,7 @@ class SchedulerCommands:
     def _format_event_list(self, events: list[CalendarEvent]) -> str:
         """格式化行事曆事件列表"""
         lines = []
-        now = datetime.now()
+        now = datetime.now(TZ_TAIPEI)
         for e in events:
             status = "✅" if e.start < now else "⬜"
             lines.append(f"  {status} W{e.week_number} {e.date_str} {e.time_str}")
