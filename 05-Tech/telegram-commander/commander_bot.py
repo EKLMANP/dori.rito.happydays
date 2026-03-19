@@ -2,7 +2,7 @@
 Dori & Rito - Telegram 遠端指揮中心 Bot
 =========================================
 讓 Eric & Pennee 在外時透過 Telegram 指揮 AI 虛擬團隊
-AI 引擎：Anthropic Claude — DR_Virtual Team
+AI 引擎：Google Gemini — DR_Virtual Team
 
 虛擬團隊成員：
   /head      - 負責人（戰略決策）
@@ -34,7 +34,7 @@ import os
 import sys
 import time
 import requests
-import anthropic
+import google.generativeai as genai
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -43,9 +43,9 @@ load_dotenv(dotenv_path=Path(__file__).parent / ".env", override=True)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_CHAT_ID   = os.getenv("TELEGRAM_CHAT_ID", "").strip()
-ANTHROPIC_API_KEY  = os.getenv("ANTHROPIC_API_KEY", "").strip()
+GOOGLE_AI_API_KEY  = os.getenv("GOOGLE_AI_API_KEY", "").strip()
 
-CLAUDE_MODEL = "claude-opus-4-5"
+GEMINI_MODEL = "gemini-2.0-flash"
 
 PROMPTS_DIR = Path(__file__).parent.parent.parent / "04-TEAM" / "prompts"
 
@@ -96,17 +96,17 @@ class TelegramCommander:
     def __init__(self):
         if not TELEGRAM_BOT_TOKEN:
             raise ValueError("請設定 TELEGRAM_BOT_TOKEN 環境變數")
-        if not ANTHROPIC_API_KEY:
-            raise ValueError("請設定 ANTHROPIC_API_KEY 環境變數")
+        if not GOOGLE_AI_API_KEY:
+            raise ValueError("請設定 GOOGLE_AI_API_KEY 環境變數")
 
         self.token = TELEGRAM_BOT_TOKEN
         self.allowed_chat_id = TELEGRAM_CHAT_ID
-        self.claude = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        genai.configure(api_key=GOOGLE_AI_API_KEY)
         self.last_update_id = 0
         self._prompts_cache = {}
         self.scheduler = None  # 排課模組（延遲載入）
 
-        print(f"✅ Anthropic Claude 已連接 — 模型: {CLAUDE_MODEL}")
+        print(f"✅ Google Gemini 已連接 — 模型: {GEMINI_MODEL}")
         print(f"🔒 授權 Chat ID: {self.allowed_chat_id}")
 
         # 載入排課模組（Google API 未設定時不影響其他功能）
@@ -246,22 +246,19 @@ class TelegramCommander:
         self.send(chat_id, msg)
 
     def cmd_status(self, chat_id: str) -> None:
-        # 測試 Claude 連線
+        # 測試 Gemini 連線
         try:
-            self.claude.messages.create(
-                model=CLAUDE_MODEL,
-                max_tokens=10,
-                messages=[{"role": "user", "content": "ping"}]
-            )
-            claude_status = f"✅ 正常（{CLAUDE_MODEL}）"
+            model = genai.GenerativeModel(GEMINI_MODEL)
+            model.generate_content("ping", generation_config={"max_output_tokens": 10})
+            ai_status = f"✅ 正常（{GEMINI_MODEL}）"
         except Exception as e:
-            claude_status = f"❌ 異常：{str(e)[:40]}"
+            ai_status = f"❌ 異常：{str(e)[:40]}"
 
         scheduler_status = "✅ 已載入" if self.scheduler else "⚠️ 未啟用"
 
         msg = f"""📊 *系統狀態*
 
-🤖 Anthropic Claude：{claude_status}
+🤖 Google Gemini：{ai_status}
 📱 Telegram Bot：✅ 運作中
 👥 虛擬團隊：✅ {len(TEAM_MEMBERS)} 位成員就緒
 📅 排課系統：{scheduler_status}
@@ -292,13 +289,15 @@ class TelegramCommander:
 
         try:
             self.send_typing(chat_id)
-            response = self.claude.messages.create(
-                model=CLAUDE_MODEL,
-                max_tokens=2000,
-                system=system_prompt,
-                messages=[{"role": "user", "content": task}]
+            model = genai.GenerativeModel(
+                GEMINI_MODEL,
+                system_instruction=system_prompt,
             )
-            answer = response.content[0].text
+            response = model.generate_content(
+                task,
+                generation_config={"max_output_tokens": 2000},
+            )
+            answer = response.text
             header = f"{info['emoji']} *{info['name']} 的回覆：*\n\n"
             self.send(chat_id, header + answer)
 
