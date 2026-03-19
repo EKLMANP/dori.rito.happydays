@@ -122,8 +122,10 @@ class TelegramCommander:
     def _tg(self, method: str, **kwargs) -> dict:
         """呼叫 Telegram Bot API"""
         url = f"https://api.telegram.org/bot{self.token}/{method}"
+        # getUpdates 用 long polling，HTTP timeout 要比 Telegram timeout 長
+        http_timeout = 60 if method == "getUpdates" else 30
         try:
-            resp = requests.post(url, json=kwargs, timeout=30)
+            resp = requests.post(url, json=kwargs, timeout=http_timeout)
             return resp.json()
         except Exception as e:
             print(f"❌ Telegram API 錯誤: {e}")
