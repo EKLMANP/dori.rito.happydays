@@ -74,8 +74,8 @@ color: blue
 使用 Mermaid 語法繪製，確保非技術人員也能理解。
 
 ## 參考文件
-- 外部服務整合：`03-TECHNOLOGY/integrations/integrations.md`
-- 輸出位置：`03-TECHNOLOGY/architecture/`
+- 外部服務整合：`05-Tech/integrations/integrations.md`
+- 輸出位置：`05-Tech/architecture/`
 
 ## 重要原則
 - 優先考慮簡單可靠的方案，不過度工程化

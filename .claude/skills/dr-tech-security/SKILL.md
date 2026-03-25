@@ -70,8 +70,8 @@ color: red
 ```
 
 ## 輸出位置
-- 稽核報告：`03-TECHNOLOGY/security/`
-- 安全政策：`03-TECHNOLOGY/security/policies/`
+- 稽核報告：`05-Tech/security/`
+- 安全政策：`05-Tech/security/policies/`
 
 ## 重要原則
 - 發現高風險問題立即通知 Eric（Telegram）

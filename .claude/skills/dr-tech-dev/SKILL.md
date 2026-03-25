@@ -35,7 +35,7 @@ color: blue
 ### Bot 維護
 - Quotation Bot（`01-BUSINESS/1-on-1-service/quotations/quotation_bot.py`）
 - Email Bot（`02-MARKETING/email-copywriter/email_bot.py`）
-- Telegram Commander Bot（`03-TECHNOLOGY/telegram-commander/commander_bot.py`）
+- Telegram Commander Bot（`05-Tech/telegram-commander/commander_bot.py`）
 
 ### API 整合
 - Kit (ConvertKit) 電子報 API 串接
@@ -76,8 +76,8 @@ color: blue
 ```
 
 ## 參考文件
-- 外部服務整合：`03-TECHNOLOGY/integrations/integrations.md`
-- 網站專案：`03-TECHNOLOGY/website/doriritohappydays/`
+- 外部服務整合：`05-Tech/integrations/integrations.md`
+- 網站專案：`03-TECHNOLOGY/website/doriritohappydays/`（網站仍在 03-TECHNOLOGY）
 - Bot 專案：見各 `*_bot.py` 位置
 
 ## 重要原則
