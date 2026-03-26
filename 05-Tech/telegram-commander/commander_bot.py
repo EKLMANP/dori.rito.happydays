@@ -2,7 +2,7 @@
 Dori & Rito - Telegram 遠端指揮中心 Bot
 =========================================
 讓 Eric & Pennee 在外時透過 Telegram 指揮 AI 虛擬團隊
-AI 引擎：Anthropic Claude — DR_Virtual Team
+AI 引擎：Google Gemini — DR_Virtual Team
 
 虛擬團隊成員：
   /head      - 負責人（戰略決策）
@@ -11,6 +11,11 @@ AI 引擎：Anthropic Claude — DR_Virtual Team
   /seo       - SEO 專員（關鍵字分析）
   /cs        - 客服人員（客戶回覆）
   /designer  - 設計師（視覺建議）
+
+排課系統：
+  /排課       - 批次排課（新客戶）
+  /補課       - 從指定堂數補寄邀請
+  /調課       - 智慧調課（A/B/C 三模式）
 
 通用指令：
   /start     - 歡迎訊息
@@ -22,13 +27,14 @@ AI 引擎：Anthropic Claude — DR_Virtual Team
   /mkt 幫我寫一篇關於分離焦慮的 IG 貼文
   /cs 客戶說狗狗對陌生人很有攻擊性，該怎麼回覆？
   /seo 分析「台北訓狗」這個關鍵字的策略
+  /調課 (按照步驟操作即可)
 """
 
 import os
 import sys
 import time
 import requests
-import anthropic
+import google.generativeai as genai
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -37,9 +43,9 @@ load_dotenv(dotenv_path=Path(__file__).parent / ".env", override=True)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
 TELEGRAM_CHAT_ID   = os.getenv("TELEGRAM_CHAT_ID", "").strip()
-ANTHROPIC_API_KEY  = os.getenv("ANTHROPIC_API_KEY", "").strip()
+GOOGLE_AI_API_KEY  = os.getenv("GOOGLE_AI_API_KEY", "").strip()
 
-CLAUDE_MODEL = "claude-opus-4-5"
+GEMINI_MODEL = "gemini-2.0-flash"
 
 PROMPTS_DIR = Path(__file__).parent.parent.parent / "04-TEAM" / "prompts"
 
@@ -90,25 +96,36 @@ class TelegramCommander:
     def __init__(self):
         if not TELEGRAM_BOT_TOKEN:
             raise ValueError("請設定 TELEGRAM_BOT_TOKEN 環境變數")
-        if not ANTHROPIC_API_KEY:
-            raise ValueError("請設定 ANTHROPIC_API_KEY 環境變數")
+        if not GOOGLE_AI_API_KEY:
+            raise ValueError("請設定 GOOGLE_AI_API_KEY 環境變數")
 
         self.token = TELEGRAM_BOT_TOKEN
         self.allowed_chat_id = TELEGRAM_CHAT_ID
-        self.claude = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        genai.configure(api_key=GOOGLE_AI_API_KEY)
         self.last_update_id = 0
         self._prompts_cache = {}
+        self.scheduler = None  # 排課模組（延遲載入）
 
-        print(f"✅ Anthropic Claude 已連接 — 模型: {CLAUDE_MODEL}")
+        print(f"✅ Google Gemini 已連接 — 模型: {GEMINI_MODEL}")
         print(f"🔒 授權 Chat ID: {self.allowed_chat_id}")
+
+        # 載入排課模組（Google API 未設定時不影響其他功能）
+        try:
+            from scheduler.commands import SchedulerCommands
+            self.scheduler = SchedulerCommands(self)
+            print("📅 排課系統已載入")
+        except Exception as e:
+            print(f"⚠️ 排課系統未啟用：{e}")
 
     # ── Telegram API helpers ──────────────────────────────────────
 
     def _tg(self, method: str, **kwargs) -> dict:
         """呼叫 Telegram Bot API"""
         url = f"https://api.telegram.org/bot{self.token}/{method}"
+        # getUpdates 用 long polling，HTTP timeout 要比 Telegram timeout 長
+        http_timeout = 60 if method == "getUpdates" else 30
         try:
-            resp = requests.post(url, json=kwargs, timeout=30)
+            resp = requests.post(url, json=kwargs, timeout=http_timeout)
             return resp.json()
         except Exception as e:
             print(f"❌ Telegram API 錯誤: {e}")
@@ -116,15 +133,21 @@ class TelegramCommander:
 
     def send(self, chat_id: str, text: str, parse_mode: str = "Markdown") -> None:
         """發送訊息（自動切割超過 4096 字元的長訊息）"""
+        # 組裝參數，parse_mode=None 時不傳（避免 Telegram API 收到 null）
+        msg_kwargs = {"chat_id": chat_id, "text": text}
+        if parse_mode:
+            msg_kwargs["parse_mode"] = parse_mode
+
         limit = 4000
         if len(text) <= limit:
-            self._tg("sendMessage", chat_id=chat_id, text=text, parse_mode=parse_mode)
+            self._tg("sendMessage", **msg_kwargs)
             return
         # 長訊息切割
         chunks = [text[i:i+limit] for i in range(0, len(text), limit)]
         for i, chunk in enumerate(chunks):
             suffix = f"\n\n_（{i+1}/{len(chunks)}）_" if len(chunks) > 1 else ""
-            self._tg("sendMessage", chat_id=chat_id, text=chunk + suffix, parse_mode=parse_mode)
+            chunk_kwargs = {**msg_kwargs, "text": chunk + suffix}
+            self._tg("sendMessage", **chunk_kwargs)
             time.sleep(0.3)
 
     def send_typing(self, chat_id: str) -> None:
@@ -132,7 +155,7 @@ class TelegramCommander:
         self._tg("sendChatAction", chat_id=chat_id, action="typing")
 
     def get_updates(self, offset: int = 0) -> dict:
-        return self._tg("getUpdates", offset=offset, timeout=30, allowed_updates=["message"])
+        return self._tg("getUpdates", offset=offset, timeout=30, allowed_updates=["message", "callback_query"])
 
     def get_me(self) -> dict:
         return self._tg("getMe")
@@ -160,7 +183,16 @@ class TelegramCommander:
     # ── 指令處理 ────────────────────────────────────────────────────
 
     def cmd_start(self, chat_id: str) -> None:
-        msg = """🐕 *Dori & Rito 遠端指揮中心*
+        scheduler_block = ""
+        if self.scheduler:
+            scheduler_block = """
+
+*📅 排課系統：*
+• `/排課` — 批次排課（新客戶）
+• `/補課` — 從指定堂數補寄邀請
+• `/調課` — 智慧調課（三模式）"""
+
+        msg = f"""🐕 *Dori & Rito 遠端指揮中心*
 
 嗨 Eric & Pennee！我是你們的 AI 虛擬團隊助手 🤖
 
@@ -169,7 +201,7 @@ class TelegramCommander:
 *快速開始：*
 • `/team` — 查看所有虛擬團隊成員
 • `/help` — 完整使用說明
-• `/status` — 服務狀態
+• `/status` — 服務狀態{scheduler_block}
 
 *範例：*
 `/mkt 幫我寫狗狗分離焦慮的 IG 文案`
@@ -202,6 +234,11 @@ class TelegramCommander:
 `/head 評估要不要開設線上課程，分析利弊`
 `/designer 狗狗萬聖節貼文需要什麼視覺元素？`
 
+*📅 排課系統：*
+`/排課` — 批次排課（新客戶）
+`/補課` — 從指定堂數補寄邀請
+`/調課` — 智慧調課（A/B/C 三模式）
+
 *通用指令：*
 `/start` — 歡迎頁面
 `/team` — 團隊成員列表
@@ -215,22 +252,22 @@ class TelegramCommander:
         self.send(chat_id, msg)
 
     def cmd_status(self, chat_id: str) -> None:
-        # 測試 Claude 連線
+        # 測試 Gemini 連線
         try:
-            self.claude.messages.create(
-                model=CLAUDE_MODEL,
-                max_tokens=10,
-                messages=[{"role": "user", "content": "ping"}]
-            )
-            claude_status = f"✅ 正常（{CLAUDE_MODEL}）"
+            model = genai.GenerativeModel(GEMINI_MODEL)
+            model.generate_content("ping", generation_config={"max_output_tokens": 10})
+            ai_status = f"✅ 正常（{GEMINI_MODEL}）"
         except Exception as e:
-            claude_status = f"❌ 異常：{str(e)[:40]}"
+            ai_status = f"❌ 異常：{str(e)[:40]}"
+
+        scheduler_status = "✅ 已載入" if self.scheduler else "⚠️ 未啟用"
 
         msg = f"""📊 *系統狀態*
 
-🤖 Anthropic Claude：{claude_status}
+🤖 Google Gemini：{ai_status}
 📱 Telegram Bot：✅ 運作中
 👥 虛擬團隊：✅ {len(TEAM_MEMBERS)} 位成員就緒
+📅 排課系統：{scheduler_status}
 📁 Prompts 目錄：{'✅ 找到' if PROMPTS_DIR.exists() else '❌ 找不到'}
 
 *已載入角色：* {', '.join(f"`{r}`" for r in self._prompts_cache) or '尚未呼叫'}"""
@@ -258,13 +295,15 @@ class TelegramCommander:
 
         try:
             self.send_typing(chat_id)
-            response = self.claude.messages.create(
-                model=CLAUDE_MODEL,
-                max_tokens=2000,
-                system=system_prompt,
-                messages=[{"role": "user", "content": task}]
+            model = genai.GenerativeModel(
+                GEMINI_MODEL,
+                system_instruction=system_prompt,
             )
-            answer = response.content[0].text
+            response = model.generate_content(
+                task,
+                generation_config={"max_output_tokens": 2000},
+            )
+            answer = response.text
             header = f"{info['emoji']} *{info['name']} 的回覆：*\n\n"
             self.send(chat_id, header + answer)
 
@@ -278,6 +317,27 @@ class TelegramCommander:
         if not self.allowed_chat_id:
             return True
         return str(chat_id) == str(self.allowed_chat_id)
+
+    def handle_callback_query(self, callback_query: dict) -> None:
+        """處理 Inline Keyboard 按鈕回調"""
+        chat_id = str(callback_query["message"]["chat"]["id"])
+        data = callback_query.get("data", "")
+        callback_id = callback_query["id"]
+
+        # 安全驗證
+        if not self._is_authorized(chat_id):
+            return
+
+        # 立即回應 callback（避免 Telegram 顯示 loading）
+        self._tg("answerCallbackQuery", callback_query_id=callback_id)
+
+        # 交給排課系統處理
+        if self.scheduler:
+            try:
+                self.scheduler.handle_callback(chat_id, data)
+            except Exception as e:
+                print(f"❌ 處理 callback 失敗: {e}")
+                self.send(chat_id, f"❌ 操作失敗：{e}", parse_mode=None)
 
     def handle_message(self, message: dict) -> None:
         chat_id = str(message["chat"]["id"])
@@ -295,6 +355,11 @@ class TelegramCommander:
 
         print(f"📩 [{user}] {text[:60]}")
 
+        # 如果排課系統有進行中的對話，先嘗試處理文字輸入
+        if not text.startswith("/") and self.scheduler:
+            if self.scheduler.handle_text_input(chat_id, text):
+                return
+
         # 解析指令
         if not text.startswith("/"):
             self.send(
@@ -304,19 +369,29 @@ class TelegramCommander:
             return
 
         parts = text.split(maxsplit=1)
-        cmd = parts[0].lower().lstrip("/").split("@")[0]  # 去掉 @botname
+        cmd = parts[0].lstrip("/").split("@")[0]  # 去掉 @botname（保留中文原始大小寫）
+        cmd_lower = cmd.lower()
         args = parts[1] if len(parts) > 1 else ""
 
-        if cmd == "start":
+        # 排課系統指令（中文指令不做 lower）
+        if self.scheduler and cmd in self.scheduler.COMMANDS:
+            try:
+                self.scheduler.handle_command(chat_id, cmd, args)
+            except Exception as e:
+                print(f"❌ 排課指令失敗: {e}")
+                self.send(chat_id, f"❌ 排課系統錯誤：{e}", parse_mode=None)
+            return
+
+        if cmd_lower == "start":
             self.cmd_start(chat_id)
-        elif cmd == "help":
+        elif cmd_lower == "help":
             self.cmd_help(chat_id)
-        elif cmd == "team":
+        elif cmd_lower == "team":
             self.cmd_team(chat_id)
-        elif cmd == "status":
+        elif cmd_lower == "status":
             self.cmd_status(chat_id)
-        elif cmd in TEAM_MEMBERS:
-            self.cmd_role(chat_id, cmd, args)
+        elif cmd_lower in TEAM_MEMBERS:
+            self.cmd_role(chat_id, cmd_lower, args)
         else:
             self.send(
                 chat_id,
@@ -343,7 +418,12 @@ class TelegramCommander:
                 if updates.get("ok") and updates.get("result"):
                     for update in updates["result"]:
                         self.last_update_id = update["update_id"]
-                        if "message" in update:
+                        if "callback_query" in update:
+                            try:
+                                self.handle_callback_query(update["callback_query"])
+                            except Exception as e:
+                                print(f"❌ 處理 callback 失敗: {e}")
+                        elif "message" in update:
                             try:
                                 self.handle_message(update["message"])
                             except Exception as e:
