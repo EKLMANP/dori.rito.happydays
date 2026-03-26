@@ -4,12 +4,8 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '*.zeabur.app',
+        hostname: 'cms.doriritohappydays.com',
         pathname: '/content/images/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'doriritohappydays.ghost.io',
       },
       {
         protocol: 'https',
