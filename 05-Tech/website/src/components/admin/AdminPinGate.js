@@ -5,7 +5,12 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 const AdminPinContext = createContext(null);
 
 export function useAdminPin() {
-    return useContext(AdminPinContext);
+    const ctx = useContext(AdminPinContext);
+    // Return safe defaults during SSR/prerender when no Provider exists
+    if (!ctx) {
+        return { pin: '', adminFetch: fetch, logout: () => {} };
+    }
+    return ctx;
 }
 
 export default function AdminPinGate({ children }) {
