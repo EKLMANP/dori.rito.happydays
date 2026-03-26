@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import ConfirmDialog from '@/components/admin/ConfirmDialog';
 
 const TRAINERS = ['Eric', 'Pennee'];
 
@@ -20,6 +21,7 @@ function NewOrderContent() {
 
     const [step, setStep] = useState(preselectedCustomerId ? 2 : 1);
     const [submitting, setSubmitting] = useState(false);
+    const [confirmSubmit, setConfirmSubmit] = useState(false);
 
     // Step 1: Customer
     const [customerQuery, setCustomerQuery] = useState('');
@@ -94,10 +96,15 @@ function NewOrderContent() {
 
     const totalAmount = (Number(sessions) || 0) * (Number(unitPrice) || 0);
 
-    const handleSubmit = async () => {
+    const handleSubmitClick = () => {
         if (!selectedCustomer || !selectedService || !trainer || !sessions || !unitPrice) return;
+        setConfirmSubmit(true);
+    };
+
+    const handleSubmitConfirm = async (dialogNotes) => {
         setSubmitting(true);
         try {
+            const orderNotes = [notes, dialogNotes].filter(Boolean).join('\n');
             const res = await fetch('/api/admin/orders', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -107,11 +114,12 @@ function NewOrderContent() {
                     trainer,
                     sessions: Number(sessions),
                     unitPrice: Number(unitPrice),
-                    notes,
+                    notes: orderNotes,
                 }),
             });
             const data = await res.json();
             if (res.ok && data.id) {
+                setConfirmSubmit(false);
                 router.push(`/admin/orders/${data.id}`);
             } else {
                 alert(data.error || '建立訂單失敗');
@@ -332,7 +340,7 @@ function NewOrderContent() {
                             &larr; 上一步
                         </button>
                         <button
-                            onClick={handleSubmit}
+                            onClick={handleSubmitClick}
                             disabled={submitting || !trainer || !sessions || !unitPrice}
                             className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
                         >
@@ -341,6 +349,26 @@ function NewOrderContent() {
                     </div>
                 </div>
             )}
+
+            {/* Confirm Submit Dialog */}
+            <ConfirmDialog
+                open={confirmSubmit}
+                title="確認建立訂單"
+                variant="default"
+                confirmLabel="確認建立"
+                onConfirm={handleSubmitConfirm}
+                onCancel={() => setConfirmSubmit(false)}
+            >
+                <p>確認要建立以下訂單嗎？</p>
+                <div style={{ marginTop: '8px', fontSize: '0.85rem' }}>
+                    <p><strong>客戶</strong>：{selectedCustomer?.name}</p>
+                    <p><strong>服務</strong>：{selectedService?.name}</p>
+                    <p><strong>訓犬師</strong>：{trainer}</p>
+                    <p><strong>課堂數</strong>：{sessions} 堂</p>
+                    <p><strong>單堂報價</strong>：${Number(unitPrice || 0).toLocaleString()}</p>
+                    <p><strong>總金額</strong>：${totalAmount.toLocaleString()}</p>
+                </div>
+            </ConfirmDialog>
         </div>
     );
 }

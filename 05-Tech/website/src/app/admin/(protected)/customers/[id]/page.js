@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import ConfirmDialog from '@/components/admin/ConfirmDialog';
 
 const CONVERSION_STATUSES = ['Not started', 'booked call', 'Lost', 'In progress(1-6/8)', '1st session', 'Done'];
 
@@ -52,6 +53,7 @@ function OrderStatusBadge({ status }) {
 
 export default function CustomerDetailPage() {
     const { id } = useParams();
+    const router = useRouter();
     const [customer, setCustomer] = useState(null);
     const [loading, setLoading] = useState(true);
     const [editing, setEditing] = useState(false);
@@ -60,6 +62,9 @@ export default function CustomerDetailPage() {
     const [saveError, setSaveError] = useState('');
     const [orders, setOrders] = useState([]);
     const [ordersLoading, setOrdersLoading] = useState(true);
+    const [confirmSave, setConfirmSave] = useState(false);
+    const [confirmArchive, setConfirmArchive] = useState(false);
+    const [changedFields, setChangedFields] = useState({});
 
     useEffect(() => {
         fetch(`/api/admin/customers/${id}`)
@@ -90,21 +95,37 @@ export default function CustomerDetailPage() {
         setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     };
 
-    const handleSave = async () => {
+    const getChangedFields = () => {
+        const changed = {};
+        for (const key of Object.keys(form)) {
+            if (form[key] !== customer[key]) {
+                changed[key] = { old: customer[key], new: form[key] };
+            }
+        }
+        return changed;
+    };
+
+    const handleSaveClick = () => {
+        const changed = getChangedFields();
+        if (Object.keys(changed).length === 0) {
+            setEditing(false);
+            return;
+        }
+        setChangedFields(changed);
+        setConfirmSave(true);
+    };
+
+    const handleSaveConfirm = async (notes) => {
         setSaving(true);
         setSaveError('');
         try {
-            // Only send changed fields
             const changed = {};
             for (const key of Object.keys(form)) {
                 if (form[key] !== customer[key]) {
                     changed[key] = form[key];
                 }
             }
-            if (Object.keys(changed).length === 0) {
-                setEditing(false);
-                return;
-            }
+            if (notes) changed.notes = notes;
             const res = await fetch(`/api/admin/customers/${id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
@@ -115,10 +136,29 @@ export default function CustomerDetailPage() {
             setCustomer(data);
             setForm(data);
             setEditing(false);
+            setConfirmSave(false);
         } catch (err) {
             setSaveError(err.message);
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleArchiveConfirm = async (notes) => {
+        try {
+            const res = await fetch(`/api/admin/customers/${id}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ notes }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || '封存失敗');
+            }
+            router.push('/admin/customers');
+        } catch (err) {
+            setSaveError(err.message);
+            setConfirmArchive(false);
         }
     };
 
@@ -151,7 +191,7 @@ export default function CustomerDetailPage() {
                             className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50">
                             取消
                         </button>
-                        <button onClick={handleSave} disabled={saving}
+                        <button onClick={handleSaveClick} disabled={saving}
                             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium disabled:opacity-50">
                             {saving ? '儲存中...' : '儲存'}
                         </button>
@@ -204,6 +244,16 @@ export default function CustomerDetailPage() {
                 {saveError && <p className="px-4 pb-4 text-sm text-red-600">{saveError}</p>}
             </div>
 
+            {/* Archive Button */}
+            <div className="mb-6">
+                <button
+                    onClick={() => setConfirmArchive(true)}
+                    className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-md hover:bg-red-100 text-sm font-medium"
+                >
+                    封存客戶
+                </button>
+            </div>
+
             {/* Related Orders */}
             <div className="bg-white rounded-lg border border-gray-200">
                 <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
@@ -254,6 +304,35 @@ export default function CustomerDetailPage() {
                     <p className="px-4 py-8 text-center text-gray-500">尚無相關訂單</p>
                 )}
             </div>
+            {/* Confirm Save Dialog */}
+            <ConfirmDialog
+                open={confirmSave}
+                title="修改客戶資料"
+                variant="default"
+                confirmLabel="確認修改"
+                onConfirm={handleSaveConfirm}
+                onCancel={() => setConfirmSave(false)}
+            >
+                <p style={{ marginBottom: '8px' }}>以下欄位將被修改：</p>
+                {Object.entries(changedFields).map(([key, { old: oldVal, new: newVal }]) => (
+                    <div key={key} style={{ fontSize: '0.85rem', marginBottom: '4px' }}>
+                        <strong>{key}</strong>：{oldVal || '(空)'} → {newVal || '(空)'}
+                    </div>
+                ))}
+            </ConfirmDialog>
+
+            {/* Confirm Archive Dialog */}
+            <ConfirmDialog
+                open={confirmArchive}
+                title="封存客戶"
+                variant="danger"
+                confirmLabel="確認封存"
+                onConfirm={handleArchiveConfirm}
+                onCancel={() => setConfirmArchive(false)}
+            >
+                <p>確定要封存客戶「{customer.name}」嗎？</p>
+                <p style={{ color: '#dc2626', marginTop: '8px' }}>封存後此客戶資料將被標記為不活躍，相關訂單不受影響。</p>
+            </ConfirmDialog>
         </div>
     );
 }

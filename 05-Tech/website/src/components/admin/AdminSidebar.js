@@ -4,12 +4,15 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const NAV_ITEMS = [
-    { label: 'Dashboard', href: '/admin', icon: '📊' },
+    { label: 'Overview', href: '/admin', icon: '📊' },
     { label: '營運分析', href: '/admin/analytics', icon: '📈' },
-    { label: '記錄成本', href: '/admin/lesson-cost', icon: '✏️' },
-    { label: '服務管理', href: '/admin/services', icon: '🐕' },
+    { label: '客戶管理', href: '/admin/customers', icon: '👥' },
+    { label: '訂單管理', href: '/admin/orders', icon: '📦' },
+    { label: '服務項目', href: '/admin/services', icon: '🐕' },
+    { label: '成本紀錄', href: '/admin/lesson-cost', icon: '✏️' },
     { label: '問卷管理', href: '/admin/forms', icon: '📋' },
     { label: 'Email 模板', href: '/admin/emails', icon: '📧' },
+    { label: '操作紀錄', href: '/admin/logs', icon: '📝' },
 ];
 
 export default function AdminSidebar({ onLogout }) {

@@ -21,7 +21,7 @@ export function middleware(request) {
     }
 
     // Allow login page and auth API without authentication
-    if (pathname === '/admin/login' || pathname === '/api/admin/auth') {
+    if (pathname === '/admin/login' || pathname === '/api/admin/auth' || pathname === '/api/admin/pin-auth') {
         return NextResponse.next();
     }
 
@@ -43,9 +43,8 @@ export function middleware(request) {
         if (isAdminApi) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
-        const loginUrl = new URL('/admin/login', request.url);
-        loginUrl.searchParams.set('from', pathname);
-        return NextResponse.redirect(loginUrl);
+        // Admin pages: let through — AdminPinGate in the layout handles page-level auth
+        return NextResponse.next();
     }
 
     return NextResponse.next();

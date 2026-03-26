@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import ConfirmDialog from '@/components/admin/ConfirmDialog';
 
 const SERVICE_TYPES = ['Offline', 'Online', 'Product', 'Service'];
 const STATUS_OPTIONS = ['Live', 'In prep', 'Not started'];
@@ -56,6 +57,12 @@ export default function AdminServicesPage() {
     const [createForm, setCreateForm] = useState(EMPTY_FORM);
     const [saving, setSaving] = useState(false);
 
+    // ConfirmDialog state
+    const [confirmCreate, setConfirmCreate] = useState(false);
+    const [confirmEdit, setConfirmEdit] = useState(null); // service id
+    const [confirmArchive, setConfirmArchive] = useState(null); // service object
+    const [editChangedFields, setEditChangedFields] = useState({});
+
     const fetchServices = useCallback(() => {
         setLoading(true);
         fetch('/api/admin/services')
@@ -73,22 +80,29 @@ export default function AdminServicesPage() {
     }, [fetchServices]);
 
     // --- Create ---
-    const handleCreate = async () => {
+    const handleCreateClick = () => {
         if (!createForm.name.trim()) return;
+        setConfirmCreate(true);
+    };
+
+    const handleCreateConfirm = async (notes) => {
         setSaving(true);
         try {
+            const body = {
+                ...createForm,
+                defaultSessions: createForm.defaultSessions ? Number(createForm.defaultSessions) : null,
+                suggestedPrice: createForm.suggestedPrice ? Number(createForm.suggestedPrice) : null,
+            };
+            if (notes) body.notes = notes;
             const res = await fetch('/api/admin/services', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...createForm,
-                    defaultSessions: createForm.defaultSessions ? Number(createForm.defaultSessions) : null,
-                    suggestedPrice: createForm.suggestedPrice ? Number(createForm.suggestedPrice) : null,
-                }),
+                body: JSON.stringify(body),
             });
             if (!res.ok) throw new Error('建立失敗');
             setShowCreate(false);
             setCreateForm(EMPTY_FORM);
+            setConfirmCreate(false);
             fetchServices();
         } catch (err) {
             alert(err.message);
@@ -116,25 +130,68 @@ export default function AdminServicesPage() {
         setEditForm({});
     };
 
-    const handleSave = async (id) => {
+    const handleSaveClick = (id) => {
+        const service = services.find((s) => s.id === id);
+        if (!service) return;
+        const changed = {};
+        for (const key of Object.keys(editForm)) {
+            const origVal = service[key] ?? '';
+            const newVal = editForm[key] ?? '';
+            if (String(origVal) !== String(newVal)) {
+                changed[key] = { old: origVal, new: newVal };
+            }
+        }
+        if (Object.keys(changed).length === 0) {
+            setEditingId(null);
+            return;
+        }
+        setEditChangedFields(changed);
+        setConfirmEdit(id);
+    };
+
+    const handleSaveConfirm = async (notes) => {
+        const id = confirmEdit;
         setSaving(true);
         try {
+            const body = {
+                ...editForm,
+                defaultSessions: editForm.defaultSessions !== '' ? Number(editForm.defaultSessions) : null,
+                suggestedPrice: editForm.suggestedPrice !== '' ? Number(editForm.suggestedPrice) : null,
+            };
+            if (notes) body.notes = notes;
             const res = await fetch(`/api/admin/services/${id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...editForm,
-                    defaultSessions: editForm.defaultSessions !== '' ? Number(editForm.defaultSessions) : null,
-                    suggestedPrice: editForm.suggestedPrice !== '' ? Number(editForm.suggestedPrice) : null,
-                }),
+                body: JSON.stringify(body),
             });
             if (!res.ok) throw new Error('儲存失敗');
             setEditingId(null);
+            setConfirmEdit(null);
             fetchServices();
         } catch (err) {
             alert(err.message);
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleArchiveConfirm = async (notes) => {
+        const service = confirmArchive;
+        try {
+            const res = await fetch(`/api/admin/services/${service.id}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ notes }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || '封存失敗');
+            }
+            setConfirmArchive(null);
+            fetchServices();
+        } catch (err) {
+            alert(err.message);
+            setConfirmArchive(null);
         }
     };
 
@@ -162,7 +219,7 @@ export default function AdminServicesPage() {
                     />
                     <div className="flex gap-2 mt-4">
                         <button
-                            onClick={handleCreate}
+                            onClick={handleCreateClick}
                             disabled={saving || !createForm.name.trim()}
                             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
                         >
@@ -193,7 +250,7 @@ export default function AdminServicesPage() {
                                 />
                                 <div className="flex gap-2 mt-4">
                                     <button
-                                        onClick={() => handleSave(service.id)}
+                                        onClick={() => handleSaveClick(service.id)}
                                         disabled={saving}
                                         className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
                                     >
@@ -208,18 +265,73 @@ export default function AdminServicesPage() {
                                 </div>
                             </div>
                         ) : (
-                            <ServiceCard key={service.id} service={service} onEdit={() => startEdit(service)} />
+                            <ServiceCard key={service.id} service={service} onEdit={() => startEdit(service)} onArchive={() => setConfirmArchive(service)} />
                         )
                     )}
                 </div>
             )}
+
+            {/* Confirm Create Dialog */}
+            <ConfirmDialog
+                open={confirmCreate}
+                title="新增服務"
+                variant="default"
+                confirmLabel="確認新增"
+                onConfirm={handleCreateConfirm}
+                onCancel={() => setConfirmCreate(false)}
+            >
+                <p>確認要新增以下服務嗎？</p>
+                <div style={{ marginTop: '8px', fontSize: '0.85rem' }}>
+                    <p><strong>名稱</strong>：{createForm.name}</p>
+                    {createForm.code && <p><strong>代碼</strong>：{createForm.code}</p>}
+                    <p><strong>類型</strong>：{TYPE_LABELS[createForm.type] || createForm.type}</p>
+                    {createForm.defaultSessions && <p><strong>預設堂數</strong>：{createForm.defaultSessions}</p>}
+                    {createForm.suggestedPrice && <p><strong>建議單價</strong>：TWD {Number(createForm.suggestedPrice).toLocaleString()}</p>}
+                </div>
+            </ConfirmDialog>
+
+            {/* Confirm Edit Dialog */}
+            <ConfirmDialog
+                open={!!confirmEdit}
+                title="修改服務"
+                variant="default"
+                confirmLabel="確認修改"
+                onConfirm={handleSaveConfirm}
+                onCancel={() => setConfirmEdit(null)}
+            >
+                <p>以下欄位將被修改：</p>
+                <div style={{ marginTop: '8px' }}>
+                    {Object.entries(editChangedFields).map(([key, { old: oldVal, new: newVal }]) => (
+                        <div key={key} style={{ fontSize: '0.85rem', marginBottom: '4px' }}>
+                            <strong>{key}</strong>：{oldVal || '(空)'} → {newVal || '(空)'}
+                        </div>
+                    ))}
+                </div>
+            </ConfirmDialog>
+
+            {/* Confirm Archive Dialog */}
+            <ConfirmDialog
+                open={!!confirmArchive}
+                title="封存服務"
+                variant="danger"
+                confirmLabel="確認封存"
+                onConfirm={handleArchiveConfirm}
+                onCancel={() => setConfirmArchive(null)}
+            >
+                {confirmArchive && (
+                    <>
+                        <p>確定要封存服務「{confirmArchive.name}」嗎？</p>
+                        <p style={{ color: '#dc2626', marginTop: '8px' }}>封存後此服務將無法被選用於新訂單。</p>
+                    </>
+                )}
+            </ConfirmDialog>
         </div>
     );
 }
 
 // --- Sub-components ---
 
-function ServiceCard({ service, onEdit }) {
+function ServiceCard({ service, onEdit, onArchive }) {
     return (
         <div className="bg-white rounded-lg border border-gray-200 p-5 hover:shadow-sm transition-shadow">
             <div className="flex items-start justify-between mb-3">
@@ -229,12 +341,20 @@ function ServiceCard({ service, onEdit }) {
                         <p className="text-sm text-gray-400 mt-0.5">{service.code}</p>
                     )}
                 </div>
-                <button
-                    onClick={onEdit}
-                    className="px-3 py-1 text-sm text-blue-600 border border-blue-200 rounded-md hover:bg-blue-50"
-                >
-                    編輯
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={onEdit}
+                        className="px-3 py-1 text-sm text-blue-600 border border-blue-200 rounded-md hover:bg-blue-50"
+                    >
+                        編輯
+                    </button>
+                    <button
+                        onClick={onArchive}
+                        className="px-3 py-1 text-sm text-red-500 hover:text-red-700"
+                    >
+                        封存
+                    </button>
+                </div>
             </div>
 
             <div className="flex flex-wrap gap-2 mb-3">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import ConfirmDialog from '@/components/admin/ConfirmDialog';
 
 const CONVERSION_STATUSES = ['Not started', 'booked call', 'Lost', 'In progress(1-6/8)', '1st session', 'Done'];
 
@@ -37,28 +38,36 @@ function CustomerFormInline({ onCreated, onCancel }) {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
     const [dedupWarning, setDedupWarning] = useState('');
+    const [confirmCreate, setConfirmCreate] = useState(false);
 
     const handleChange = (e) => {
         setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
         if (!form.name.trim()) { setError('客戶姓名為必填'); return; }
+        setConfirmCreate(true);
+    };
+
+    const handleCreateConfirm = async (notes) => {
         setSaving(true);
         setError('');
         setDedupWarning('');
         try {
+            const body = { ...form };
+            if (notes) body.notes = (body.notes ? body.notes + '\n' : '') + notes;
             const res = await fetch('/api/admin/customers', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(form),
+                body: JSON.stringify(body),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || '建立失敗');
             if (data.created === false) {
                 setDedupWarning('此客戶可能已存在，請確認是否為重複資料。');
             }
+            setConfirmCreate(false);
             onCreated(data.customer || data);
         } catch (err) {
             setError(err.message);
@@ -97,6 +106,23 @@ function CustomerFormInline({ onCreated, onCancel }) {
                     </button>
                 </div>
             </form>
+
+            <ConfirmDialog
+                open={confirmCreate}
+                title="新增客戶"
+                variant="default"
+                confirmLabel="確認新增"
+                onConfirm={handleCreateConfirm}
+                onCancel={() => setConfirmCreate(false)}
+            >
+                <p>確認要新增以下客戶嗎？</p>
+                <div style={{ marginTop: '8px', fontSize: '0.85rem' }}>
+                    <p><strong>姓名</strong>：{form.name}</p>
+                    {form.phone && <p><strong>電話</strong>：{form.phone}</p>}
+                    {form.email && <p><strong>Email</strong>：{form.email}</p>}
+                    {form.dogName && <p><strong>狗狗名字</strong>：{form.dogName}</p>}
+                </div>
+            </ConfirmDialog>
         </div>
     );
 }
@@ -166,7 +192,12 @@ export default function CustomersPage() {
     };
 
     const handleCustomerCreated = (customer) => {
-        setCustomers((prev) => [customer, ...prev]);
+        // Avoid duplicates: replace if exists, prepend if new
+        setCustomers((prev) => {
+            const exists = prev.some((c) => c.id === customer.id);
+            if (exists) return prev;
+            return [customer, ...prev];
+        });
         setShowForm(false);
     };
 

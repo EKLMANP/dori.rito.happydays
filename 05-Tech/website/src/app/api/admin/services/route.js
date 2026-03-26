@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { listServices, createService } from '@/lib/notion';
+import { writeLog } from '@/lib/admin-log';
 
 /** GET /api/admin/services?activeOnly=true */
 export async function GET(request) {
@@ -22,6 +23,17 @@ export async function POST(request) {
             return NextResponse.json({ error: '服務名稱為必填' }, { status: 400 });
         }
         const service = await createService(body);
+        try {
+            await writeLog({
+                action: 'create',
+                entityType: 'service',
+                entityId: service.id || 'unknown',
+                entityName: body.name,
+                notes: body.notes,
+            });
+        } catch (logErr) {
+            console.error('Failed to write log (non-blocking):', logErr.message);
+        }
         return NextResponse.json(service, { status: 201 });
     } catch (err) {
         console.error('Create service error:', err);

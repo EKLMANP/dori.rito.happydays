@@ -3,6 +3,7 @@ import { articleSchema } from '@/lib/schema';
 import { BRAND } from '@/lib/constants';
 import NewsletterCTA from '@/components/NewsletterCTA';
 import BlogCard from '@/components/BlogCard';
+import GhostVideoPlayer from '@/components/GhostVideoPlayer';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -108,7 +109,10 @@ export default async function BlogPostPage({ params }) {
                     </div>
                 )}
 
-                {/* Article Content Part 1 */}
+                {/* Ghost video player activation */}
+                <GhostVideoPlayer />
+
+                {/* Article Content Part 1 (trusted Ghost CMS content) */}
                 <div
                     className="ghost-content"
                     dangerouslySetInnerHTML={{ __html: htmlPart1 }}

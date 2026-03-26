@@ -1,25 +1,10 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-
 /**
- * Conditionally renders Header/Footer only for public (non-admin) pages.
+ * PublicShell — pass-through wrapper.
+ * Header/Footer are handled by (public)/layout.js for public routes
+ * and admin routes skip them via admin/layout.js.
  */
 export default function PublicShell({ children }) {
-    const pathname = usePathname();
-    const isAdmin = pathname?.startsWith('/admin');
-
-    if (isAdmin) {
-        return children;
-    }
-
-    return (
-        <>
-            <Header />
-            <main>{children}</main>
-            <Footer />
-        </>
-    );
+    return children;
 }

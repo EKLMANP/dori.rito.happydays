@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { listOrders, createOrder } from '@/lib/notion';
+import { writeLog } from '@/lib/admin-log';
 
 /** GET /api/admin/orders?status=&paymentStatus=&trainer=&cursor=&pageSize= */
 export async function GET(request) {
@@ -33,6 +34,17 @@ export async function POST(request) {
             return NextResponse.json({ error: '課堂數和單價為必填' }, { status: 400 });
         }
         const order = await createOrder(body);
+        try {
+            await writeLog({
+                action: 'create',
+                entityType: 'order',
+                entityId: order.id || 'unknown',
+                entityName: order.orderNumber,
+                notes: body.notes,
+            });
+        } catch (logErr) {
+            console.error('Failed to write log (non-blocking):', logErr.message);
+        }
         return NextResponse.json(order, { status: 201 });
     } catch (err) {
         console.error('Create order error:', err);

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import ConfirmDialog from '@/components/admin/ConfirmDialog';
 
 function StatusBadge({ status }) {
     const styles = {
@@ -62,6 +63,10 @@ export default function OrderDetailPage() {
     const [transferDate, setTransferDate] = useState('');
     const [bankLast5, setBankLast5] = useState('');
 
+    // ConfirmDialog state
+    const [confirmStatus, setConfirmStatus] = useState(null); // { next, label }
+    const [confirmArchive, setConfirmArchive] = useState(false);
+
     const fetchOrder = async () => {
         try {
             const res = await fetch(`/api/admin/orders/${id}`);
@@ -105,9 +110,33 @@ export default function OrderDetailPage() {
         }
     };
 
-    const handleStatusChange = (nextStatus) => {
-        if (nextStatus === '已取消' && !confirm('確定要取消此訂單嗎？')) return;
-        patchOrder({ orderStatus: nextStatus });
+    const handleStatusChange = (nextStatus, label) => {
+        setConfirmStatus({ next: nextStatus, label });
+    };
+
+    const handleStatusConfirm = async (notes) => {
+        const fields = { orderStatus: confirmStatus.next };
+        if (notes) fields.notes = notes;
+        await patchOrder(fields);
+        setConfirmStatus(null);
+    };
+
+    const handleArchiveConfirm = async (notes) => {
+        try {
+            const res = await fetch(`/api/admin/orders/${id}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ notes }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || '封存失敗');
+            }
+            router.push('/admin/orders');
+        } catch (err) {
+            alert(err.message || '封存失敗');
+            setConfirmArchive(false);
+        }
     };
 
     const handleDecrementSession = () => {
@@ -223,7 +252,7 @@ export default function OrderDetailPage() {
                                     {transitions.map(({ label, next, danger }) => (
                                         <button
                                             key={next}
-                                            onClick={() => handleStatusChange(next)}
+                                            onClick={() => handleStatusChange(next, label)}
                                             disabled={updating}
                                             className={`px-4 py-2 rounded-md text-sm font-medium disabled:opacity-50 ${
                                                 danger
@@ -313,9 +342,49 @@ export default function OrderDetailPage() {
                                 </div>
                             )}
                         </div>
+                        {/* Archive button */}
+                        {(order.orderStatus === '報價中' || order.orderStatus === '已取消') && (
+                            <div>
+                                <p className="text-sm text-gray-500 mb-2">封存</p>
+                                <button
+                                    onClick={() => setConfirmArchive(true)}
+                                    disabled={updating}
+                                    className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-md hover:bg-red-100 text-sm font-medium disabled:opacity-50"
+                                >
+                                    封存訂單
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
+
+            {/* Confirm Status Change Dialog */}
+            <ConfirmDialog
+                open={!!confirmStatus}
+                title="變更訂單狀態"
+                variant="default"
+                confirmLabel="確認變更"
+                onConfirm={handleStatusConfirm}
+                onCancel={() => setConfirmStatus(null)}
+            >
+                {confirmStatus && (
+                    <p>確認要將訂單狀態從「{order.orderStatus}」改為「{confirmStatus.next}」嗎？</p>
+                )}
+            </ConfirmDialog>
+
+            {/* Confirm Archive Dialog */}
+            <ConfirmDialog
+                open={confirmArchive}
+                title="封存訂單"
+                variant="danger"
+                confirmLabel="確認封存"
+                onConfirm={handleArchiveConfirm}
+                onCancel={() => setConfirmArchive(false)}
+            >
+                <p>確定要封存訂單「{order.orderNumber}」嗎？</p>
+                <p style={{ color: '#dc2626', marginTop: '8px' }}>封存後此訂單將被標記為不活躍。</p>
+            </ConfirmDialog>
         </div>
     );
 }

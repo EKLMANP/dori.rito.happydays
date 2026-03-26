@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { listCustomers, createCustomer } from '@/lib/notion';
+import { writeLog } from '@/lib/admin-log';
 
 /** GET /api/admin/customers?status=&source=&cursor=&pageSize= */
 export async function GET(request) {
@@ -26,6 +27,17 @@ export async function POST(request) {
             return NextResponse.json({ error: '客戶姓名為必填' }, { status: 400 });
         }
         const result = await createCustomer(body);
+        try {
+            await writeLog({
+                action: 'create',
+                entityType: 'customer',
+                entityId: result.customer?.id || 'unknown',
+                entityName: body.name,
+                notes: body.notes,
+            });
+        } catch (logErr) {
+            console.error('Failed to write log (non-blocking):', logErr.message);
+        }
         return NextResponse.json(result, { status: result.created ? 201 : 200 });
     } catch (err) {
         console.error('Create customer error:', err);

@@ -55,15 +55,13 @@ export function getNotionClient() {
  * Generic database query with auto-pagination (uses databases.query for backward compat).
  * Prefer the typed functions (listCustomers, listOrders, etc.) for CRM operations.
  */
-export async function queryDatabase(dbId, filter = undefined, sorts = undefined, maxPages = 3) {
-    const notion = getClient();
+export async function queryDatabase(dsId, filter = undefined, sorts = undefined, maxPages = 3) {
     const results = [];
     let cursor = undefined;
     let pageCount = 0;
 
     do {
-        const response = await notion.databases.query({
-            database_id: dbId,
+        const response = await queryDS(dsId, {
             filter,
             sorts,
             start_cursor: cursor,
@@ -477,46 +475,182 @@ export async function updateService(pageId, updates) {
 // Dashboard stats
 // ============================================================
 
-/** Get summary stats for the admin dashboard */
+/** Get comprehensive dashboard stats for the Overview page */
 export async function getDashboardStats() {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+    const sevenDaysAgo = new Date(now - 7 * 86400000).toISOString().slice(0, 10);
+    const fourteenDaysAgo = new Date(now - 14 * 86400000).toISOString().slice(0, 10);
 
-    const [activeOrders, monthOrders, unpaidOrders] = await Promise.all([
-        queryDS(DS.orders, {
-            filter: { property: '訂單狀態', status: { equals: '進行中' } },
+    const [allOrders, monthCustomers, allCustomers] = await Promise.all([
+        queryDS(DS.orders, { page_size: 100 }),
+        queryDS(DS.customers, {
+            filter: { timestamp: 'created_time', created_time: { on_or_after: monthStart } },
             page_size: 100,
         }),
-        queryDS(DS.orders, {
-            filter: {
-                timestamp: 'created_time',
-                created_time: { on_or_after: monthStart },
-            },
-            page_size: 100,
-        }),
-        queryDS(DS.orders, {
-            filter: {
-                and: [
-                    { property: '付款狀態', status: { does_not_equal: '已付款' } },
-                    { property: '訂單狀態', status: { does_not_equal: '已取消' } },
-                ],
-            },
-            page_size: 100,
-        }),
+        queryDS(DS.customers, { page_size: 100 }),
     ]);
 
-    const monthRevenue = monthOrders.results.reduce((sum, page) => {
-        const sessions = page.properties['購買課堂數']?.number || 0;
-        const price = page.properties['單堂課報價']?.number || 0;
-        return sum + (sessions * price);
-    }, 0);
+    const orders = allOrders.results.map(formatOrder);
+    const customers = allCustomers.results.map(formatCustomer);
+
+    // --- Core cards ---
+    const paidOrders = orders.filter(o => o.paymentStatus === '已付款');
+    const monthPaidRevenue = paidOrders
+        .filter(o => o.createdTime >= monthStart)
+        .reduce((sum, o) => sum + o.totalAmount, 0);
+
+    const pendingPaymentAmount = orders
+        .filter(o => ['待付款', '付款中'].includes(o.paymentStatus) && o.orderStatus !== '已取消')
+        .reduce((sum, o) => sum + o.totalAmount, 0);
+
+    const activeOrderCount = orders.filter(o => o.orderStatus === '進行中').length;
+    const monthNewCustomers = monthCustomers.results.length;
+
+    // --- Conversion funnel ---
+    const funnelStages = ['Not started', 'booked call', '1st session', 'In progress(1-6/8)', 'Done'];
+    const funnel = funnelStages.map(stage => ({
+        stage,
+        count: customers.filter(c => c.conversionStatus === stage).length,
+    }));
+
+    // --- Trainer workload ---
+    const activeOrders = orders.filter(o => o.orderStatus === '進行中');
+    const trainerWorkload = {};
+    for (const o of activeOrders) {
+        const name = o.trainer || '未指派';
+        if (!trainerWorkload[name]) trainerWorkload[name] = { activeOrders: 0, remainingSessions: 0 };
+        trainerWorkload[name].activeOrders++;
+        trainerWorkload[name].remainingSessions += o.remainingSessions;
+    }
+
+    // --- Alerts ---
+    const alerts = [];
+
+    // Overdue payments (> 7 days, still 待付款)
+    for (const o of orders) {
+        if (o.paymentStatus === '待付款' && o.createdTime < sevenDaysAgo && o.orderStatus !== '已取消') {
+            const days = Math.floor((now - new Date(o.createdTime)) / 86400000);
+            alerts.push({
+                type: 'overdue_payment',
+                severity: 'red',
+                message: `訂單 ${o.orderNumber} 已 ${days} 天未付款`,
+                orderId: o.id,
+                customerIds: o.customerIds,
+            });
+        }
+    }
+
+    // Courses about to end (remaining <= 1)
+    for (const o of activeOrders) {
+        if (o.remainingSessions <= 1) {
+            alerts.push({
+                type: 'course_ending',
+                severity: 'yellow',
+                message: `訂單 ${o.orderNumber} 剩餘 ${o.remainingSessions} 堂，準備結案或續約`,
+                orderId: o.id,
+                customerIds: o.customerIds,
+            });
+        }
+    }
+
+    // Idle customers (booked call > 14 days)
+    for (const c of customers) {
+        if (c.conversionStatus === 'booked call' && c.createdTime < fourteenDaysAgo) {
+            const days = Math.floor((now - new Date(c.createdTime)) / 86400000);
+            alerts.push({
+                type: 'idle_customer',
+                severity: 'orange',
+                message: `${c.name} 已預約但 ${days} 天沒進展`,
+                customerId: c.id,
+            });
+        }
+    }
 
     return {
-        activeOrderCount: activeOrders.results.length,
-        monthOrderCount: monthOrders.results.length,
-        monthRevenue,
-        unpaidOrderCount: unpaidOrders.results.length,
-        activeOrders: activeOrders.results.map(formatOrder),
-        unpaidOrders: unpaidOrders.results.map(formatOrder),
+        cards: {
+            monthRevenue: monthPaidRevenue,
+            pendingPayment: pendingPaymentAmount,
+            activeOrderCount,
+            monthNewCustomers,
+        },
+        funnel,
+        trainerWorkload,
+        alerts,
     };
+}
+
+// ============================================================
+// Archive (soft delete)
+// ============================================================
+
+/** Archive a customer (soft delete in Notion) */
+export async function archiveCustomer(pageId) {
+    return getClient().pages.update({ page_id: pageId, archived: true });
+}
+
+/** Archive an order (soft delete in Notion) */
+export async function archiveOrder(pageId) {
+    return getClient().pages.update({ page_id: pageId, archived: true });
+}
+
+/** Archive a service (soft delete in Notion) */
+export async function archiveService(pageId) {
+    return getClient().pages.update({ page_id: pageId, archived: true });
+}
+
+// ============================================================
+// Booking CRM (migrated from notion-crm.js)
+// ============================================================
+
+/**
+ * Create a customer page with Q&A content blocks.
+ * Called at questionnaire completion (Phase 1 of booking flow).
+ */
+export async function createCustomerPageWithBlocks({ properties, children }) {
+    const page = await getClient().pages.create({
+        parent: { database_id: DB.customers },
+        properties,
+        children: children?.length > 0 ? children : undefined,
+    });
+    return { pageId: page.id, url: page.url };
+}
+
+/**
+ * Update customer payment status and append booking info blocks.
+ * Called after payment success (Phase 2 of booking flow).
+ */
+export async function updateCustomerPaymentStatus(pageId, { properties, bookingBlocks }) {
+    // 1. Update properties
+    await getClient().pages.update({ page_id: pageId, properties });
+
+    // 2. Append booking info blocks
+    if (bookingBlocks?.length > 0) {
+        await getClient().blocks.children.append({
+            block_id: pageId,
+            children: bookingBlocks,
+        });
+    }
+
+    return { pageId };
+}
+
+// ============================================================
+// Dashboard cache (5 min TTL)
+// ============================================================
+
+let _dashboardCache = null;
+let _dashboardCacheTime = 0;
+const DASHBOARD_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/** Get dashboard stats with 5-min cache */
+export async function getCachedDashboardStats() {
+    const now = Date.now();
+    if (_dashboardCache && (now - _dashboardCacheTime) < DASHBOARD_CACHE_TTL) {
+        return _dashboardCache;
+    }
+    const stats = await getDashboardStats();
+    _dashboardCache = stats;
+    _dashboardCacheTime = now;
+    return stats;
 }
