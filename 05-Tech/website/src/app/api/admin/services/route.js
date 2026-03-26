@@ -1,29 +1,42 @@
 import { NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
-import { requireAdmin } from '@/lib/admin-auth';
+import { listServices, createService } from '@/lib/notion';
+import { writeLog } from '@/lib/admin-log';
 
-export async function GET() {
-    const { error } = await requireAdmin();
-    if (error) return error;
-
-    const services = await sql`SELECT * FROM services ORDER BY sort_order`;
-    return NextResponse.json(services);
+/** GET /api/admin/services?activeOnly=true */
+export async function GET(request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const activeOnly = searchParams.get('activeOnly') === 'true';
+        const services = await listServices({ activeOnly });
+        return NextResponse.json({ services });
+    } catch (err) {
+        console.error('List services error:', err);
+        return NextResponse.json({ error: err.message }, { status: 500 });
+    }
 }
 
+/** POST /api/admin/services { name, code, type, defaultSessions, suggestedPrice, status, description } */
 export async function POST(request) {
-    const { error } = await requireAdmin();
-    if (error) return error;
-
-    const { id, name, description, price, duration, landing_content, image_url, is_active, sort_order } = await request.json();
-
-    if (!id || !name || price == null || !duration) {
-        return NextResponse.json({ error: 'Missing required fields (id, name, price, duration)' }, { status: 400 });
+    try {
+        const body = await request.json();
+        if (!body.name?.trim()) {
+            return NextResponse.json({ error: '服務名稱為必填' }, { status: 400 });
+        }
+        const service = await createService(body);
+        try {
+            await writeLog({
+                action: 'create',
+                entityType: 'service',
+                entityId: service.id || 'unknown',
+                entityName: body.name,
+                notes: body.notes,
+            });
+        } catch (logErr) {
+            console.error('Failed to write log (non-blocking):', logErr.message);
+        }
+        return NextResponse.json(service, { status: 201 });
+    } catch (err) {
+        console.error('Create service error:', err);
+        return NextResponse.json({ error: err.message }, { status: 500 });
     }
-
-    const rows = await sql`
-        INSERT INTO services (id, name, description, price, duration, landing_content, image_url, is_active, sort_order)
-        VALUES (${id}, ${name}, ${description || null}, ${price}, ${duration}, ${landing_content || null}, ${image_url || null}, ${is_active !== false}, ${sort_order || 0})
-        RETURNING *
-    `;
-    return NextResponse.json(rows[0], { status: 201 });
 }

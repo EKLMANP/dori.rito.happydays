@@ -46,11 +46,10 @@ export async function GET() {
                     booking_data->>'serviceName' as service_name,
                     booking_data->>'slotDate' as slot_date,
                     (booking_data->>'price')::int as price,
-                    booking_data->>'email' as email,
-                    created_at
+                    booking_data->>'email' as email
                 FROM processed_orders
                 WHERE processed_at IS NULL
-                ORDER BY created_at DESC
+                ORDER BY merchant_trade_no DESC
                 LIMIT 20
             `,
         ]);

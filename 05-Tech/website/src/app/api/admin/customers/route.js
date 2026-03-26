@@ -1,45 +1,46 @@
 import { NextResponse } from 'next/server';
-import { validateAdminPin } from '@/lib/admin-auth';
-import { isNotionConfigured, queryDatabase, getPropValue } from '@/lib/notion';
+import { listCustomers, createCustomer } from '@/lib/notion';
+import { writeLog } from '@/lib/admin-log';
 
-const CRM_DB_ID = process.env.NOTION_CRM_DB_ID || process.env.NOTION_CUSTOMER_DB_ID;
-
-/**
- * GET /api/admin/customers?search=xxx
- */
+/** GET /api/admin/customers?status=&source=&cursor=&pageSize= */
 export async function GET(request) {
-    const auth = validateAdminPin(request);
-    if (!auth.valid) return auth.response;
-
-    if (!isNotionConfigured()) {
-        return NextResponse.json({ customers: [], dev: true });
-    }
-
     try {
         const { searchParams } = new URL(request.url);
-        const search = searchParams.get('search')?.trim();
-
-        let filter = undefined;
-        if (search) {
-            filter = {
-                property: '客戶姓名',
-                title: { contains: search },
-            };
-        }
-
-        const pages = await queryDatabase(CRM_DB_ID, filter, [
-            { property: '客戶姓名', direction: 'ascending' },
-        ], 1);
-
-        const customers = pages.map(page => ({
-            id: page.id,
-            name: getPropValue(page, '客戶姓名') || '(未命名)',
-            dogName: getPropValue(page, '狗狗名字 Name of your lovely dog') || '',
-        }));
-
-        return NextResponse.json({ customers });
+        const result = await listCustomers({
+            status: searchParams.get('status') || undefined,
+            source: searchParams.get('source') || undefined,
+            startCursor: searchParams.get('cursor') || undefined,
+            pageSize: parseInt(searchParams.get('pageSize')) || 20,
+        });
+        return NextResponse.json(result);
     } catch (err) {
-        console.error('Customers API error:', err);
-        return NextResponse.json({ error: '取得客戶列表失敗' }, { status: 500 });
+        console.error('List customers error:', err);
+        return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+}
+
+/** POST /api/admin/customers { name, dogName, phone, email, lineId, address, source, notes } */
+export async function POST(request) {
+    try {
+        const body = await request.json();
+        if (!body.name?.trim()) {
+            return NextResponse.json({ error: '客戶姓名為必填' }, { status: 400 });
+        }
+        const result = await createCustomer(body);
+        try {
+            await writeLog({
+                action: 'create',
+                entityType: 'customer',
+                entityId: result.customer?.id || 'unknown',
+                entityName: body.name,
+                notes: body.notes,
+            });
+        } catch (logErr) {
+            console.error('Failed to write log (non-blocking):', logErr.message);
+        }
+        return NextResponse.json(result, { status: result.created ? 201 : 200 });
+    } catch (err) {
+        console.error('Create customer error:', err);
+        return NextResponse.json({ error: err.message }, { status: 500 });
     }
 }

@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { validateAdminPin } from '@/lib/admin-auth';
 import { isNotionConfigured, queryDatabase, getPropValue } from '@/lib/notion';
 
 const CRM_DB_ID = process.env.NOTION_CRM_DB_ID || '22a17e11503d80eea2b5ccbe69a16c59';
@@ -28,11 +27,9 @@ function buildEmptyMonths(monthCount) {
 /**
  * GET /api/admin/dashboard?months=6
  * 彙整營收 + 成本數據
+ * Auth: middleware handles authentication via admin_session cookie
  */
 export async function GET(request) {
-    const auth = validateAdminPin(request);
-    if (!auth.valid) return auth.response;
-
     try {
         const { searchParams } = new URL(request.url);
         const monthCount = Math.min(Number(searchParams.get('months')) || 6, 12);

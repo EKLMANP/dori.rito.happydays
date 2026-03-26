@@ -1,20 +1,32 @@
 import { NextResponse } from 'next/server';
 
+/** POST /api/admin/auth { password } — Set admin session cookie */
 export async function POST(request) {
-    try {
-        const { pin } = await request.json();
-        const expectedPin = process.env.ADMIN_PIN;
+    const { password } = await request.json();
+    const secret = process.env.ADMIN_SECRET;
 
-        if (!expectedPin) {
-            return NextResponse.json(
-                { error: 'ADMIN_PIN not configured' },
-                { status: 500 }
-            );
-        }
-
-        const valid = pin === expectedPin;
-        return NextResponse.json({ valid });
-    } catch {
-        return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    if (!secret) {
+        return NextResponse.json({ error: 'Admin not configured' }, { status: 503 });
     }
+
+    if (password !== secret) {
+        return NextResponse.json({ error: '密碼錯誤' }, { status: 401 });
+    }
+
+    const res = NextResponse.json({ success: true });
+    res.cookies.set('admin_session', secret, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+    });
+    return res;
+}
+
+/** DELETE /api/admin/auth — Clear admin session cookie (logout) */
+export async function DELETE() {
+    const res = NextResponse.json({ success: true });
+    res.cookies.delete('admin_session');
+    return res;
 }

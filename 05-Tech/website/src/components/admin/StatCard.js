@@ -33,9 +33,9 @@ export default function StatCard({
     trendColor = 'text-green-600',
 }) {
     return (
-        <div className={`bg-white rounded-xl border border-gray-200 border-l-4 ${COLOR_MAP[color] || COLOR_MAP.orange} p-6`}>
+        <div className={`bg-white rounded-xl border border-gray-200 border-l-4 ${COLOR_MAP[color] || COLOR_MAP.orange} p-4 sm:p-6`}>
             <div className="flex items-center justify-between mb-1">
-                <p className="text-sm text-gray-500">{title}</p>
+                <p className="text-xs sm:text-sm text-gray-500">{title}</p>
                 {icon && <span className="text-lg">{icon}</span>}
             </div>
 
@@ -47,7 +47,7 @@ export default function StatCard({
             ) : (
                 <>
                     <div className="flex items-end gap-2">
-                        <p className="text-3xl font-bold text-gray-800">{value}</p>
+                        <p className="text-2xl sm:text-3xl font-bold text-gray-800">{value}</p>
                         {trend && (
                             <span className={`text-xs font-medium ${trendColor} mb-1`}>{trend}</span>
                         )}

@@ -10,7 +10,14 @@ export async function POST(request) {
         }
 
         if (pin === expectedPin) {
-            return NextResponse.json({ ok: true });
+            const res = NextResponse.json({ ok: true });
+            res.cookies.set('admin_session', process.env.ADMIN_SECRET, {
+                httpOnly: true,
+                sameSite: 'lax',
+                path: '/',
+                maxAge: 60 * 60 * 24, // 24 hours
+            });
+            return res;
         }
 
         return NextResponse.json({ error: '密碼錯誤' }, { status: 401 });

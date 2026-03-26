@@ -7,6 +7,10 @@ import StatCard from '@/components/admin/StatCard';
 import PlaceholderCard from '@/components/admin/PlaceholderCard';
 import SimpleBarChart from '@/components/admin/charts/SimpleBarChart';
 import SimplePieChart from '@/components/admin/charts/SimplePieChart';
+import SimpleLineChart from '@/components/admin/charts/SimpleLineChart';
+import FunnelChart from '@/components/admin/charts/FunnelChart';
+import TimePeriodSelector from '@/components/admin/TimePeriodSelector';
+import SetupGuideCard from '@/components/admin/SetupGuideCard';
 
 /** Cache loaded tab data to avoid re-fetching on tab switch */
 const tabDataCache = {};
@@ -521,29 +525,320 @@ function formatPaymentDate(paymentDate, processedAt) {
 }
 
 // ─────────────────────────────────────────────
-// MKT Tab (Phase 1 Placeholder)
+// MKT Tab — Full Marketing Dashboard
 // ─────────────────────────────────────────────
-function MKTTab() {
-    const { data, loading } = useTabData('mkt');
 
-    if (loading) {
-        return <div className="h-48 bg-gray-100 rounded-xl animate-pulse" />;
-    }
+/** Custom hook for MKT data with per-section period support */
+function useMktData(section, period) {
+    const cacheKey = `mkt_${section}_${period}`;
+    const [data, setData] = useState(tabDataCache[cacheKey] || null);
+    const [loading, setLoading] = useState(!tabDataCache[cacheKey]);
+
+    useEffect(() => {
+        if (tabDataCache[cacheKey]) {
+            setData(tabDataCache[cacheKey]);
+            setLoading(false);
+            return;
+        }
+
+        setLoading(true);
+        fetch(`/api/admin/analytics/mkt?section=${section}&period=${period}`)
+            .then((res) => res.ok ? res.json() : Promise.reject(res.status))
+            .then((json) => {
+                tabDataCache[cacheKey] = json;
+                setData(json);
+            })
+            .catch((err) => console.error(`[MKT ${section}]`, err))
+            .finally(() => setLoading(false));
+    }, [section, period, cacheKey]);
+
+    const refresh = useCallback(() => {
+        delete tabDataCache[cacheKey];
+        setData(null);
+        setLoading(true);
+    }, [cacheKey]);
+
+    return { data, loading, refresh };
+}
+
+function MKTTab() {
+    // Each section has its own period state
+    const [igPeriod, setIgPeriod] = useState('week');
+    const [nlPeriod, setNlPeriod] = useState('week');
+    const [webPeriod, setWebPeriod] = useState('week');
+
+    // Fetch config to know which services are set up
+    const { data: configData, loading: configLoading } = useTabData('mkt');
+
+    const configured = configData?.configured || {};
 
     return (
-        <div className="space-y-6">
-            <PlaceholderCard
-                title="電子報 & 交易信統計"
-                phase="Phase 2"
-                message="整合 Ghost CMS + Mailgun 統計數據"
-                upcoming={data?.availableInPhase2 || []}
-            />
-            <PlaceholderCard
-                title="網站流量分析"
-                phase="Phase 3"
-                message="串接 GA4 API，追蹤流量與轉換率"
-                upcoming={data?.availableInPhase3 || []}
-            />
+        <div className="space-y-8">
+            {/* ── Instagram Section ── */}
+            <MKTInstagramSection period={igPeriod} onPeriodChange={setIgPeriod} configured={configured.instagram} />
+
+            {/* ── Newsletter Section ── */}
+            <MKTNewsletterSection period={nlPeriod} onPeriodChange={setNlPeriod} configured={configured.ghost} />
+
+            {/* ── Website / GA4 Section ── */}
+            <MKTWebsiteSection period={webPeriod} onPeriodChange={setWebPeriod} configured={configured.ga4} />
+        </div>
+    );
+}
+
+function MKTInstagramSection({ period, onPeriodChange, configured }) {
+    const { data, loading } = useMktData('instagram', period);
+    const ig = data?.instagram;
+
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+                <h2 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center gap-2">
+                    <span>📸</span> Instagram
+                </h2>
+                <TimePeriodSelector value={period} onChange={onPeriodChange} />
+            </div>
+
+            {configured === false ? (
+                <SetupGuideCard
+                    title="Instagram API 尚未設定"
+                    icon="📸"
+                    message="需要連結 Facebook Page 才能使用 Instagram Graph API"
+                    steps={[
+                        '建立或使用現有的 Facebook Page',
+                        '在 IG App 設定 → 帳號 → 連結 Facebook Page',
+                        '在 Facebook Developer Portal 建立 App',
+                        '取得 Long-Lived Access Token',
+                        '設定環境變數 IG_ACCESS_TOKEN 和 IG_USER_ID',
+                    ]}
+                />
+            ) : (
+                <>
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                        <StatCard
+                            title="累積粉絲數"
+                            value={loading ? '—' : (ig?.totalFollowers ?? 0).toLocaleString()}
+                            icon="👥"
+                            color="purple"
+                            loading={loading}
+                        />
+                        <StatCard
+                            title="24h 新增粉絲"
+                            value={loading ? '—' : `+${ig?.newIn24h ?? 0}`}
+                            icon="📈"
+                            color="green"
+                            loading={loading}
+                        />
+                        <StatCard
+                            title="24h 退追蹤"
+                            value={loading ? '—' : `-${ig?.unfollowsIn24h ?? 0}`}
+                            icon="📉"
+                            color="red"
+                            loading={loading}
+                        />
+                    </div>
+
+                    <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+                        <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-4">粉絲增長趨勢</h3>
+                        <div className="h-[200px] sm:h-[260px]">
+                            <SimpleLineChart
+                                data={ig?.trend || []}
+                                xKey="date"
+                                lines={[
+                                    { key: 'total_followers', label: '累積粉絲', color: '#8B5CF6' },
+                                    { key: 'new_24h', label: '新增', color: '#10B981' },
+                                    { key: 'unfollows_24h', label: '退追蹤', color: '#EF4444' },
+                                ]}
+                                height="100%"
+                                loading={loading}
+                            />
+                        </div>
+                    </div>
+                </>
+            )}
+        </div>
+    );
+}
+
+function MKTNewsletterSection({ period, onPeriodChange, configured }) {
+    const { data, loading } = useMktData('newsletter', period);
+    const nl = data?.newsletter;
+
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+                <h2 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center gap-2">
+                    <span>📧</span> 電子報
+                </h2>
+                <TimePeriodSelector value={period} onChange={onPeriodChange} />
+            </div>
+
+            {configured === false ? (
+                <SetupGuideCard
+                    title="Ghost Admin API 尚未設定"
+                    icon="📧"
+                    message="需要 Ghost Admin API Key 才能取得訂閱數據"
+                    steps={[
+                        '登入 Ghost Admin → Settings → Integrations',
+                        '點「+ Add custom integration」',
+                        '命名為「Dori Admin Dashboard」',
+                        '複製 Admin API Key（格式：{id}:{secret}）',
+                        '設為環境變數 GHOST_ADMIN_API_KEY',
+                    ]}
+                />
+            ) : (
+                <>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                        <StatCard
+                            title="累積訂閱數"
+                            value={loading ? '—' : (nl?.totalSubscribers ?? 0).toLocaleString()}
+                            icon="📬"
+                            color="orange"
+                            loading={loading}
+                        />
+                        <StatCard
+                            title="24h 新增訂閱"
+                            value={loading ? '—' : `+${nl?.newIn24h ?? 0}`}
+                            icon="📈"
+                            color="green"
+                            loading={loading}
+                        />
+                        <StatCard
+                            title="24h 退訂"
+                            value={loading ? '—' : `-${nl?.unsubIn24h ?? 0}`}
+                            icon="📉"
+                            color="red"
+                            loading={loading}
+                        />
+                        <StatCard
+                            title="24h 未確認"
+                            value={loading ? '—' : nl?.unconfirmedIn24h ?? 0}
+                            icon="⏳"
+                            color="amber"
+                            loading={loading}
+                        />
+                    </div>
+
+                    <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+                        <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-4">訂閱趨勢</h3>
+                        <div className="h-[200px] sm:h-[260px]">
+                            <SimpleLineChart
+                                data={nl?.trend || []}
+                                xKey="date"
+                                lines={[
+                                    { key: 'total_subscribers', label: '累積訂閱', color: '#F75000' },
+                                    { key: 'new_24h', label: '新增', color: '#10B981' },
+                                    { key: 'unsub_24h', label: '退訂', color: '#EF4444' },
+                                ]}
+                                height="100%"
+                                loading={loading}
+                            />
+                        </div>
+                    </div>
+                </>
+            )}
+        </div>
+    );
+}
+
+function MKTWebsiteSection({ period, onPeriodChange, configured }) {
+    const { data, loading } = useMktData('website', period);
+    const web = data?.website;
+
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+                <h2 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center gap-2">
+                    <span>🌐</span> 網站流量分析
+                </h2>
+                <TimePeriodSelector value={period} onChange={onPeriodChange} />
+            </div>
+
+            {configured === false ? (
+                <SetupGuideCard
+                    title="GA4 API 尚未設定"
+                    icon="🌐"
+                    message="需要 GA4 Property ID 和 Service Account 才能取得流量數據"
+                    steps={[
+                        '在 Google Analytics 4 取得 Property ID',
+                        '建立 Google Cloud Service Account',
+                        '在 GA4 Property 加入 Service Account 的 Email',
+                        '設定環境變數 GA4_PROPERTY_ID 和 GOOGLE_SERVICE_ACCOUNT_KEY',
+                    ]}
+                />
+            ) : (
+                <>
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                        <StatCard
+                            title="Sessions"
+                            value={loading ? '—' : (web?.sessions ?? 0).toLocaleString()}
+                            icon="👁️"
+                            color="blue"
+                            loading={loading}
+                        />
+                        <StatCard
+                            title="Users"
+                            value={loading ? '—' : (web?.users ?? 0).toLocaleString()}
+                            icon="👤"
+                            color="purple"
+                            loading={loading}
+                        />
+                        <StatCard
+                            title="預約諮詢轉換率"
+                            value={loading ? '—' : `${web?.funnel?.conversionRate ?? 0}%`}
+                            icon="🎯"
+                            color="green"
+                            loading={loading}
+                        />
+                    </div>
+
+                    {/* Charts Row */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+                            <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-4">流量來源分布</h3>
+                            <div className="h-[200px] sm:h-[260px]">
+                                <SimplePieChart
+                                    data={web?.trafficSources || []}
+                                    nameKey="source"
+                                    valueKey="sessions"
+                                    height="100%"
+                                    loading={loading}
+                                />
+                            </div>
+                        </div>
+                        <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+                            <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-4">部落格文章瀏覽排行</h3>
+                            <div className="h-[200px] sm:h-[260px]">
+                                <SimpleBarChart
+                                    data={(web?.topBlogPosts || []).slice(0, 5).map((p) => ({
+                                        title: p.title?.length > 15 ? p.title.slice(0, 15) + '…' : p.title,
+                                        views: p.views,
+                                    }))}
+                                    xKey="title"
+                                    yKey="views"
+                                    color="#3B82F6"
+                                    height="100%"
+                                    yLabel="次"
+                                    loading={loading}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Booking Funnel */}
+                    <div className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6">
+                        <h3 className="text-xs sm:text-sm font-semibold text-gray-700 mb-4">預約諮詢轉換漏斗</h3>
+                        <FunnelChart
+                            steps={web?.funnel ? [
+                                { label: '頁面瀏覽', value: web.funnel.pageViews },
+                                { label: '點擊預約', value: web.funnel.contactClicks },
+                                { label: '表單送出', value: web.funnel.formSubmits },
+                            ] : []}
+                            loading={loading}
+                        />
+                    </div>
+                </>
+            )}
         </div>
     );
 }
@@ -674,6 +969,8 @@ const TAB_COMPONENTS = {
     cs: CSTab,
     mkt: MKTTab,
     tech: TechTab,
+    mkt: MKTTab,
+    tech: TechTab,
 };
 
 // ─────────────────────────────────────────────
@@ -685,7 +982,7 @@ function AnalyticsPageInner() {
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-800">營運分析</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-gray-800">營運分析</h1>
                     <p className="text-sm text-gray-400 mt-1">深入了解各部門營運數據</p>
                 </div>
                 <Link

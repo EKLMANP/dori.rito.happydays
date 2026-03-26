@@ -1,5 +1,6 @@
 import './globals.css';
 import Script from 'next/script';
+import PublicShell from '@/components/PublicShell';
 import { BRAND } from '@/lib/constants';
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
@@ -89,7 +90,9 @@ export default function RootLayout({ children }) {
             />
           </noscript>
         )}
-        {children}
+        <PublicShell>
+          {children}
+        </PublicShell>
       </body>
     </html>
   );
