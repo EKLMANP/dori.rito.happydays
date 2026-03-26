@@ -37,7 +37,12 @@ color: cyan
 
 當使用者要求依據 SEO 研究批次產出內容並寫入 Notion 時，執行 `references/content-writing-workflow.md` 中的標準流程。
 
+## Ghost 發布工作流程
+
+當使用者要求將 Notion 文章（部落格或電子報）發布到 Ghost 時，執行 `references/ghost-publishing-workflow.md` 中的標準流程。
+
 ## 參考文件
 
 - 詳細寫作規範、禁止用詞、輸出格式模板、檢查清單 → `references/writing-guidelines.md`
 - Notion 發布格式、資料庫結構、圖片規範 → `references/notion-publishing.md`
+- Ghost 發布流程（Notion → Ghost Draft） → `references/ghost-publishing-workflow.md`
