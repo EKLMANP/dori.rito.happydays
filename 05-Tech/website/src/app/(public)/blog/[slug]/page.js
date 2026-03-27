@@ -131,7 +131,9 @@ export default async function BlogPostPage({ params }) {
                 {post.tags && post.tags.length > 0 && (
                     <div style={{ marginTop: '3rem', paddingTop: '1.5rem', borderTop: '1px solid var(--color-border)' }}>
                         <span style={{ fontWeight: 700, fontSize: '0.9rem', marginRight: '0.75rem' }}>相關主題：</span>
-                        {post.tags.map((tag) => (
+                        {post.tags
+                            .filter((tag) => tag.visibility === 'public' && !tag.name.startsWith('#'))
+                            .map((tag) => (
                             <Link key={tag.id} href={`/blog?tag=${tag.slug}`}
                                 className="tag" style={{ marginRight: '0.5rem', textDecoration: 'none' }}>
                                 {tag.name}
