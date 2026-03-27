@@ -18,6 +18,35 @@ function getApi() {
 }
 
 /**
+ * Rewrite Ghost image URLs from old domains to self-hosted VPS Ghost.
+ * Ghost API may return image URLs pointing to old ghost.io or zeabur.app domains.
+ */
+const OLD_GHOST_HOSTS = [
+    /https:\/\/doriritohappydays\.ghost\.io/g,
+    /https:\/\/doriritohappydays\.zeabur\.app/g,
+];
+
+function rewriteImageUrls(post) {
+    if (!post) return post;
+    const ghostUrl = process.env.GHOST_URL;
+    if (!ghostUrl) return post;
+
+    const rewrite = (str) => {
+        if (!str) return str;
+        for (const pattern of OLD_GHOST_HOSTS) {
+            str = str.replace(pattern, ghostUrl);
+        }
+        return str;
+    };
+
+    if (post.feature_image) post.feature_image = rewrite(post.feature_image);
+    if (post.html) post.html = rewrite(post.html);
+    if (post.og_image) post.og_image = rewrite(post.og_image);
+    if (post.twitter_image) post.twitter_image = rewrite(post.twitter_image);
+    return post;
+}
+
+/**
  * Retry wrapper for Ghost API calls.
  * Zeabur free-tier Ghost can return 502 on cold starts.
  * Retries up to `maxRetries` times with exponential backoff.
@@ -53,7 +82,7 @@ export async function getPosts(options = {}) {
                 order: 'published_at DESC',
             })
         );
-        return { posts, meta: posts.meta };
+        return { posts: posts.map(rewriteImageUrls), meta: posts.meta };
     } catch (err) {
         console.error('Ghost getPosts error:', err?.message || err);
         return { posts: [], meta: { pagination: { total: 0, pages: 1 } } };
@@ -68,7 +97,7 @@ export async function getPostBySlug(slug) {
         const post = await withRetry(() =>
             api.posts.read({ slug }, { include: 'tags,authors' })
         );
-        return post;
+        return rewriteImageUrls(post);
     } catch (err) {
         console.error(`Ghost getPostBySlug(${slug}) error:`, err?.message || err);
         return null;
@@ -103,7 +132,7 @@ export async function getRelatedPosts(slug, primaryTag, limit = 3) {
                 order: 'published_at DESC',
             })
         );
-        return posts;
+        return posts.map(rewriteImageUrls);
     } catch (err) {
         console.error('Ghost getRelatedPosts error:', err?.message || err);
         return [];
@@ -122,7 +151,7 @@ export async function getLatestPosts(limit = 3) {
                 order: 'published_at DESC',
             })
         );
-        return posts;
+        return posts.map(rewriteImageUrls);
     } catch (err) {
         console.error('Ghost getLatestPosts error:', err?.message || err);
         return [];

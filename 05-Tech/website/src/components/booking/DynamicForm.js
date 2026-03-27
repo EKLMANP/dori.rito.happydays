@@ -62,9 +62,6 @@ export default function DynamicForm({ sections, responses, onChange, currentSect
                 {section.description && (
                     <p className="text-sm text-gray-500 mt-1">{section.description}</p>
                 )}
-                <p className="text-xs text-gray-400 mt-1">
-                    第 {currentSection + 1} / {sections.length} 區
-                </p>
             </div>
 
             {/* Fields — already filtered (is_active) and sorted (sort_order) by API */}
