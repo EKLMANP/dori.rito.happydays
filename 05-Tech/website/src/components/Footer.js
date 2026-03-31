@@ -16,7 +16,7 @@ export default function Footer() {
                 <div>
                     <h5 className="text-white font-black mb-8 text-lg tracking-widest">快速連結</h5>
                     <ul className="space-y-4 font-bold">
-                        <li><Link href="/services" className="hover:text-brand-orange transition-colors">正向訓犬服務</Link></li>
+                        <li><Link href="/#session-section" className="hover:text-brand-orange transition-colors">一對一課程</Link></li>
                         <li><Link href="/blog" className="hover:text-brand-orange transition-colors">狗狗行為文章</Link></li>
                         <li><Link href="/contact" className="hover:text-brand-orange transition-colors">合作洽詢</Link></li>
                     </ul>

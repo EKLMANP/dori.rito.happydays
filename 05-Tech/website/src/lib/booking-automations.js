@@ -7,7 +7,7 @@
 
 import { sql } from '@/lib/db';
 import { renderEmailTemplate, renderSubject } from '@/lib/email-renderer';
-import { updateCustomerPayment, createCustomerPageWithPayment } from '@/lib/notion-crm';
+import { updateCustomerPayment, createCustomerPageWithPayment, createNotionOrder as createNotionOrderFn } from '@/lib/notion-crm';
 import { createEvent } from '@/lib/google-calendar';
 
 // --- Active Handlers ---
@@ -105,7 +105,8 @@ async function createNotionCRM(bookingData) {
 
     const paymentOptions = {
         serviceName: bookingData.serviceName,
-        serviceCategory: '1對1_線上諮詢',
+        serviceId: bookingData.serviceId,
+        serviceCategory: null, // will be resolved from SERVICE_NOTION_MAP
         slotDate: bookingData.slotDate,
         slotTime: bookingData.slotTime,
         price: bookingData.price,
@@ -163,6 +164,18 @@ async function createGCalEvent(bookingData) {
     console.log('[createGCalEvent] Created event:', result.eventId, 'Meet:', result.meetLink);
 }
 
+async function createOrderInNotion(bookingData) {
+    if (!process.env.NOTION_API_KEY || !process.env.NOTION_ORDER_DB_ID) {
+        console.warn('[createOrderInNotion] Notion Order DB not configured, skipping');
+        return;
+    }
+
+    // Use notionPageId from questionnaire submission as customer relation
+    const customerPageId = bookingData.notionPageId || null;
+    const result = await createNotionOrderFn(bookingData, customerPageId);
+    console.log('[createOrderInNotion] Created order:', result.pageId);
+}
+
 // --- Handler Registry ---
 // Add new integrations here. Each must be async (bookingData) => void.
 
@@ -171,6 +184,7 @@ const handlers = [
     notifyEmail,
     notifyTelegram,
     createNotionCRM,
+    createOrderInNotion,  // NEW: Create order in 訂單管理 DB
     // --- Future Integrations (uncomment to enable) ---
     // notifySlack,
     // syncHubSpot,

@@ -32,12 +32,12 @@ export default function Header() {
                         </Link>
                     ))}
                     <Link href="/booking" className="btn btn-primary flex items-center justify-center shadow-md scale-90 origin-right transition-all">
-                        預約諮詢
+                        立即預約課程
                     </Link>
                 </div>
                 <div className="md:hidden flex items-center gap-4">
                     <Link href="/booking" className="btn btn-primary flex items-center justify-center shadow-md scale-75 origin-right transition-all">
-                        預約諮詢
+                        立即預約課程
                     </Link>
                     <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2 text-[#F75000]">
                         {mobileOpen ? '✕' : (

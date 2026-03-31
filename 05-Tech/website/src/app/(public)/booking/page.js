@@ -8,7 +8,7 @@ import DateTimePicker from '@/components/booking/DateTimePicker';
 import BookingSummary from '@/components/booking/BookingSummary';
 import { trackEvent } from '@/lib/analytics';
 
-const DEFAULT_SERVICE = 'online-consult';
+const DEFAULT_SERVICE = 'single-session';
 
 /**
  * Booking Wizard — 3-step flow (全程不跳轉)
