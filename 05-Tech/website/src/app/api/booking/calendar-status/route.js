@@ -1,0 +1,58 @@
+import { NextResponse } from 'next/server';
+import { getFreeBusy, getAvailabilityWindows } from '@/lib/google-calendar';
+
+/**
+ * GET /api/booking/calendar-status
+ *
+ * Debug endpoint to check Google Calendar connection status.
+ * Reports OAuth health, freeBusy availability, and availability calendar config.
+ */
+export async function GET() {
+    const status = {
+        config: {
+            clientId: !!process.env.GOOGLE_CALENDAR_CLIENT_ID,
+            clientSecret: !!process.env.GOOGLE_CALENDAR_CLIENT_SECRET,
+            refreshToken: !!process.env.GOOGLE_CALENDAR_REFRESH_TOKEN,
+            calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary (default)',
+            availabilityCalendarId: process.env.GOOGLE_AVAILABILITY_CALENDAR_ID
+                ? `...${process.env.GOOGLE_AVAILABILITY_CALENDAR_ID.slice(-20)}`
+                : null,
+        },
+        freeBusy: { ok: false, error: null, busyCount: 0 },
+        availability: { ok: false, error: null, configured: false, windowCount: 0 },
+    };
+
+    // Test freeBusy (next 7 days)
+    const now = new Date();
+    const weekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const timeMin = now.toISOString();
+    const timeMax = weekLater.toISOString();
+
+    try {
+        const busy = await getFreeBusy(timeMin, timeMax);
+        status.freeBusy.ok = true;
+        status.freeBusy.busyCount = busy.length;
+    } catch (err) {
+        status.freeBusy.error = err.message;
+    }
+
+    // Test availability calendar
+    try {
+        const windows = await getAvailabilityWindows(timeMin, timeMax);
+        if (windows === null) {
+            status.availability.configured = false;
+            status.availability.error = 'GOOGLE_AVAILABILITY_CALENDAR_ID not set';
+        } else {
+            status.availability.ok = true;
+            status.availability.configured = true;
+            status.availability.windowCount = windows.length;
+        }
+    } catch (err) {
+        status.availability.configured = !!process.env.GOOGLE_AVAILABILITY_CALENDAR_ID;
+        status.availability.error = err.message;
+    }
+
+    const allOk = status.freeBusy.ok && status.availability.ok;
+
+    return NextResponse.json({ ok: allOk, ...status });
+}

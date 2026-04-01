@@ -151,7 +151,7 @@ export default async function HomePage() {
                 ))}
               </div>
 
-              <div className="mt-16 pt-10 border-t border-orange-100 text-center">
+              <div id="pricing-section" className="mt-16 pt-10 border-t border-orange-100 text-center">
                 <p className="text-xl md:text-2xl font-black text-slate-800 mb-12 leading-relaxed">
                   如果你已經試過很多方法卻沒用，<br />
                   這次，我會讓你知道<span className="text-orange-600">「問題到底出在哪」</span>。
@@ -389,7 +389,7 @@ export default async function HomePage() {
         <div className="container mx-auto relative z-10">
           <h2 className="text-4xl md:text-6xl font-black mb-10 leading-tight text-white">準備好與您的狗狗<br />開啟新關係了嗎？</h2>
           <p className="text-xl md:text-2xl mb-14 opacity-90 max-w-2xl mx-auto text-center font-medium">現在預約專業行為諮詢，讓我們協助您找回輕鬆自在的相處時光。</p>
-          <Link href="/booking" className="inline-block bg-white text-brand-orange px-16 py-6 rounded-full font-black text-2xl shadow-2xl hover:bg-orange-50 hover:-translate-y-2 transition-all text-center">
+          <Link href="#pricing-section" className="inline-block bg-white text-brand-orange px-16 py-6 rounded-full font-black text-2xl shadow-2xl hover:bg-orange-50 hover:-translate-y-2 transition-all text-center">
             立即預約課程 ➔
           </Link>
         </div>

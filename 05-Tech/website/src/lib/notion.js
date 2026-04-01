@@ -11,8 +11,8 @@ import { Client } from '@notionhq/client';
 let _client = null;
 function getClient() {
     if (!_client) {
-        const auth = process.env.NOTION_API_KEY;
-        if (!auth) throw new Error('NOTION_API_KEY is not set');
+        const auth = process.env.NOTION_API_KEY_CRM || process.env.NOTION_API_KEY;
+        if (!auth) throw new Error('NOTION_API_KEY_CRM or NOTION_API_KEY is not set');
         _client = new Client({ auth });
     }
     return _client;
@@ -43,7 +43,7 @@ function queryDS(dataSourceId, options = {}) {
 
 /** Check if Notion API key is configured */
 export function isNotionConfigured() {
-    return !!process.env.NOTION_API_KEY;
+    return !!(process.env.NOTION_API_KEY_CRM || process.env.NOTION_API_KEY);
 }
 
 /** Get the singleton Notion client */

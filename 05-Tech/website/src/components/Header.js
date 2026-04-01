@@ -31,14 +31,8 @@ export default function Header() {
                             {link.label}
                         </Link>
                     ))}
-                    <Link href="/booking" className="btn btn-primary flex items-center justify-center shadow-md scale-90 origin-right transition-all">
-                        立即預約課程
-                    </Link>
                 </div>
                 <div className="md:hidden flex items-center gap-4">
-                    <Link href="/booking" className="btn btn-primary flex items-center justify-center shadow-md scale-75 origin-right transition-all">
-                        立即預約課程
-                    </Link>
                     <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2 text-[#F75000]">
                         {mobileOpen ? '✕' : (
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">

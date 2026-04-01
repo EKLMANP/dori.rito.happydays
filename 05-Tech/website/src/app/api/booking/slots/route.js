@@ -64,10 +64,12 @@ export async function GET(request) {
 
     // 4. Get Google Calendar busy times (primary calendar, for conflict check)
     let busyPeriods = [];
+    let calendarConnected = false;
     try {
         busyPeriods = await getFreeBusy(calendarStart, calendarEnd);
+        calendarConnected = true;
     } catch (err) {
-        console.warn('[booking/slots] Google Calendar unavailable, continuing without:', err.message);
+        console.error('[booking/slots] Google Calendar freeBusy failed:', err);
     }
 
     // No buffer — only block slots that directly overlap with existing events
@@ -78,10 +80,12 @@ export async function GET(request) {
 
     // 5. Check for availability calendar (new: single source of truth)
     let availabilityWindows = null;
+    let availabilityMode = false;
     try {
         availabilityWindows = await getAvailabilityWindows(calendarStart, calendarEnd);
+        if (availabilityWindows !== null) availabilityMode = true;
     } catch (err) {
-        console.warn('[booking/slots] Availability calendar unavailable, falling back to DB rules:', err.message);
+        console.error('[booking/slots] Availability calendar failed:', err);
     }
 
     // 6. Generate slots
@@ -99,7 +103,10 @@ export async function GET(request) {
             minBookingTime, maxBookingDate, blockedDates, expandedBusy,
         });
 
-    return NextResponse.json({ month, serviceId, slots });
+    return NextResponse.json({
+        month, serviceId, slots,
+        _meta: { calendarConnected, availabilityMode },
+    });
 }
 
 // ─────────────────────────────────────────────────────────────
