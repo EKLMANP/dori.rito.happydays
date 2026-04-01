@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isNotionConfigured, queryDatabase, getPropValue } from '@/lib/notion';
 
-const CRM_DB_ID = process.env.NOTION_CRM_DB_ID || '22a17e11503d80eea2b5ccbe69a16c59';
+const CRM_DB_ID = process.env.NOTION_CUSTOMER_DS_ID || process.env.NOTION_CRM_DB_ID || '22a17e11503d80eea2b5ccbe69a16c59';
 const LESSON_COSTS_DB_ID = process.env.NOTION_LESSON_COSTS_DB_ID;
 const MONTHLY_OVERHEAD = Number(process.env.MONTHLY_OVERHEAD) || 0;
 const COMMUTE_HOURLY_RATE = Number(process.env.COMMUTE_HOURLY_RATE) || 300;
