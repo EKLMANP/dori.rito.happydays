@@ -118,10 +118,18 @@ async function migrate() {
         CREATE TABLE IF NOT EXISTS processed_orders (
             merchant_trade_no TEXT PRIMARY KEY,
             booking_data JSONB,
-            processed_at TIMESTAMP DEFAULT NOW()
+            processed_at TIMESTAMP DEFAULT NOW(),
+            automation_completed_at TIMESTAMP
         )
     `;
     console.log('✅ processed_orders');
+
+    // Add automation_completed_at column if missing (idempotent for existing DBs)
+    await sql`
+        ALTER TABLE processed_orders
+        ADD COLUMN IF NOT EXISTS automation_completed_at TIMESTAMP
+    `;
+    console.log('✅ processed_orders.automation_completed_at column ensured');
 
     console.log('\n🎉 Migration complete — all 7 tables created.');
 }

@@ -37,6 +37,8 @@ export default function OrderListPage() {
     const [statusFilter, setStatusFilter] = useState('');
     const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
     const [trainerFilter, setTrainerFilter] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchInput, setSearchInput] = useState('');
 
     const fetchOrders = useCallback(async (cursor = null, append = false) => {
         if (append) {
@@ -47,11 +49,15 @@ export default function OrderListPage() {
 
         try {
             const params = new URLSearchParams();
-            if (statusFilter) params.set('status', statusFilter);
-            if (paymentStatusFilter) params.set('paymentStatus', paymentStatusFilter);
-            if (trainerFilter) params.set('trainer', trainerFilter);
-            if (cursor) params.set('cursor', cursor);
-            params.set('pageSize', PAGE_SIZE);
+            if (searchQuery) {
+                params.set('search', searchQuery);
+            } else {
+                if (statusFilter) params.set('status', statusFilter);
+                if (paymentStatusFilter) params.set('paymentStatus', paymentStatusFilter);
+                if (trainerFilter) params.set('trainer', trainerFilter);
+                if (cursor) params.set('cursor', cursor);
+                params.set('pageSize', PAGE_SIZE);
+            }
 
             const res = await fetch(`/api/admin/orders?${params}`);
             const data = await res.json();
@@ -70,7 +76,7 @@ export default function OrderListPage() {
             setLoading(false);
             setLoadingMore(false);
         }
-    }, [statusFilter, paymentStatusFilter, trainerFilter]);
+    }, [statusFilter, paymentStatusFilter, trainerFilter, searchQuery]);
 
     useEffect(() => {
         fetchOrders();
@@ -92,6 +98,37 @@ export default function OrderListPage() {
                 >
                     + 新增訂單
                 </Link>
+            </div>
+
+            {/* Search */}
+            <div className="mb-4">
+                <form
+                    onSubmit={(e) => { e.preventDefault(); setSearchQuery(searchInput); }}
+                    className="flex gap-2"
+                >
+                    <input
+                        type="text"
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        placeholder="搜尋客戶姓名、訂單編號、手機、Email、狗狗名字..."
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                    <button
+                        type="submit"
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+                    >
+                        搜尋
+                    </button>
+                    {searchQuery && (
+                        <button
+                            type="button"
+                            onClick={() => { setSearchInput(''); setSearchQuery(''); }}
+                            className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-300 rounded-md"
+                        >
+                            清除
+                        </button>
+                    )}
+                </form>
             </div>
 
             {/* Filters */}

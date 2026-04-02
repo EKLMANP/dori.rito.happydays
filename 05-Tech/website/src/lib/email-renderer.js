@@ -17,16 +17,55 @@ function interpolate(text, data) {
     });
 }
 
+/** LINE CTA HTML snippet for email */
+const LINE_CTA = `<a href="https://lin.ee/9OHBvAL" style="text-decoration:none;">
+<img src="https://scdn.line-apps.com/n/line_add_friends/btn/zh-Hant.png" alt="加入LINE官方帳號" style="height:36px;vertical-align:middle;" />
+</a>`;
+
+/**
+ * Apply service-specific email body transformations.
+ * - Renames "諮詢前小提醒" → "課程前小提醒"
+ * - Prepends LINE CTA to first bullet
+ * - Appends multi-session note for breakthrough-4
+ */
+function applyServiceOverrides(html, serviceId) {
+    if (!serviceId || (serviceId !== 'single-session' && serviceId !== 'breakthrough-4')) {
+        return html;
+    }
+
+    // 1. 諮詢前小提醒 → 課程前小提醒
+    html = html.replace('諮詢前小提醒', '課程前小提醒');
+
+    // 2. Prepend LINE CTA to first <li>
+    const lineTip = `為了讓你可以在線上課程收穫滿滿，務必請先加入我們的官方LINE帳號 ${LINE_CTA} 並傳送訊息或貼圖，方便老師在課程前跟你討論毛寶貝的狀況喔！`;
+    html = html.replace(
+        /<ul([^>]*)>\s*<li>/,
+        `<ul$1><li>${lineTip}</li><li>`
+    );
+
+    // 3. For breakthrough-4: append multi-session note before </ul>
+    if (serviceId === 'breakthrough-4') {
+        html = html.replace(
+            /<\/ul>/,
+            `<li>此為第一堂課，後續課程將另外再與老師協調時間</li></ul>`
+        );
+    }
+
+    return html;
+}
+
 /**
  * Render a complete HTML email from a template record and data.
  *
  * @param {object} template - DB template record (subject, body_html, header_image_url, etc.)
  * @param {object} data - Variable values for interpolation
+ * @param {string} [serviceId] - Service ID for conditional content
  * @returns {string} Complete HTML email string
  */
-export function renderEmailTemplate(template, data = {}) {
+export function renderEmailTemplate(template, data = {}, serviceId) {
     const subject = interpolate(template.subject, data);
-    const bodyHtml = interpolate(template.body_html, data);
+    let bodyHtml = interpolate(template.body_html, data);
+    bodyHtml = applyServiceOverrides(bodyHtml, serviceId);
     const footerHtml = interpolate(template.footer_html || '', data);
 
     const headerImage = template.header_image_url

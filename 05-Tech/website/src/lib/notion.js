@@ -332,7 +332,7 @@ async function generateOrderNumber() {
 }
 
 /** List orders with optional filters */
-export async function listOrders({ startCursor, pageSize = 20, status, paymentStatus, trainer } = {}) {
+export async function listOrders({ startCursor, pageSize = 20, status, paymentStatus, trainer, search } = {}) {
     const filters = [];
     if (status) {
         filters.push({ property: '訂單狀態', status: { equals: status } });
@@ -342,6 +342,10 @@ export async function listOrders({ startCursor, pageSize = 20, status, paymentSt
     }
     if (trainer) {
         filters.push({ property: '訓犬師', select: { equals: trainer } });
+    }
+    if (search) {
+        // Search by order number (title field)
+        filters.push({ property: '訂單編號', title: { contains: search } });
     }
 
     const query = {
@@ -360,10 +364,101 @@ export async function listOrders({ startCursor, pageSize = 20, status, paymentSt
     };
 }
 
-/** Get single order by page ID */
+/**
+ * Search orders by customer info (name, phone, email, dog name) or order number.
+ * Searches customers first, then finds their orders + direct order number match.
+ */
+export async function searchOrders(searchTerm) {
+    if (!searchTerm?.trim()) return [];
+
+    const term = searchTerm.trim();
+    const results = new Map(); // dedup by order ID
+
+    // 1. Direct order number search
+    try {
+        const orderRes = await queryDS(DS.orders, {
+            filter: { property: '訂單編號', title: { contains: term } },
+            page_size: 20,
+        });
+        for (const page of orderRes.results) {
+            const order = formatOrder(page);
+            results.set(order.id, order);
+        }
+    } catch (err) {
+        console.warn('[searchOrders] Order number search failed:', err.message);
+    }
+
+    // 2. Search customers by name, phone, email, dog name
+    try {
+        const customerFilters = [
+            { property: '客戶姓名', title: { contains: term } },
+            { property: '聯絡Email', email: { contains: term } },
+            { property: '聯絡手機號碼 Mobile number ', rich_text: { contains: term } },
+            { property: '狗狗名字 Name of your lovely dog', rich_text: { contains: term } },
+        ];
+        const customerRes = await queryDS(DS.customers, {
+            filter: { or: customerFilters },
+            page_size: 20,
+        });
+
+        // For each matching customer, find their orders via relation
+        const customerIds = customerRes.results.map(c => c.id);
+        if (customerIds.length > 0) {
+            const orderFilters = customerIds.map(cid => ({
+                property: '客戶姓名', relation: { contains: cid },
+            }));
+            const ordersRes = await queryDS(DS.orders, {
+                filter: orderFilters.length === 1 ? orderFilters[0] : { or: orderFilters },
+                page_size: 50,
+            });
+            for (const page of ordersRes.results) {
+                const order = formatOrder(page);
+                results.set(order.id, order);
+            }
+        }
+    } catch (err) {
+        console.warn('[searchOrders] Customer-based search failed:', err.message);
+    }
+
+    return Array.from(results.values());
+}
+
+/** Get single order by page ID (resolves customer and service relations) */
 export async function getOrder(pageId) {
     const page = await getClient().pages.retrieve({ page_id: pageId });
-    return formatOrder(page);
+    const order = formatOrder(page);
+
+    // Resolve customer relation → get name, phone, email, dogName
+    if (order.customerIds?.length > 0) {
+        try {
+            const customer = await getCustomer(order.customerIds[0]);
+            order.customer = {
+                id: customer.id,
+                name: customer.name,
+                dogName: customer.dogName,
+                phone: customer.phone,
+                email: customer.email,
+            };
+        } catch (err) {
+            console.warn('[getOrder] Failed to resolve customer:', err.message);
+        }
+    }
+
+    // Resolve service relation → get service names
+    if (order.serviceIds?.length > 0) {
+        try {
+            const serviceNames = [];
+            for (const sid of order.serviceIds) {
+                const service = await getService(sid);
+                serviceNames.push(service.name);
+            }
+            order.serviceNames = serviceNames;
+        } catch (err) {
+            console.warn('[getOrder] Failed to resolve services:', err.message);
+        }
+    }
+
+    return order;
 }
 
 /** Create a new order */

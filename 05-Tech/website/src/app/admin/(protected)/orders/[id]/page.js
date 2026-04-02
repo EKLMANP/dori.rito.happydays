@@ -181,8 +181,12 @@ export default function OrderDetailPage() {
                     <h2 className="text-lg font-semibold text-gray-900 mb-3">基本資訊</h2>
                     <div className="divide-y divide-gray-100">
                         <InfoRow label="訂單編號">{order.orderNumber}</InfoRow>
+                        <InfoRow label="客戶姓名">{order.customer?.name || '-'}</InfoRow>
+                        <InfoRow label="狗狗名字">{order.customer?.dogName || '-'}</InfoRow>
+                        <InfoRow label="手機號碼">{order.customer?.phone || '-'}</InfoRow>
+                        <InfoRow label="聯絡 Email">{order.customer?.email || '-'}</InfoRow>
                         <InfoRow label="訓犬師">{order.trainer || '-'}</InfoRow>
-                        <InfoRow label="服務項目">{order.serviceIds?.join(', ') || '-'}</InfoRow>
+                        <InfoRow label="訂購的服務項目">{order.serviceNames?.join(', ') || '-'}</InfoRow>
                         <InfoRow label="建立日期">{formatDate(order.createdTime)}</InfoRow>
                     </div>
                 </div>

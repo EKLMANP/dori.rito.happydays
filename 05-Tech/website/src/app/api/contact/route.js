@@ -47,6 +47,72 @@ async function sendTelegramNotification({ name, message }) {
 }
 
 /**
+ * 發送感謝 Email 給合作洽詢者
+ */
+async function sendThankYouEmail({ name, email }) {
+    const apiKey = process.env.MAILGUN_API_KEY;
+    const domain = process.env.MAILGUN_DOMAIN;
+    const baseUrl = process.env.MAILGUN_BASE_URL || 'https://api.mailgun.net';
+    if (!apiKey || !domain) {
+        console.log('[DEV] Mailgun not configured, skipping thank-you email');
+        return;
+    }
+
+    const subject = `【Dori & Rito Happydays】感謝您的合作提案 - ${name}`;
+    const html = `<!DOCTYPE html>
+<html lang="zh-TW">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background-color:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f4;">
+    <tr><td align="center" style="padding:20px 0;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+        <tr><td style="padding:30px;font-size:16px;line-height:1.8;color:#333;">
+          <p>${name} 您好，</p>
+          <p>感謝您對 <strong>Dori & Rito Happydays</strong> 的合作興趣！</p>
+          <p>我們已收到您的合作提案，團隊會在 <strong>3 個工作天</strong>內回覆您。<br/>如有任何急需，歡迎直接來信 <a href="mailto:dori.rito.happydays@gmail.com" style="color:#2563eb;">dori.rito.happydays@gmail.com</a></p>
+          <hr style="border:none;border-top:1px solid #eee;margin:20px 0;"/>
+          <p style="font-size:14px;color:#666;">
+            🌐 <a href="https://doriritohappydays.com" style="color:#2563eb;">官網</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+            📸 <a href="https://www.instagram.com/dori_rito_happydays/" style="color:#2563eb;">Instagram</a>
+          </p>
+          <p style="margin-top:24px;">Dori & Rito Happydays 團隊敬上</p>
+        </td></tr>
+        <tr><td style="padding:20px 30px;font-size:12px;color:#999;text-align:center;border-top:1px solid #eee;">
+          &copy; ${new Date().getFullYear()} Dori &amp; Rito Happydays &mdash; 正向訓犬<br/>
+          <a href="https://doriritohappydays.com" style="color:#999;">doriritohappydays.com</a>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+    const formData = new URLSearchParams();
+    formData.append('from', `Dori & Rito Happydays <noreply@${domain}>`);
+    formData.append('to', email);
+    formData.append('subject', subject);
+    formData.append('html', html);
+    formData.append('h:Reply-To', 'dori.rito.happydays@gmail.com');
+
+    try {
+        const res = await fetch(`${baseUrl}/v3/${domain}/messages`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Basic ${Buffer.from(`api:${apiKey}`).toString('base64')}`,
+            },
+            body: formData,
+        });
+        if (!res.ok) {
+            console.error('Thank-you email failed:', await res.text());
+        } else {
+            console.log('✅ 感謝 Email 已發送給', email);
+        }
+    } catch (err) {
+        console.error('Thank-you email error:', err);
+    }
+}
+
+/**
  * 透過 Mailgun API 發送 Email 通知
  */
 async function sendEmailNotification({ name, email, phone, types, message }) {
@@ -177,6 +243,7 @@ export async function POST(request) {
         Promise.allSettled([
             sendTelegramNotification(formData),
             sendEmailNotification(formData),
+            sendThankYouEmail(formData),
         ]).then((results) => {
             results.forEach((r) => {
                 if (r.status === 'rejected') console.error('Notification error:', r.reason);

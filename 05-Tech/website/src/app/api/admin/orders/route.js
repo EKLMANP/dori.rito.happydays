@@ -1,11 +1,19 @@
 import { NextResponse } from 'next/server';
-import { listOrders, createOrder } from '@/lib/notion';
+import { listOrders, searchOrders, createOrder } from '@/lib/notion';
 import { writeLog } from '@/lib/admin-log';
 
 /** GET /api/admin/orders?status=&paymentStatus=&trainer=&cursor=&pageSize= */
 export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);
+        const search = searchParams.get('search')?.trim();
+
+        // If search query provided, use cross-entity fuzzy search
+        if (search) {
+            const orders = await searchOrders(search);
+            return NextResponse.json({ orders, hasMore: false, nextCursor: null });
+        }
+
         const result = await listOrders({
             status: searchParams.get('status') || undefined,
             paymentStatus: searchParams.get('paymentStatus') || undefined,
