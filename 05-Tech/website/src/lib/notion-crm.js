@@ -171,10 +171,10 @@ function buildBookingBlocks(options) {
     return blocks;
 }
 
-/** Shared fetch helper for Notion API */
+/** Shared fetch helper for Notion API (uses CRM-specific key) */
 async function notionFetch(path, { method = 'GET', body } = {}) {
-    const apiKey = process.env.NOTION_API_KEY;
-    if (!apiKey) throw new Error('Notion API key not configured');
+    const apiKey = process.env.NOTION_API_KEY_CRM || process.env.NOTION_API_KEY;
+    if (!apiKey) throw new Error('Notion API key not configured (need NOTION_API_KEY_CRM)');
 
     const res = await fetch(`${NOTION_API}${path}`, {
         method,
@@ -321,7 +321,7 @@ export async function createNotionOrder(bookingData, customerPageId) {
     }
 
     // Look up service page ID for relation
-    const serviceDbId = process.env.NOTION_SERVICE_DB_ID;
+    const serviceDbId = process.env.NOTION_SERVICE_CATALOG_DB_ID || process.env.NOTION_SERVICE_DB_ID;
     if (serviceDbId) {
         try {
             const searchData = await notionFetch(`/databases/${serviceDbId}/query`, {

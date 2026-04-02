@@ -98,8 +98,9 @@ async function notifyTelegram(bookingData) {
 }
 
 async function createNotionCRM(bookingData) {
-    if (!process.env.NOTION_API_KEY || !process.env.NOTION_CUSTOMER_DB_ID) {
-        console.warn('[createNotionCRM] Notion not configured, skipping');
+    const notionKey = process.env.NOTION_API_KEY_CRM || process.env.NOTION_API_KEY;
+    if (!notionKey || !process.env.NOTION_CUSTOMER_DB_ID) {
+        console.warn('[createNotionCRM] Notion CRM not configured, skipping');
         return;
     }
 
@@ -165,7 +166,8 @@ async function createGCalEvent(bookingData) {
 }
 
 async function createOrderInNotion(bookingData) {
-    if (!process.env.NOTION_API_KEY || !process.env.NOTION_ORDER_DB_ID) {
+    const notionKey = process.env.NOTION_API_KEY_CRM || process.env.NOTION_API_KEY;
+    if (!notionKey || !process.env.NOTION_ORDER_DB_ID) {
         console.warn('[createOrderInNotion] Notion Order DB not configured, skipping');
         return;
     }
