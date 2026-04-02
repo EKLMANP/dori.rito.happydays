@@ -96,17 +96,10 @@ Newsletter_[系列名]_banner_1080x540
 - **色調**：明亮白天自然光線為主，營造安心與陪伴感。
 - **參考風格**：
   - 參考圖 1: https://iili.io/q2VXlkl.png
-  - 參考圖 2: https://iili.io/q2VX3LF.png
+  - 參考圖 2: https://ibb.co/ccVLDg22
+  - 參考圖 3: https://ibb.co/gZ4nj6BR
   - 重點：真實狗狗特寫或全身照、自然光、色調溫暖、乾淨大量留白。
 
----
-
-## 審核流程
-
-1. 完成設計提案 → 提交 DR-MKT 初審
-2. DR-MKT 確認 → 提交 DR-Head 審核
-3. DR-Head 通過 → 提交 Eric 最終確認
-4. Eric 核准 → 上傳 Google Drive（設計部）
 
 ---
 

@@ -7,8 +7,24 @@
 
 import { sql } from '@/lib/db';
 import { renderEmailTemplate, renderSubject } from '@/lib/email-renderer';
-import { updateCustomerPayment, createCustomerPageWithPayment, createNotionOrder as createNotionOrderFn } from '@/lib/notion-crm';
+import { updateCustomerPayment, createCustomerPageWithPayment, createNotionOrder as createNotionOrderFn, linkOrderToCustomer } from '@/lib/notion-crm';
 import { createEvent } from '@/lib/google-calendar';
+
+/** Service-specific display names for emails and calendar events */
+const SERVICE_DISPLAY = {
+    'single-session': {
+        emailSubject: '【Dori & Rito Happydays】線上課程預約確認：單次 60 分鐘',
+        calendarTitle: (name) => `【Dori & Rito Happydays】線上課程：單次 60 分鐘 - ${name}`,
+        calendarNote: '無',
+        isMultiSession: false,
+    },
+    'breakthrough-4': {
+        emailSubject: '【Dori & Rito Happydays】線上課程預約確認：突破成長方案 4堂',
+        calendarTitle: (name) => `【Dori & Rito Happydays】線上課程：突破成長方案4堂(W1/4) - ${name}`,
+        calendarNote: '此為第一堂課，後續課程將另外再與老師協調時間',
+        isMultiSession: true,
+    },
+};
 
 // --- Active Handlers ---
 
@@ -28,6 +44,8 @@ async function notifyEmail(bookingData) {
     }
     const template = templates[0];
 
+    const serviceDisplay = SERVICE_DISPLAY[bookingData.serviceId];
+
     const data = {
         customer_name: bookingData.customerName,
         dog_name: bookingData.dogName,
@@ -39,8 +57,9 @@ async function notifyEmail(bookingData) {
         meet_link: bookingData.meetLink || '',
     };
 
-    const html = renderEmailTemplate(template, data);
-    const subject = renderSubject(template, data);
+    const html = renderEmailTemplate(template, data, bookingData.serviceId);
+    // Use service-specific subject if available, otherwise fallback to template
+    const subject = serviceDisplay?.emailSubject || renderSubject(template, data);
 
     const form = new URLSearchParams();
     form.append('from', `Dori & Rito Happydays <noreply@${domain}>`);
@@ -63,13 +82,10 @@ async function notifyEmail(bookingData) {
 }
 
 async function notifyTelegram(bookingData) {
-    const botToken = process.env.DR_FNACC_BOT_TOKEN;
-    const groups = [
-        process.env.DR_CS_GROUP_CHAT_ID,
-        process.env.DR_FN_GROUP_CHAT_ID,
-    ].filter(Boolean);
+    const botToken = process.env.TELEGRAM_DR_FNACC_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_GROUP_DR_CS_TEAM;
 
-    if (!botToken || groups.length === 0) {
+    if (!botToken || !chatId) {
         console.warn('[notifyTelegram] Telegram not configured, skipping');
         return;
     }
@@ -78,28 +94,33 @@ async function notifyTelegram(bookingData) {
         '🔔 *新預約成功*',
         `客戶：${bookingData.customerName}`,
         `狗狗：${bookingData.dogName}`,
-        `服務：${bookingData.serviceName}`,
+        `訂購的服務項目：${bookingData.serviceName}`,
         `時間：${bookingData.slotDate} ${bookingData.slotTime}`,
         `金額：NT$${bookingData.price}`,
         `訂單：${bookingData.merchantTradeNo}`,
     ].join('\n');
 
-    for (const chatId of groups) {
-        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                chat_id: chatId,
-                text,
-                parse_mode: 'Markdown',
-            }),
-        });
+    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: chatId,
+            text,
+            parse_mode: 'Markdown',
+        }),
+    });
+
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`Telegram send failed: ${err}`);
     }
+    console.log('[notifyTelegram] Notification sent to DR_CS_team');
 }
 
 async function createNotionCRM(bookingData) {
-    if (!process.env.NOTION_API_KEY || !process.env.NOTION_CUSTOMER_DB_ID) {
-        console.warn('[createNotionCRM] Notion not configured, skipping');
+    const notionKey = process.env.NOTION_API_KEY_CRM || process.env.NOTION_API_KEY;
+    if (!notionKey || !process.env.NOTION_CUSTOMER_DB_ID) {
+        console.warn('[createNotionCRM] Notion CRM not configured, skipping');
         return;
     }
 
@@ -122,6 +143,8 @@ async function createNotionCRM(bookingData) {
         // Fallback: notionPageId missing (e.g. questionnaire-submit failed) — create fresh
         console.warn('[createNotionCRM] No notionPageId, creating page with payment directly');
         const result = await createCustomerPageWithPayment(bookingData);
+        // Store pageId for downstream handlers (e.g. createOrderInNotion)
+        bookingData.notionPageId = result.pageId;
         console.log('[createNotionCRM] Created page with payment:', result.pageId);
     }
 }
@@ -141,18 +164,26 @@ async function createGCalEvent(bookingData) {
     const endM = String(totalMin % 60).padStart(2, '0');
     const endDateTime = `${bookingData.slotDate}T${endH}:${endM}:00+08:00`;
 
+    const serviceDisplay = SERVICE_DISPLAY[bookingData.serviceId];
+    const calendarNote = serviceDisplay?.calendarNote || '無';
+
     const description = [
-        `客戶：${bookingData.customerName}`,
-        `狗狗：${bookingData.dogName}`,
+        `客戶姓名：${bookingData.customerName}`,
+        `毛寶貝姓名：${bookingData.dogName}`,
         `Email：${bookingData.email}`,
         `電話：${bookingData.phone || ''}`,
-        `訂單：${bookingData.merchantTradeNo}`,
+        `訂單編號：${bookingData.merchantTradeNo}`,
+        `備註：${calendarNote}`,
     ].join('\n');
+
+    const summary = serviceDisplay?.calendarTitle
+        ? serviceDisplay.calendarTitle(bookingData.customerName)
+        : `${bookingData.serviceName} - ${bookingData.customerName}`;
 
     const attendeeEmails = [bookingData.email].filter(Boolean);
 
     const result = await createEvent({
-        summary: `${bookingData.serviceName} - ${bookingData.customerName}`,
+        summary,
         description,
         startDateTime,
         endDateTime,
@@ -165,7 +196,8 @@ async function createGCalEvent(bookingData) {
 }
 
 async function createOrderInNotion(bookingData) {
-    if (!process.env.NOTION_API_KEY || !process.env.NOTION_ORDER_DB_ID) {
+    const notionKey = process.env.NOTION_API_KEY_CRM || process.env.NOTION_API_KEY;
+    if (!notionKey || !process.env.NOTION_ORDER_DB_ID) {
         console.warn('[createOrderInNotion] Notion Order DB not configured, skipping');
         return;
     }
@@ -174,6 +206,15 @@ async function createOrderInNotion(bookingData) {
     const customerPageId = bookingData.notionPageId || null;
     const result = await createNotionOrderFn(bookingData, customerPageId);
     console.log('[createOrderInNotion] Created order:', result.pageId);
+
+    // Link order back to customer page (訂單編號 with hyperlink)
+    if (customerPageId && result.pageId) {
+        try {
+            await linkOrderToCustomer(customerPageId, result.pageId, bookingData.merchantTradeNo);
+        } catch (err) {
+            console.error('[createOrderInNotion] Failed to link order to customer:', err.message);
+        }
+    }
 }
 
 // --- Handler Registry ---

@@ -37,6 +37,18 @@ export default function OrderListPage() {
     const [statusFilter, setStatusFilter] = useState('');
     const [paymentStatusFilter, setPaymentStatusFilter] = useState('');
     const [trainerFilter, setTrainerFilter] = useState('');
+    const [serviceFilter, setServiceFilter] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+
+    // Fetch service options for filter dropdown
+    const [serviceOptions, setServiceOptions] = useState([]);
+    useEffect(() => {
+        fetch('/api/admin/services')
+            .then(res => res.json())
+            .then(data => setServiceOptions(data.services || []))
+            .catch(err => console.error('Failed to load services:', err));
+    }, []);
 
     const fetchOrders = useCallback(async (cursor = null, append = false) => {
         if (append) {
@@ -47,11 +59,16 @@ export default function OrderListPage() {
 
         try {
             const params = new URLSearchParams();
-            if (statusFilter) params.set('status', statusFilter);
-            if (paymentStatusFilter) params.set('paymentStatus', paymentStatusFilter);
-            if (trainerFilter) params.set('trainer', trainerFilter);
-            if (cursor) params.set('cursor', cursor);
-            params.set('pageSize', PAGE_SIZE);
+            if (searchQuery) {
+                params.set('search', searchQuery);
+            } else {
+                if (statusFilter) params.set('status', statusFilter);
+                if (paymentStatusFilter) params.set('paymentStatus', paymentStatusFilter);
+                if (trainerFilter) params.set('trainer', trainerFilter);
+                if (serviceFilter) params.set('service', serviceFilter);
+                if (cursor) params.set('cursor', cursor);
+                params.set('pageSize', PAGE_SIZE);
+            }
 
             const res = await fetch(`/api/admin/orders?${params}`);
             const data = await res.json();
@@ -70,7 +87,7 @@ export default function OrderListPage() {
             setLoading(false);
             setLoadingMore(false);
         }
-    }, [statusFilter, paymentStatusFilter, trainerFilter]);
+    }, [statusFilter, paymentStatusFilter, trainerFilter, serviceFilter, searchQuery]);
 
     useEffect(() => {
         fetchOrders();
@@ -92,6 +109,37 @@ export default function OrderListPage() {
                 >
                     + 新增訂單
                 </Link>
+            </div>
+
+            {/* Search */}
+            <div className="mb-4">
+                <form
+                    onSubmit={(e) => { e.preventDefault(); setSearchQuery(searchInput); }}
+                    className="flex gap-2"
+                >
+                    <input
+                        type="text"
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        placeholder="搜尋客戶姓名、訂單編號、手機、Email、狗狗名字..."
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                    <button
+                        type="submit"
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium"
+                    >
+                        搜尋
+                    </button>
+                    {searchQuery && (
+                        <button
+                            type="button"
+                            onClick={() => { setSearchInput(''); setSearchQuery(''); }}
+                            className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-300 rounded-md"
+                        >
+                            清除
+                        </button>
+                    )}
+                </form>
             </div>
 
             {/* Filters */}
@@ -128,6 +176,17 @@ export default function OrderListPage() {
                         <option key={t} value={t}>{t}</option>
                     ))}
                 </select>
+
+                <select
+                    value={serviceFilter}
+                    onChange={(e) => setServiceFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white"
+                >
+                    <option value="">所有服務項目</option>
+                    {serviceOptions.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                </select>
             </div>
 
             {/* Table */}
@@ -147,6 +206,11 @@ export default function OrderListPage() {
                                 <thead className="bg-gray-50">
                                     <tr>
                                         <th className="px-4 py-2 text-left text-gray-600">訂單編號</th>
+                                        <th className="px-4 py-2 text-left text-gray-600">訂購的服務項目</th>
+                                        <th className="px-4 py-2 text-left text-gray-600">客戶姓名</th>
+                                        <th className="px-4 py-2 text-left text-gray-600">狗狗名字</th>
+                                        <th className="px-4 py-2 text-left text-gray-600">聯絡手機</th>
+                                        <th className="px-4 py-2 text-left text-gray-600">聯絡 Email</th>
                                         <th className="px-4 py-2 text-left text-gray-600">訓犬師</th>
                                         <th className="px-4 py-2 text-right text-gray-600">總金額</th>
                                         <th className="px-4 py-2 text-center text-gray-600">剩餘堂數</th>
@@ -163,7 +227,16 @@ export default function OrderListPage() {
                                                     {order.orderNumber}
                                                 </Link>
                                             </td>
-                                            <td className="px-4 py-3 text-gray-700">{order.trainer}</td>
+                                            <td className="px-4 py-3 text-gray-700 max-w-[200px] truncate" title={order.serviceName}>
+                                                {order.serviceName || '-'}
+                                            </td>
+                                            <td className="px-4 py-3 text-gray-700">{order.customerName || '-'}</td>
+                                            <td className="px-4 py-3 text-gray-700">{order.dogName || '-'}</td>
+                                            <td className="px-4 py-3 text-gray-700">{order.phone || '-'}</td>
+                                            <td className="px-4 py-3 text-gray-700 max-w-[180px] truncate" title={order.email}>
+                                                {order.email || '-'}
+                                            </td>
+                                            <td className="px-4 py-3 text-gray-700">{order.trainer || '-'}</td>
                                             <td className="px-4 py-3 text-right text-gray-700">
                                                 ${order.totalAmount?.toLocaleString()}
                                             </td>

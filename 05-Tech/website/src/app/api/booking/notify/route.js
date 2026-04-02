@@ -34,37 +34,53 @@ export async function POST(request) {
     const merchantTradeNo = params.MerchantTradeNo;
     const rtnCode = params.RtnCode; // "1" = success
 
-    // 2. Idempotency check — skip if already processed (processed_at IS NOT NULL)
-    const existing = await sql`
-        SELECT booking_data, processed_at
-        FROM processed_orders
-        WHERE merchant_trade_no = ${merchantTradeNo}
-    `;
-
-    if (existing.length > 0 && existing[0].processed_at) {
-        console.log(`[booking/notify] Already processed: ${merchantTradeNo}`);
-        return new Response('1|OK');
-    }
-
-    // 3. Only process successful payments
+    // 2. Only process successful payments
     if (rtnCode !== '1') {
         console.warn(`[booking/notify] Payment failed for ${merchantTradeNo}: RtnCode=${rtnCode}`);
         return new Response('1|OK');
     }
 
-    // 4. Retrieve stored booking data (persisted by /api/booking/create)
-    let storedData = {};
-    if (existing.length > 0 && existing[0].booking_data) {
-        try {
-            storedData = typeof existing[0].booking_data === 'string'
-                ? JSON.parse(existing[0].booking_data)
-                : existing[0].booking_data;
-        } catch {
-            console.warn('[booking/notify] Failed to parse stored booking data');
-        }
+    // 3. Check if automations already completed (handles ECPay webhook retries)
+    const alreadyDone = await sql`
+        SELECT automation_completed_at FROM processed_orders
+        WHERE merchant_trade_no = ${merchantTradeNo} AND automation_completed_at IS NOT NULL
+    `;
+    if (alreadyDone.length > 0) {
+        console.log(`[booking/notify] Automations already completed for ${merchantTradeNo}, skipping retry`);
+        return new Response('1|OK');
     }
 
-    // 5. Merge stored booking data with ECPay payment results
+    // 4. Atomic claim: only the first caller gets to process (prevents race with /return)
+    const claimed = await sql`
+        UPDATE processed_orders
+        SET processed_at = NOW()
+        WHERE merchant_trade_no = ${merchantTradeNo} AND processed_at IS NULL
+        RETURNING booking_data
+    `;
+
+    if (claimed.length === 0) {
+        // Already processed by /return handler, or order doesn't exist yet
+        // Try INSERT for edge case where webhook arrives before /create finishes
+        try {
+            await sql`
+                INSERT INTO processed_orders (merchant_trade_no, booking_data, processed_at)
+                VALUES (${merchantTradeNo}, ${JSON.stringify({ merchantTradeNo })}, NOW())
+                ON CONFLICT (merchant_trade_no) DO NOTHING
+            `;
+        } catch { /* already exists — fine */ }
+        console.log(`[booking/notify] Already processed or claimed: ${merchantTradeNo}`);
+        return new Response('1|OK');
+    }
+
+    // 4. Parse stored booking data + merge with ECPay payment results
+    let storedData = {};
+    try {
+        const raw = claimed[0].booking_data;
+        storedData = typeof raw === 'string' ? JSON.parse(raw) : raw || {};
+    } catch {
+        console.warn('[booking/notify] Failed to parse stored booking data');
+    }
+
     const bookingData = {
         ...storedData,
         merchantTradeNo,
@@ -73,28 +89,20 @@ export async function POST(request) {
         paymentDate: params.PaymentDate,
         paymentType: params.PaymentType,
         price: storedData.price || parseInt(params.TradeAmt) || 0,
-        // Fallbacks from ECPay custom fields (in case stored data is missing)
         customerName: storedData.customerName || params.CustomField1 || '',
         email: storedData.email || params.CustomField2 || '',
         dogName: storedData.dogName || params.CustomField3 || '',
         serviceName: storedData.serviceName || params.CustomField4 || '',
     };
 
-    // 6. Mark as processed + update with payment info
-    if (existing.length > 0) {
-        await sql`
-            UPDATE processed_orders
-            SET processed_at = NOW(), booking_data = ${JSON.stringify(bookingData)}
-            WHERE merchant_trade_no = ${merchantTradeNo}
-        `;
-    } else {
-        await sql`
-            INSERT INTO processed_orders (merchant_trade_no, booking_data, processed_at)
-            VALUES (${merchantTradeNo}, ${JSON.stringify(bookingData)}, NOW())
-        `;
-    }
+    // 6. Persist merged booking data back to DB
+    await sql`
+        UPDATE processed_orders
+        SET booking_data = ${JSON.stringify(bookingData)}
+        WHERE merchant_trade_no = ${merchantTradeNo}
+    `;
 
-    // 7. Run all post-payment automations (includes Notion questionnaire push)
+    // 7. Run all post-payment automations
     try {
         const result = await runBookingAutomations(bookingData);
         console.log(
@@ -105,6 +113,13 @@ export async function POST(request) {
         console.error(`[booking/notify] Automations error for ${merchantTradeNo}:`, err);
     }
 
-    // 8. Return success per ECPay spec
+    // 8. Mark automations as completed (prevents duplicate processing on ECPay retries)
+    await sql`
+        UPDATE processed_orders
+        SET automation_completed_at = NOW()
+        WHERE merchant_trade_no = ${merchantTradeNo}
+    `;
+
+    // 9. Return success per ECPay spec
     return new Response('1|OK');
 }

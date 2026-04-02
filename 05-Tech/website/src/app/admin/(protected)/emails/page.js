@@ -431,7 +431,7 @@ export default function AdminEmailsPage() {
                             <div className="px-6 py-3 text-xs text-gray-400 border-t text-center">
                                 {editing.footer_html
                                     ? <span dangerouslySetInnerHTML={{ __html: sanitizeHtml(editing.footer_html) }} />
-                                    : <span>&copy; 2026 Dori &amp; Rito Happydays — 正向訓犬</span>
+                                    : <span>&copy; 2026 Dori &amp; Rito Happydays</span>
                                 }
                             </div>
                         </div>

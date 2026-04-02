@@ -171,10 +171,10 @@ function buildBookingBlocks(options) {
     return blocks;
 }
 
-/** Shared fetch helper for Notion API */
+/** Shared fetch helper for Notion API (uses CRM-specific key) */
 async function notionFetch(path, { method = 'GET', body } = {}) {
-    const apiKey = process.env.NOTION_API_KEY;
-    if (!apiKey) throw new Error('Notion API key not configured');
+    const apiKey = process.env.NOTION_API_KEY_CRM || process.env.NOTION_API_KEY;
+    if (!apiKey) throw new Error('Notion API key not configured (need NOTION_API_KEY_CRM)');
 
     const res = await fetch(`${NOTION_API}${path}`, {
         method,
@@ -234,7 +234,7 @@ export async function updateCustomerPayment(pageId, options) {
     const properties = {
         '付款狀態': { status: { name: '已付款' } },
         '付費服務類別': { multi_select: [{ name: options.serviceCategory || serviceInfo.label }] },
-        '訂單編號': { rich_text: [{ type: 'text', text: { content: options.merchantTradeNo || '' } }] },
+        // 訂單編號 is set by linkOrderToCustomer() after order page is created (with hyperlink)
         '購買課堂數': { number: serviceInfo.sessions },
         '剩餘課堂數': { number: serviceInfo.sessions },
         '單堂課報價': { rich_text: [{ text: { content: String(serviceInfo.unitPrice) } }] },
@@ -321,7 +321,7 @@ export async function createNotionOrder(bookingData, customerPageId) {
     }
 
     // Look up service page ID for relation
-    const serviceDbId = process.env.NOTION_SERVICE_DB_ID;
+    const serviceDbId = process.env.NOTION_SERVICE_CATALOG_DB_ID || process.env.NOTION_SERVICE_DB_ID;
     if (serviceDbId) {
         try {
             const searchData = await notionFetch(`/databases/${serviceDbId}/query`, {
@@ -345,5 +345,43 @@ export async function createNotionOrder(bookingData, customerPageId) {
     });
 
     console.log('[notion-crm] Created order:', page.id);
-    return { pageId: page.id };
+    return { pageId: page.id, url: page.url };
+}
+
+/**
+ * Link an order to a customer page by appending the order number as a hyperlink
+ * in the 訂單編號 rich_text field. Supports multiple orders (appends with separator).
+ */
+export async function linkOrderToCustomer(customerPageId, orderPageId, merchantTradeNo) {
+    // 1. Read existing 訂單編號 from customer page
+    const page = await notionFetch(`/pages/${customerPageId}`, { method: 'GET' });
+    const existing = page.properties?.['訂單編號']?.rich_text || [];
+
+    // 2. Build new rich_text array: keep existing entries + separator + new linked entry
+    const newRichText = [...existing];
+
+    if (newRichText.length > 0) {
+        // Add separator between existing and new order
+        newRichText.push({ type: 'text', text: { content: '\n' } });
+    }
+
+    // Notion page URL format: https://www.notion.so/{pageId-without-dashes}
+    const orderUrl = `https://www.notion.so/${orderPageId.replace(/-/g, '')}`;
+
+    newRichText.push({
+        type: 'text',
+        text: { content: merchantTradeNo, link: { url: orderUrl } },
+    });
+
+    // 3. Update customer page
+    await notionFetch(`/pages/${customerPageId}`, {
+        method: 'PATCH',
+        body: {
+            properties: {
+                '訂單編號': { rich_text: newRichText },
+            },
+        },
+    });
+
+    console.log(`[notion-crm] Linked order ${merchantTradeNo} → customer ${customerPageId}`);
 }

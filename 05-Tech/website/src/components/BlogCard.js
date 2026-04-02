@@ -39,19 +39,16 @@ export default function BlogCard({ post }) {
                             🐾
                         </div>
                     )}
-                    {primary_tag && (
-                        <span className="tag" style={{
-                            position: 'absolute',
-                            top: '1rem',
-                            left: '1rem',
-                        }}>
-                            {primary_tag.name}
-                        </span>
-                    )}
                 </div>
 
                 {/* Content */}
                 <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
+                    {/* Tag — between image and title */}
+                    {primary_tag && (
+                        <span className="tag" style={{ alignSelf: 'flex-start' }}>
+                            {primary_tag.name}
+                        </span>
+                    )}
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 700, lineHeight: 1.4, marginBottom: '0.25rem' }}>
                         {title}
                     </h3>
@@ -68,19 +65,22 @@ export default function BlogCard({ post }) {
                             {excerpt}
                         </p>
                     )}
+                    {/* Metadata row — date, reading time, CTA all on one line */}
                     <div style={{
                         marginTop: 'auto',
-                        paddingTop: '1rem',
+                        paddingTop: '0.75rem',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '1rem',
-                        fontSize: '0.8rem',
+                        gap: '0.6rem',
+                        fontSize: '0.75rem',
                         color: 'var(--color-text-muted)',
                         borderTop: '1px solid var(--color-border)',
+                        flexWrap: 'nowrap',
+                        overflow: 'hidden',
                     }}>
-                        {formattedDate && <span>📅 {formattedDate}</span>}
-                        {reading_time && <span>⏱️ {reading_time} 分鐘</span>}
-                        <span style={{ marginLeft: 'auto', color: 'var(--color-primary)', fontWeight: 600 }}>閱讀更多 →</span>
+                        {formattedDate && <span style={{ flexShrink: 0 }}>📅 {formattedDate}</span>}
+                        {reading_time && <span style={{ flexShrink: 0 }}>⏱️ {reading_time} 分鐘</span>}
+                        <span style={{ marginLeft: 'auto', color: 'var(--color-primary)', fontWeight: 600, flexShrink: 0 }}>閱讀更多 →</span>
                     </div>
                 </div>
             </article>
