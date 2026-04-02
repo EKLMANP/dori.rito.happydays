@@ -6,8 +6,8 @@ export default function Footer() {
 
     return (
         <footer className="py-20 bg-slate-900 text-slate-400 mt-auto">
-            <div className="container mx-auto px-6 grid md:grid-cols-4 gap-12 text-center md:text-left">
-                <div className="col-span-2">
+            <div className="container mx-auto px-6 grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12 text-center md:text-left">
+                <div className="md:col-span-2">
                     <div className="flex items-center justify-center md:justify-start">
                         <img src="https://iili.io/qf6QsVe.png" alt="Eric & Pennee Logo" className="h-14 brightness-0 invert opacity-80 mb-8" />
                     </div>
