@@ -2,7 +2,7 @@ import { getPosts, getTags } from '@/lib/ghost';
 import { BRAND } from '@/lib/constants';
 import BlogCard from '@/components/BlogCard';
 import NewsletterCTA from '@/components/NewsletterCTA';
-import Link from 'next/link';
+import TagFilterDropdown from '@/components/TagFilterDropdown';
 
 export const metadata = {
     title: '毛孩知識',
@@ -21,13 +21,10 @@ export default async function BlogListPage({ searchParams }) {
         getTags(),
     ]);
 
-    const tagDisplayMap = {
-        'puppy-training': '幼犬訓練',
-        'separation-anxiety': '分離焦慮',
-        'reactive-dog': '反應性犬',
-        'basic-obedience': '基礎服從',
-        'behavior-issues': '行為問題',
-    };
+    // Build tag options from Ghost tags (exclude internal #-prefixed tags)
+    const tagOptions = tags
+        .filter(t => !t.slug.startsWith('hash-') && t.count?.posts > 0)
+        .map(t => ({ label: t.name, value: t.slug }));
 
     return (
         <>
@@ -50,28 +47,9 @@ export default async function BlogListPage({ searchParams }) {
             {/* Tag Filter Bar */}
             <section style={{ background: 'var(--color-white)', padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--color-border)', position: 'sticky', top: '72px', zIndex: 10 }}>
                 <div className="container">
-                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 700, fontSize: '0.9rem', marginRight: '0.25rem', flexShrink: 0 }}>篩選：</span>
-                        {[{ label: '全部文章', value: '' }, ...Object.entries(tagDisplayMap).map(([v, l]) => ({ label: l, value: v }))].map(
-                            (tag) => (
-                                <Link
-                                    key={tag.value}
-                                    href={tag.value ? `/blog?tag=${tag.value}` : '/blog'}
-                                    style={{
-                                        padding: '0.4rem 1rem',
-                                        borderRadius: 'var(--radius-full)',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 600,
-                                        textDecoration: 'none',
-                                        background: tagFilter === tag.value ? 'var(--color-primary)' : 'var(--color-sand)',
-                                        color: tagFilter === tag.value ? 'white' : 'var(--color-text)',
-                                        transition: 'var(--transition)',
-                                    }}
-                                >
-                                    {tag.label}
-                                </Link>
-                            )
-                        )}
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.9rem', flexShrink: 0 }}>篩選：</span>
+                        <TagFilterDropdown tags={tagOptions} currentTag={tagFilter} />
                     </div>
                 </div>
             </section>

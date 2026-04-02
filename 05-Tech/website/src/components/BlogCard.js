@@ -39,15 +39,6 @@ export default function BlogCard({ post }) {
                             🐾
                         </div>
                     )}
-                    {primary_tag && (
-                        <span className="tag" style={{
-                            position: 'absolute',
-                            top: '1rem',
-                            left: '1rem',
-                        }}>
-                            {primary_tag.name}
-                        </span>
-                    )}
                 </div>
 
                 {/* Content */}
@@ -73,11 +64,24 @@ export default function BlogCard({ post }) {
                         paddingTop: '1rem',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '1rem',
+                        flexWrap: 'wrap',
+                        gap: '0.5rem 1rem',
                         fontSize: '0.8rem',
                         color: 'var(--color-text-muted)',
                         borderTop: '1px solid var(--color-border)',
                     }}>
+                        {primary_tag && (
+                            <span style={{
+                                padding: '0.15rem 0.6rem',
+                                borderRadius: 'var(--radius-full)',
+                                background: 'var(--color-sage)',
+                                color: 'var(--color-text)',
+                                fontSize: '0.8rem',
+                                fontWeight: 600,
+                            }}>
+                                {primary_tag.name}
+                            </span>
+                        )}
                         {formattedDate && <span>📅 {formattedDate}</span>}
                         {reading_time && <span>⏱️ {reading_time} 分鐘</span>}
                         <span style={{ marginLeft: 'auto', color: 'var(--color-primary)', fontWeight: 600 }}>閱讀更多 →</span>
