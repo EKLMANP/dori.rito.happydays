@@ -332,7 +332,7 @@ async function generateOrderNumber() {
 }
 
 /** List orders with optional filters */
-export async function listOrders({ startCursor, pageSize = 20, status, paymentStatus, trainer, search } = {}) {
+export async function listOrders({ startCursor, pageSize = 20, status, paymentStatus, trainer, service, search } = {}) {
     const filters = [];
     if (status) {
         filters.push({ property: '訂單狀態', status: { equals: status } });
@@ -342,6 +342,9 @@ export async function listOrders({ startCursor, pageSize = 20, status, paymentSt
     }
     if (trainer) {
         filters.push({ property: '訓犬師', select: { equals: trainer } });
+    }
+    if (service) {
+        filters.push({ property: '服務項目', relation: { contains: service } });
     }
     if (search) {
         // Search by order number (title field)
@@ -362,6 +365,49 @@ export async function listOrders({ startCursor, pageSize = 20, status, paymentSt
         hasMore: res.has_more,
         nextCursor: res.next_cursor,
     };
+}
+
+/**
+ * Batch-resolve customer and service relations for a list of orders.
+ * Avoids N+1 by deduping IDs and fetching each only once.
+ */
+export async function resolveOrderRelations(orders) {
+    // Collect unique IDs
+    const customerIdSet = new Set();
+    const serviceIdSet = new Set();
+    for (const o of orders) {
+        (o.customerIds || []).forEach(id => customerIdSet.add(id));
+        (o.serviceIds || []).forEach(id => serviceIdSet.add(id));
+    }
+
+    // Batch fetch (parallel)
+    const [customerMap, serviceMap] = await Promise.all([
+        batchFetchPages([...customerIdSet], formatCustomer),
+        batchFetchPages([...serviceIdSet], formatService),
+    ]);
+
+    // Attach resolved data to each order
+    return orders.map(o => ({
+        ...o,
+        customerName: (o.customerIds || []).map(id => customerMap.get(id)?.name).filter(Boolean).join(', ') || '',
+        dogName: (o.customerIds || []).map(id => customerMap.get(id)?.dogName).filter(Boolean).join(', ') || '',
+        phone: (o.customerIds || []).map(id => customerMap.get(id)?.phone).filter(Boolean).join(', ') || '',
+        email: (o.customerIds || []).map(id => customerMap.get(id)?.email).filter(Boolean).join(', ') || '',
+        serviceName: (o.serviceIds || []).map(id => serviceMap.get(id)?.name).filter(Boolean).join(', ') || '',
+    }));
+}
+
+/** Fetch pages by IDs in parallel, return Map<id, formatted> */
+async function batchFetchPages(ids, formatter) {
+    const map = new Map();
+    if (ids.length === 0) return map;
+    const results = await Promise.allSettled(
+        ids.map(id => getClient().pages.retrieve({ page_id: id }).then(page => ({ id, data: formatter(page) })))
+    );
+    for (const r of results) {
+        if (r.status === 'fulfilled') map.set(r.value.id, r.value.data);
+    }
+    return map;
 }
 
 /**

@@ -9,7 +9,7 @@ function AdminLayoutInner({ children }) {
     return (
         <div className="flex min-h-screen bg-gray-50">
             <AdminSidebar onLogout={logout} />
-            <main className="flex-1 p-8">{children}</main>
+            <main className="flex-1 p-4 pt-14 md:p-8 min-w-0">{children}</main>
         </div>
     );
 }

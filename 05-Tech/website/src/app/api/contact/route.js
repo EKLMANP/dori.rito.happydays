@@ -69,17 +69,16 @@ async function sendThankYouEmail({ name, email }) {
         <tr><td style="padding:30px;font-size:16px;line-height:1.8;color:#333;">
           <p>${name} 您好，</p>
           <p>感謝您對 <strong>Dori & Rito Happydays</strong> 的合作興趣！</p>
-          <p>我們已收到您的合作提案，團隊會在 <strong>3 個工作天</strong>內回覆您。<br/>如有任何急需，歡迎直接來信 <a href="mailto:dori.rito.happydays@gmail.com" style="color:#2563eb;">dori.rito.happydays@gmail.com</a></p>
+          <p>我們已收到您的合作提案，團隊會在 <strong>3 個工作天</strong>內回覆您。<br/>如果有其他想法，歡迎直接來信 <a href="mailto:dori.rito.happydays@gmail.com" style="color:#2563eb;">dori.rito.happydays@gmail.com</a></p>
+          <p style="margin-top:24px;">Dori & Rito Happydays 團隊敬上</p>
           <hr style="border:none;border-top:1px solid #eee;margin:20px 0;"/>
           <p style="font-size:14px;color:#666;">
             🌐 <a href="https://doriritohappydays.com" style="color:#2563eb;">官網</a>&nbsp;&nbsp;|&nbsp;&nbsp;
             📸 <a href="https://www.instagram.com/dori_rito_happydays/" style="color:#2563eb;">Instagram</a>
           </p>
-          <p style="margin-top:24px;">Dori & Rito Happydays 團隊敬上</p>
         </td></tr>
         <tr><td style="padding:20px 30px;font-size:12px;color:#999;text-align:center;border-top:1px solid #eee;">
-          &copy; ${new Date().getFullYear()} Dori &amp; Rito Happydays &mdash; 正向訓犬<br/>
-          <a href="https://doriritohappydays.com" style="color:#999;">doriritohappydays.com</a>
+          &copy; ${new Date().getFullYear()} Dori &amp; Rito Happydays
         </td></tr>
       </table>
     </td></tr>

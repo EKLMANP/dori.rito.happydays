@@ -75,7 +75,7 @@ export function renderEmailTemplate(template, data = {}, serviceId) {
     const footer = footerHtml
         ? `<tr><td style="padding:20px 30px;font-size:12px;color:#999;text-align:center;border-top:1px solid #eee;">${footerHtml}</td></tr>`
         : `<tr><td style="padding:20px 30px;font-size:12px;color:#999;text-align:center;border-top:1px solid #eee;">
-            &copy; ${new Date().getFullYear()} Dori &amp; Rito Happydays &mdash; 正向訓犬<br/>
+            &copy; ${new Date().getFullYear()} Dori &amp; Rito Happydays<br/>
             <a href="https://doriritohappydays.com" style="color:#999;">doriritohappydays.com</a>
            </td></tr>`;
 
