@@ -82,8 +82,8 @@ async function notifyEmail(bookingData) {
 }
 
 async function notifyTelegram(bookingData) {
-    const botToken = process.env.DR_FNACC_BOT_TOKEN;
-    const chatId = process.env.DR_CS_GROUP_CHAT_ID;
+    const botToken = process.env.TELEGRAM_DR_FNACC_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_GROUP_DR_CS_TEAM;
 
     if (!botToken || !chatId) {
         console.warn('[notifyTelegram] Telegram not configured, skipping');

@@ -7,7 +7,7 @@ const NOTION_LINK = 'https://tinyurl.com/y25e79se';
  * 發送 Telegram 通知到 DR_MKT Team 群組
  */
 async function sendTelegramNotification({ name, message }) {
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const botToken = process.env.TELEGRAM_DR_COLLAB_BOT_TOKEN;
     const chatId = process.env.TELEGRAM_GROUP_DR_MKT_TEAM;
     if (!botToken || !chatId) {
         console.log('[DEV] Telegram not configured, skipping notification');
