@@ -6,7 +6,7 @@ import TagFilterDropdown from '@/components/TagFilterDropdown';
 
 export const metadata = {
     title: '毛孩知識',
-    description: '專業 KPA 認證訓犬師撰寫的狗狗行為訓練知識庫。幼犬訓練、分離焦慮、反應性犬、基礎服從，讓你用正向的方法理解並引導毛孩。',
+    description: '專業 KPA / CATCH 認證訓犬師撰寫的狗狗行為訓練知識庫。幼犬訓練、分離焦慮、反應性犬、基礎服從，幫助你用正向方法一起打造你與毛孩的理想生活。',
     alternates: { canonical: '/blog' },
 };
 
@@ -39,7 +39,7 @@ export default async function BlogListPage({ searchParams }) {
                 <div className="container mx-auto max-w-2xl relative z-10">
                     <h1 className="text-4xl md:text-5xl font-black mb-4 text-gray-900">狗狗行為文章</h1>
                     <p className="text-gray-600 text-lg leading-relaxed font-medium">
-                        由 KPA 認證訓犬師撰寫，幫助你用正向方法理解並引導毛孩
+                        由 KPA / CATCH 認證訓犬師撰寫，幫助你用正向方法一起打造你與毛孩的理想生活
                     </p>
                 </div>
             </section>
