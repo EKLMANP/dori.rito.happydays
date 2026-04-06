@@ -21,9 +21,16 @@ export default async function BlogListPage({ searchParams }) {
         getTags(),
     ]);
 
-    // Build tag options from Ghost tags (exclude internal #-prefixed tags)
+    // Build tag options from Ghost tags (exclude internal #-prefixed tags, deduplicate by name)
+    const seen = new Set();
     const tagOptions = tags
         .filter(t => !t.slug.startsWith('hash-') && t.count?.posts > 0)
+        .filter(t => {
+            const key = t.name.trim().toLowerCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        })
         .map(t => ({ label: t.name, value: t.slug }));
 
     return (

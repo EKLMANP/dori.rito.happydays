@@ -2,7 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 export default function BlogCard({ post }) {
-    const { title, slug, excerpt, feature_image, published_at, reading_time, primary_tag } = post;
+    const { title, slug, excerpt, feature_image, published_at, reading_time, tags } = post;
 
     const formattedDate = published_at
         ? new Date(published_at).toLocaleDateString('zh-TW', {
@@ -43,11 +43,18 @@ export default function BlogCard({ post }) {
 
                 {/* Content */}
                 <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-                    {/* Tag — between image and title */}
-                    {primary_tag && (
-                        <span className="tag" style={{ alignSelf: 'flex-start' }}>
-                            {primary_tag.name}
-                        </span>
+                    {/* Tags — show all public tags */}
+                    {tags && tags.filter(t => t.visibility === 'public' && !t.name.startsWith('#')).length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', alignSelf: 'flex-start' }}>
+                            {tags
+                                .filter(t => t.visibility === 'public' && !t.name.startsWith('#'))
+                                .map(t => (
+                                    <span key={t.id} className="tag" style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem' }}>
+                                        {t.name}
+                                    </span>
+                                ))
+                            }
+                        </div>
                     )}
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 700, lineHeight: 1.4, marginBottom: '0.25rem' }}>
                         {title}
