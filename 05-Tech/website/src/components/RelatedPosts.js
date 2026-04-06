@@ -32,8 +32,11 @@ export default function RelatedPosts({ posts }) {
 
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: `repeat(${Math.min(perPage, visiblePosts.length)}, 1fr)`,
+                    gridTemplateColumns: perPage === 1
+                        ? '1fr'
+                        : 'repeat(auto-fill, minmax(280px, 1fr))',
                     gap: '1.5rem',
+                    maxWidth: perPage === 1 ? '480px' : 'none',
                 }}>
                     {visiblePosts.map((p) => <BlogCard key={p.id} post={p} />)}
                 </div>
