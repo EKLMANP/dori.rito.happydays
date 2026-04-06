@@ -48,7 +48,7 @@ export default function NewsletterCTA({ variant = 'full' }) {
             <div
                 id="newsletter"
                 style={{
-                    background: 'var(--color-sage)',
+                    background: '#FAF4E4',
                     borderRadius: 'var(--radius-lg)',
                     padding: '2rem',
                     margin: '2.5rem 0',
