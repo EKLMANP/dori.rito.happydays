@@ -307,8 +307,13 @@ button {
   margin-bottom: 1.25rem;
 }
 
-.ghost-content ul,
+.ghost-content ul {
+  list-style: disc;
+  margin: 1rem 0 1rem 1.5rem;
+}
+
 .ghost-content ol {
+  list-style: decimal;
   margin: 1rem 0 1rem 1.5rem;
 }
 
