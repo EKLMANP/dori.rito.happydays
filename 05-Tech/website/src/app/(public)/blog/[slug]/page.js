@@ -5,7 +5,7 @@ import { BRAND } from '@/lib/constants';
 import NewsletterCTA from '@/components/NewsletterCTA';
 import BlogCard from '@/components/BlogCard';
 import GhostVideoPlayer from '@/components/GhostVideoPlayer';
-import TableOfContents from '@/components/TableOfContents';
+
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -109,9 +109,6 @@ export default async function BlogPostPage({ params }) {
 
                 {/* Ghost video player activation */}
                 <GhostVideoPlayer />
-
-                {/* Table of Contents */}
-                <TableOfContents headings={headings} />
 
                 {/* Article Content Part 1 (trusted Ghost CMS content) */}
                 <div
