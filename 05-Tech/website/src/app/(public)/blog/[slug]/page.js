@@ -149,7 +149,7 @@ export default async function BlogPostPage({ params }) {
 
             {/* Related Posts */}
             {relatedPosts.length > 0 && (
-                <section className="section" style={{ backgroundColor: 'var(--color-cream)' }}>
+                <section className="section" style={{ backgroundColor: '#FAF4E4' }}>
                     <div className="container">
                         <h2 style={{ marginBottom: '2rem' }}>你可能也感興趣</h2>
                         <div style={{
