@@ -128,29 +128,33 @@ export async function getRelatedPosts(slug, tags) {
     const publicTags = tags.filter(t => t.visibility === 'public' && !t.name.startsWith('#'));
     if (publicTags.length === 0) return [];
 
-    const tagSlugs = publicTags.map(t => t.slug);
+    // Match by tag NAME (not slug) — Ghost can have duplicate tags
+    // with different slugs (e.g. "吠叫" → fei-jiao vs fei-jiao-2)
+    const tagNames = new Set(publicTags.map(t => t.name));
 
     try {
-        // Fetch all posts that share at least one tag (OR filter)
-        const tagFilter = tagSlugs.map(s => `tag:${s}`).join(',');
-        const posts = await withRetry(() =>
+        // Fetch all posts with tags, then filter/sort in JS
+        // (Ghost OR filter with Chinese tag slugs can be unreliable)
+        const allPosts = await withRetry(() =>
             api.posts.browse({
                 limit: 'all',
-                filter: `(${tagFilter})+slug:-${slug}`,
                 include: 'tags',
                 order: 'published_at DESC',
             })
         );
 
-        // Score each post by number of overlapping tags
-        const currentTagSet = new Set(tagSlugs);
-        const scored = posts.map(post => {
-            const postTagSlugs = (post.tags || [])
+        // Score each post by number of overlapping tags, exclude current post
+        const scored = [];
+        for (const post of allPosts) {
+            if (post.slug === slug) continue;
+            const postTagNames = (post.tags || [])
                 .filter(t => t.visibility === 'public' && !t.name.startsWith('#'))
-                .map(t => t.slug);
-            const overlap = postTagSlugs.filter(s => currentTagSet.has(s)).length;
-            return { ...post, _overlap: overlap };
-        });
+                .map(t => t.name);
+            const overlap = postTagNames.filter(n => tagNames.has(n)).length;
+            if (overlap > 0) {
+                scored.push({ ...post, _overlap: overlap });
+            }
+        }
 
         // Sort by overlap (desc), then by published date (desc)
         scored.sort((a, b) => {
