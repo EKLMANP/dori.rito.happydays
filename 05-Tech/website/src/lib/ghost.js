@@ -119,20 +119,46 @@ export async function getAllPostSlugs() {
     }
 }
 
-// 取得相關文章（同 Tag）
-export async function getRelatedPosts(slug, primaryTag, limit = 3) {
+// 取得相關文章（按 Tag 重疊度排序）
+export async function getRelatedPosts(slug, tags) {
     const api = getApi();
-    if (!api) return [];
+    if (!api || !Array.isArray(tags) || tags.length === 0) return [];
+
+    // Only use public (non-internal) tags
+    const publicTags = tags.filter(t => t.visibility === 'public' && !t.name.startsWith('#'));
+    if (publicTags.length === 0) return [];
+
+    const tagSlugs = publicTags.map(t => t.slug);
+
     try {
+        // Fetch all posts that share at least one tag (OR filter)
+        const tagFilter = tagSlugs.map(s => `tag:${s}`).join(',');
         const posts = await withRetry(() =>
             api.posts.browse({
-                limit,
-                filter: primaryTag ? `tag:${primaryTag}+slug:-${slug}` : `slug:-${slug}`,
+                limit: 'all',
+                filter: `(${tagFilter})+slug:-${slug}`,
                 include: 'tags',
                 order: 'published_at DESC',
             })
         );
-        return posts.map(rewriteImageUrls);
+
+        // Score each post by number of overlapping tags
+        const currentTagSet = new Set(tagSlugs);
+        const scored = posts.map(post => {
+            const postTagSlugs = (post.tags || [])
+                .filter(t => t.visibility === 'public' && !t.name.startsWith('#'))
+                .map(t => t.slug);
+            const overlap = postTagSlugs.filter(s => currentTagSet.has(s)).length;
+            return { ...post, _overlap: overlap };
+        });
+
+        // Sort by overlap (desc), then by published date (desc)
+        scored.sort((a, b) => {
+            if (b._overlap !== a._overlap) return b._overlap - a._overlap;
+            return new Date(b.published_at) - new Date(a.published_at);
+        });
+
+        return scored.map(rewriteImageUrls);
     } catch (err) {
         console.error('Ghost getRelatedPosts error:', err?.message || err);
         return [];

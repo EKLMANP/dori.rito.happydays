@@ -4,6 +4,7 @@ import { articleSchema } from '@/lib/schema';
 import { BRAND } from '@/lib/constants';
 import NewsletterCTA from '@/components/NewsletterCTA';
 import BlogCard from '@/components/BlogCard';
+import RelatedPosts from '@/components/RelatedPosts';
 import GhostVideoPlayer from '@/components/GhostVideoPlayer';
 
 import { notFound } from 'next/navigation';
@@ -40,7 +41,7 @@ export default async function BlogPostPage({ params }) {
     const post = await getPostBySlug(resolvedParams.slug);
     if (!post) notFound();
 
-    const relatedPosts = await getRelatedPosts(post.slug, post.primary_tag?.slug, 3);
+    const relatedPosts = await getRelatedPosts(post.slug, post.tags);
 
     const formattedDate = post.published_at
         ? new Date(post.published_at).toLocaleDateString('zh-TW', {
@@ -145,20 +146,7 @@ export default async function BlogPostPage({ params }) {
             <NewsletterCTA variant="full" />
 
             {/* Related Posts */}
-            {relatedPosts.length > 0 && (
-                <section className="section" style={{ backgroundColor: '#FAF4E4' }}>
-                    <div className="container">
-                        <h2 style={{ marginBottom: '2rem' }}>你可能也感興趣</h2>
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                            gap: '1.5rem',
-                        }}>
-                            {relatedPosts.map((p) => <BlogCard key={p.id} post={p} />)}
-                        </div>
-                    </div>
-                </section>
-            )}
+            {relatedPosts.length > 0 && <RelatedPosts posts={relatedPosts} />}
         </div>
     );
 }
