@@ -111,14 +111,9 @@ export function injectHeadingIds(html, headings) {
 
         const plainText = normalizeText(stripHtml(content));
 
-        // Try exact match first, then fuzzy (contains) match
-        let found = headingEntries.find((h) => h.normalized === plainText);
-        if (!found) {
-            // Fuzzy: check if TOC text contains a heading or heading contains TOC text
-            found = headingEntries.find(
-                (h) => plainText.includes(h.normalized) || h.normalized.includes(plainText)
-            );
-        }
+        // Exact match only (after normalization: Chinese→Arabic numerals, strip parentheticals)
+        // Fuzzy/contains matching caused false positives on regular list items
+        const found = headingEntries.find((h) => h.normalized === plainText);
 
         if (found) {
             return `<li><a href="#${found.id}">${content}</a></li>`;

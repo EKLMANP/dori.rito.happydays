@@ -344,6 +344,32 @@ button {
   color: var(--color-primary-hover);
 }
 
+/* Ghost Content — Table */
+.ghost-content table {
+  width: 100%;
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  font-size: 0.9rem;
+}
+
+.ghost-content th,
+.ghost-content td {
+  border: 1px solid var(--color-border);
+  padding: 0.625rem 0.875rem;
+  text-align: left;
+}
+
+.ghost-content thead th {
+  background: var(--color-cream-dark);
+  font-weight: 700;
+}
+
+.ghost-content tbody tr:nth-child(even) {
+  background: rgba(0, 0, 0, 0.02);
+}
+
 /* Ghost Card — Video */
 .ghost-content .kg-video-card {
   margin: 1.5rem 0;
