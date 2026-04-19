@@ -1,9 +1,12 @@
 import { getPostBySlug, getAllPostSlugs, getRelatedPosts } from '@/lib/ghost';
+import { extractHeadings, injectHeadingIds } from '@/lib/toc';
 import { articleSchema } from '@/lib/schema';
 import { BRAND } from '@/lib/constants';
 import NewsletterCTA from '@/components/NewsletterCTA';
 import BlogCard from '@/components/BlogCard';
+import RelatedPosts from '@/components/RelatedPosts';
 import GhostVideoPlayer from '@/components/GhostVideoPlayer';
+
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -38,7 +41,7 @@ export default async function BlogPostPage({ params }) {
     const post = await getPostBySlug(resolvedParams.slug);
     if (!post) notFound();
 
-    const relatedPosts = await getRelatedPosts(post.slug, post.primary_tag?.slug, 3);
+    const relatedPosts = await getRelatedPosts(post.slug, post.tags);
 
     const formattedDate = post.published_at
         ? new Date(post.published_at).toLocaleDateString('zh-TW', {
@@ -46,8 +49,9 @@ export default async function BlogPostPage({ params }) {
         })
         : '';
 
-    // Split HTML for inserting mid-article CTA
-    const htmlContent = post.html || '';
+    // Extract headings and inject anchor IDs (must happen BEFORE split)
+    const headings = extractHeadings(post.html || '');
+    const htmlContent = injectHeadingIds(post.html || '', headings);
     const splitPoint = Math.floor(htmlContent.length * 0.55);
     const lastTagClose = htmlContent.lastIndexOf('</p>', splitPoint);
     const splitIndex = lastTagClose > 0 ? lastTagClose + 4 : splitPoint;
@@ -55,7 +59,7 @@ export default async function BlogPostPage({ params }) {
     const htmlPart2 = htmlContent.slice(splitIndex);
 
     return (
-        <>
+        <div style={{ backgroundColor: '#fff' }}>
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema(post)) }}
@@ -76,11 +80,6 @@ export default async function BlogPostPage({ params }) {
                 </nav>
 
                 {/* Title Area */}
-                {post.primary_tag && (
-                    <span className="tag" style={{ marginBottom: '1rem', display: 'inline-block' }}>
-                        {post.primary_tag.name}
-                    </span>
-                )}
                 <h1 style={{ marginBottom: '1.25rem', lineHeight: 1.25 }}>{post.title}</h1>
 
                 {/* Meta */}
@@ -147,20 +146,7 @@ export default async function BlogPostPage({ params }) {
             <NewsletterCTA variant="full" />
 
             {/* Related Posts */}
-            {relatedPosts.length > 0 && (
-                <section className="section bg-cream">
-                    <div className="container">
-                        <h2 style={{ marginBottom: '2rem' }}>你可能也感興趣</h2>
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                            gap: '1.5rem',
-                        }}>
-                            {relatedPosts.map((p) => <BlogCard key={p.id} post={p} />)}
-                        </div>
-                    </div>
-                </section>
-            )}
-        </>
+            {relatedPosts.length > 0 && <RelatedPosts posts={relatedPosts} />}
+        </div>
     );
 }

@@ -119,20 +119,50 @@ export async function getAllPostSlugs() {
     }
 }
 
-// 取得相關文章（同 Tag）
-export async function getRelatedPosts(slug, primaryTag, limit = 3) {
+// 取得相關文章（按 Tag 重疊度排序）
+export async function getRelatedPosts(slug, tags) {
     const api = getApi();
-    if (!api) return [];
+    if (!api || !Array.isArray(tags) || tags.length === 0) return [];
+
+    // Only use public (non-internal) tags
+    const publicTags = tags.filter(t => t.visibility === 'public' && !t.name.startsWith('#'));
+    if (publicTags.length === 0) return [];
+
+    // Match by tag NAME (not slug) — Ghost can have duplicate tags
+    // with different slugs (e.g. "吠叫" → fei-jiao vs fei-jiao-2)
+    const tagNames = new Set(publicTags.map(t => t.name));
+
     try {
-        const posts = await withRetry(() =>
+        // Fetch all posts with tags, then filter/sort in JS
+        // (Ghost OR filter with Chinese tag slugs can be unreliable)
+        const allPosts = await withRetry(() =>
             api.posts.browse({
-                limit,
-                filter: primaryTag ? `tag:${primaryTag}+slug:-${slug}` : `slug:-${slug}`,
+                limit: 'all',
                 include: 'tags',
                 order: 'published_at DESC',
             })
         );
-        return posts.map(rewriteImageUrls);
+
+        // Score each post by number of overlapping tags, exclude current post
+        const scored = [];
+        for (const post of allPosts) {
+            if (post.slug === slug) continue;
+            const postTagNames = (post.tags || [])
+                .filter(t => t.visibility === 'public' && !t.name.startsWith('#'))
+                .map(t => t.name);
+            const overlap = postTagNames.filter(n => tagNames.has(n)).length;
+            if (overlap > 0) {
+                scored.push({ ...post, _overlap: overlap });
+            }
+        }
+
+        // Sort by overlap (desc), then by published date (desc)
+        scored.sort((a, b) => {
+            if (b._overlap !== a._overlap) return b._overlap - a._overlap;
+            return new Date(b.published_at) - new Date(a.published_at);
+        });
+
+        return scored.map(rewriteImageUrls);
     } catch (err) {
         console.error('Ghost getRelatedPosts error:', err?.message || err);
         return [];

@@ -207,7 +207,7 @@ button {
   border-radius: var(--radius-full);
   font-size: 0.8rem;
   font-weight: 600;
-  background: var(--color-sage);
+  background: #FFF7ED;
   color: var(--color-text);
 }
 
@@ -307,8 +307,13 @@ button {
   margin-bottom: 1.25rem;
 }
 
-.ghost-content ul,
+.ghost-content ul {
+  list-style: disc;
+  margin: 1rem 0 1rem 1.5rem;
+}
+
 .ghost-content ol {
+  list-style: decimal;
   margin: 1rem 0 1rem 1.5rem;
 }
 
@@ -320,7 +325,7 @@ button {
   border-left: 4px solid var(--color-primary);
   padding: 1rem 1.5rem;
   margin: 2rem 0;
-  background: var(--color-cream-dark);
+  background: #FFF7ED;
   border-radius: 0 var(--radius-md) var(--radius-md) 0;
   font-style: italic;
 }
@@ -337,6 +342,32 @@ button {
 
 .ghost-content a:hover {
   color: var(--color-primary-hover);
+}
+
+/* Ghost Content — Table */
+.ghost-content table {
+  width: 100%;
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  font-size: 0.9rem;
+}
+
+.ghost-content th,
+.ghost-content td {
+  border: 1px solid var(--color-border);
+  padding: 0.625rem 0.875rem;
+  text-align: left;
+}
+
+.ghost-content thead th {
+  background: var(--color-cream-dark);
+  font-weight: 700;
+}
+
+.ghost-content tbody tr:nth-child(even) {
+  background: rgba(0, 0, 0, 0.02);
 }
 
 /* Ghost Card — Video */
@@ -403,6 +434,41 @@ button {
 /* Hide Ghost's custom player controls — use native controls instead */
 .ghost-content .kg-video-player-container {
   display: none;
+}
+
+/* Ghost Video — Error Fallback */
+.ghost-content .kg-video-error {
+  background: var(--color-cream-dark);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  min-height: 200px;
+}
+
+.kg-video-error-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  min-height: 200px;
+}
+
+.kg-video-error-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.kg-video-error-title {
+  color: var(--color-text);
+  font-weight: 600;
+  margin: 0;
+}
+
+.kg-video-error-hint {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
 }
 
 /* Ghost Card — Gallery */
@@ -481,6 +547,97 @@ button {
   font-size: 0.8rem;
   color: var(--color-text-muted);
   margin-top: 0.5rem;
+}
+
+/* =====================================================
+   Table of Contents
+   ===================================================== */
+.toc {
+  margin: 1.5rem 0 2rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: #fff;
+  overflow: hidden;
+}
+
+.toc-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.875rem 1.25rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--color-text);
+}
+
+.toc-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.toc-chevron {
+  transition: transform 0.25s ease;
+  color: var(--color-text-muted);
+}
+
+.toc-chevron--open {
+  transform: rotate(180deg);
+}
+
+.toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 1.25rem 0 1.25rem;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+.toc-list--open {
+  max-height: 600px;
+  padding: 0 1.25rem 1rem 1.25rem;
+}
+
+.toc-item {
+  padding: 0.35rem 0;
+}
+
+.toc-item a {
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  display: block;
+  transition: color 0.15s;
+}
+
+.toc-item a:hover {
+  color: var(--color-primary);
+}
+
+/* Scroll offset for anchored headings */
+.ghost-content h2[id],
+.ghost-content h3[id] {
+  scroll-margin-top: 80px;
+}
+
+/* Desktop: auto-expand TOC */
+@media (min-width: 769px) {
+  .toc-list {
+    max-height: none;
+    padding: 0 1.25rem 1rem 1.25rem;
+  }
+
+  .toc-chevron {
+    display: none;
+  }
+
+  .toc-toggle {
+    cursor: default;
+  }
 }
 
 /* =====================================================
