@@ -6,6 +6,11 @@
  */
 
 import { Client } from '@notionhq/client';
+import {
+    ACTIVE_ORDER_STATUSES,
+    deriveConversionStatus,
+    aggregateOrderStats,
+} from './order-status';
 
 // --- Singleton client ---
 let _client = null;
@@ -138,6 +143,7 @@ function formatCustomer(page) {
         email: p['聯絡Email']?.email || '',
         address: plainText(p['地址']?.rich_text),
         conversionStatus: p['轉換狀態']?.status?.name || '',
+        manualConversionOverride: p['轉換狀態手動覆寫']?.checkbox || false,
         firstCall: p['1st call']?.date?.start || null,
         notes: plainText(p['Notes']?.rich_text),
         trainer: p['Trainer']?.select?.name || '',
@@ -213,8 +219,10 @@ export async function listCustomers({ startCursor, pageSize = 20, status } = {})
     if (filters.length > 1) query.filter = { and: filters };
 
     const res = await queryDS(DS.customers, query);
+    const customers = res.results.map(formatCustomer);
+    const enriched = await enrichCustomersWithOrderStats(customers);
     return {
-        customers: res.results.map(formatCustomer),
+        customers: enriched,
         hasMore: res.has_more,
         nextCursor: res.next_cursor,
     };
@@ -236,7 +244,7 @@ export async function searchCustomers(query) {
         page_size: 10,
     });
 
-    return res.results.map(formatCustomer);
+    return enrichCustomersWithOrderStats(res.results.map(formatCustomer));
 }
 
 /** Find existing customer by phone or email (for deduplication) */
@@ -258,10 +266,13 @@ export async function findCustomerByPhoneOrEmail({ phone, email }) {
     return res.results.length > 0 ? formatCustomer(res.results[0]) : null;
 }
 
-/** Get single customer by page ID */
-export async function getCustomer(pageId) {
+/** Get single customer by page ID (enriched with derived order stats) */
+export async function getCustomer(pageId, { withStats = true } = {}) {
     const page = await getClient().pages.retrieve({ page_id: pageId });
-    return formatCustomer(page);
+    const customer = formatCustomer(page);
+    if (!withStats) return customer;
+    const [enriched] = await enrichCustomersWithOrderStats([customer]);
+    return enriched;
 }
 
 /** Create a new customer (with dedup check) */
@@ -291,7 +302,10 @@ export async function createCustomer({ name, dogName, phone, email, address, not
     return { customer: formatCustomer(page), created: true };
 }
 
-/** Update customer properties */
+/** Update customer properties.
+ * If conversionStatus is included AND `manualOverride` is not explicitly false, the manual-override
+ * checkbox is set to true so future order-driven recompute won't clobber it.
+ */
 export async function updateCustomer(pageId, updates) {
     const properties = {};
 
@@ -300,11 +314,102 @@ export async function updateCustomer(pageId, updates) {
     if (updates.phone !== undefined) properties['聯絡手機號碼 Mobile number '] = { rich_text: [{ text: { content: updates.phone } }] };
     if (updates.email !== undefined) properties['聯絡Email'] = { email: updates.email || null };
     if (updates.address !== undefined) properties['地址'] = { rich_text: [{ text: { content: updates.address } }] };
-    if (updates.conversionStatus !== undefined) properties['轉換狀態'] = { status: { name: updates.conversionStatus } };
+    if (updates.conversionStatus !== undefined) {
+        properties['轉換狀態'] = { status: { name: updates.conversionStatus } };
+        if (updates.manualOverride !== false) {
+            properties['轉換狀態手動覆寫'] = { checkbox: true };
+        }
+    }
+    if (updates.manualOverride !== undefined && updates.conversionStatus === undefined) {
+        properties['轉換狀態手動覆寫'] = { checkbox: !!updates.manualOverride };
+    }
     if (updates.notes !== undefined) properties['Notes'] = { rich_text: [{ text: { content: updates.notes } }] };
 
     const page = await getClient().pages.update({ page_id: pageId, properties });
     return formatCustomer(page);
+}
+
+// ============================================================
+// Customer ↔ Order aggregation & conversion derivation
+// ============================================================
+
+/** Fetch ALL orders for given customer IDs (one Notion query per customer; cheaper than scanning DS). */
+async function fetchOrdersForCustomers(customerIds) {
+    const result = new Map(); // customerId -> Order[]
+    if (!customerIds.length) return result;
+
+    await Promise.allSettled(customerIds.map(async (cid) => {
+        try {
+            const res = await queryDS(DS.orders, {
+                filter: { property: '客戶姓名', relation: { contains: cid } },
+                page_size: 100,
+            });
+            result.set(cid, res.results.map(formatOrder));
+        } catch (err) {
+            console.warn('[fetchOrdersForCustomers] failed for', cid, err.message);
+            result.set(cid, []);
+        }
+    }));
+    return result;
+}
+
+/** Enrich customer objects with derived stats (orderCount, totalSpent, sessions, derivedStatus). */
+async function enrichCustomersWithOrderStats(customers) {
+    if (!customers.length) return customers;
+    const ordersMap = await fetchOrdersForCustomers(customers.map(c => c.id));
+
+    return customers.map((c) => {
+        const orders = ordersMap.get(c.id) || [];
+        const stats = aggregateOrderStats(orders);
+        const derivedStatus = deriveConversionStatus(orders);
+        const effectiveStatus = c.manualConversionOverride ? c.conversionStatus : derivedStatus;
+        return {
+            ...c,
+            ...stats,
+            derivedStatus,
+            // Surface the resolved status the UI should treat as authoritative.
+            conversionStatus: effectiveStatus,
+        };
+    });
+}
+
+/** Recompute and write back conversion status for a single customer (skips if override flag is set). */
+export async function recomputeCustomerStatus(customerId) {
+    if (!customerId) return null;
+    try {
+        const page = await getClient().pages.retrieve({ page_id: customerId });
+        const c = formatCustomer(page);
+        if (c.manualConversionOverride) return c.conversionStatus;
+
+        const ordersMap = await fetchOrdersForCustomers([customerId]);
+        const orders = ordersMap.get(customerId) || [];
+        const next = deriveConversionStatus(orders);
+        if (next === c.conversionStatus) return next;
+
+        await getClient().pages.update({
+            page_id: customerId,
+            properties: { '轉換狀態': { status: { name: next } } },
+        });
+        return next;
+    } catch (err) {
+        console.warn('[recomputeCustomerStatus] failed for', customerId, err.message);
+        return null;
+    }
+}
+
+/** Clear manual override and write back the derived status. */
+export async function resetCustomerConversion(customerId) {
+    const ordersMap = await fetchOrdersForCustomers([customerId]);
+    const orders = ordersMap.get(customerId) || [];
+    const next = deriveConversionStatus(orders);
+    await getClient().pages.update({
+        page_id: customerId,
+        properties: {
+            '轉換狀態': { status: { name: next } },
+            '轉換狀態手動覆寫': { checkbox: false },
+        },
+    });
+    return getCustomer(customerId);
 }
 
 // ============================================================
@@ -337,7 +442,7 @@ async function generateOrderNumber() {
 }
 
 /** List orders with optional filters */
-export async function listOrders({ startCursor, pageSize = 20, status, paymentStatus, trainer, service, search } = {}) {
+export async function listOrders({ startCursor, pageSize = 20, status, paymentStatus, trainer, service, customerId, search } = {}) {
     const filters = [];
     if (status) {
         filters.push({ property: '訂單狀態', status: { equals: status } });
@@ -350,6 +455,9 @@ export async function listOrders({ startCursor, pageSize = 20, status, paymentSt
     }
     if (service) {
         filters.push({ property: '服務項目', relation: { contains: service } });
+    }
+    if (customerId) {
+        filters.push({ property: '客戶姓名', relation: { contains: customerId } });
     }
     if (search) {
         // Search by order number (title field)
@@ -558,7 +666,14 @@ export async function updateOrder(pageId, updates) {
     if (updates.paymentEmailTarget !== undefined) properties['付款Email寄送目標'] = { rich_text: [{ text: { content: updates.paymentEmailTarget || '' } }] };
 
     const page = await getClient().pages.update({ page_id: pageId, properties });
-    return formatOrder(page);
+    const updated = formatOrder(page);
+
+    // Side effect: when orderStatus changes, propagate to derived customer conversion status.
+    if (updates.orderStatus !== undefined && updated.customerIds?.length) {
+        await Promise.allSettled(updated.customerIds.map(cid => recomputeCustomerStatus(cid)));
+    }
+
+    return updated;
 }
 
 // ============================================================
@@ -654,18 +769,18 @@ export async function getDashboardStats() {
         .filter(o => ['待付款', '付款中'].includes(o.paymentStatus))
         .reduce((sum, o) => sum + o.totalAmount, 0);
 
-    const activeOrderCount = orders.filter(o => ['已排課', '上課中'].includes(o.orderStatus)).length;
+    const activeOrderCount = orders.filter(o => ACTIVE_ORDER_STATUSES.includes(o.orderStatus)).length;
     const monthNewCustomers = monthCustomers.results.length;
 
     // --- Conversion funnel ---
-    const funnelStages = ['Not started', 'booked call', '1st session', 'In progress(1-6/8)', 'Done'];
+    const funnelStages = ['未開始', '進行中', '已完成', '已流失'];
     const funnel = funnelStages.map(stage => ({
         stage,
         count: customers.filter(c => c.conversionStatus === stage).length,
     }));
 
     // --- Trainer workload ---
-    const activeOrders = orders.filter(o => ['已排課', '上課中'].includes(o.orderStatus));
+    const activeOrders = orders.filter(o => ACTIVE_ORDER_STATUSES.includes(o.orderStatus));
     const trainerWorkload = {};
     for (const o of activeOrders) {
         const name = o.trainer || '未指派';

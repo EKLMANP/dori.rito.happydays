@@ -4,49 +4,23 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
-
-const CONVERSION_STATUSES = ['Not started', 'booked call', 'Lost', 'In progress(1-6/8)', '1st session', 'Done'];
-
-const CONVERSION_LABELS = {
-    'Not started': '未開始',
-    'booked call': '已預約諮詢',
-    'Lost': '已流失',
-    'In progress(1-6/8)': '進行中',
-    '1st session': '第一堂課',
-    'Done': '已完成',
-};
+import {
+    CONVERSION_STATUSES,
+    CONVERSION_BADGE_STYLES,
+    ORDER_STATUS_BADGE_STYLES,
+} from '@/lib/order-status';
 
 function StatusBadge({ status }) {
-    const styles = {
-        'Not started': 'bg-gray-100 text-gray-700',
-        'booked call': 'bg-blue-100 text-blue-700',
-        'Lost': 'bg-red-100 text-red-700',
-        'In progress(1-6/8)': 'bg-yellow-100 text-yellow-700',
-        '1st session': 'bg-purple-100 text-purple-700',
-        'Done': 'bg-green-100 text-green-700',
-    };
     return (
-        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-700'}`}>
-            {CONVERSION_LABELS[status] || status}
+        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${CONVERSION_BADGE_STYLES[status] || 'bg-gray-100 text-gray-700'}`}>
+            {status || '未開始'}
         </span>
     );
 }
 
 function OrderStatusBadge({ status }) {
-    const styles = {
-        '未開始': 'bg-gray-100 text-gray-500',
-        '待排課': 'bg-blue-100 text-blue-700',
-        '已排課': 'bg-indigo-100 text-indigo-700',
-        '上課中': 'bg-yellow-100 text-yellow-700',
-        '完課': 'bg-green-100 text-green-700',
-        '已取消': 'bg-red-100 text-red-700',
-        '待付款': 'bg-orange-100 text-orange-700',
-        '付款中': 'bg-yellow-100 text-yellow-700',
-        '已付款': 'bg-green-100 text-green-700',
-        '付款失敗': 'bg-red-100 text-red-700',
-    };
     return (
-        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-700'}`}>
+        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${ORDER_STATUS_BADGE_STYLES[status] || 'bg-gray-100 text-gray-700'}`}>
             {status}
         </span>
     );
@@ -82,7 +56,7 @@ export default function CustomerDetailPage() {
     }, [id]);
 
     useEffect(() => {
-        fetch('/api/admin/orders')
+        fetch(`/api/admin/orders?customerId=${id}`)
             .then((r) => {
                 if (!r.ok) throw new Error('API error');
                 return r.json();
@@ -90,7 +64,19 @@ export default function CustomerDetailPage() {
             .then((data) => setOrders(data.orders || []))
             .catch(console.error)
             .finally(() => setOrdersLoading(false));
-    }, []);
+    }, [id]);
+
+    const handleResetConversion = async () => {
+        try {
+            const res = await fetch(`/api/admin/customers/${id}/reset-conversion`, { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || '重設失敗');
+            setCustomer(data);
+            setForm(data);
+        } catch (err) {
+            setSaveError(err.message);
+        }
+    };
 
     const handleChange = (e) => {
         setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -201,7 +187,7 @@ export default function CustomerDetailPage() {
             </div>
 
             {/* Summary Stats */}
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <p className="text-sm text-blue-600">訂單數</p>
                     <p className="text-2xl font-bold text-blue-700 mt-1">{customer.orderCount ?? 0}</p>
@@ -211,6 +197,17 @@ export default function CustomerDetailPage() {
                     <p className="text-2xl font-bold text-green-700 mt-1">
                         ${(customer.totalSpent ?? 0).toLocaleString()}
                     </p>
+                </div>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <p className="text-sm text-yellow-700">課堂進度</p>
+                    {customer.conversionStatus === '進行中' && customer.purchasedSessions ? (
+                        <p className="text-2xl font-bold text-yellow-800 mt-1">
+                            {customer.usedSessions ?? 0}/{customer.purchasedSessions}
+                            <span className="text-sm font-normal text-yellow-700 ml-2">剩 {customer.remainingSessions ?? 0}</span>
+                        </p>
+                    ) : (
+                        <p className="text-2xl font-bold text-gray-400 mt-1">-</p>
+                    )}
                 </div>
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                     <p className="text-sm text-gray-600">First Call</p>
@@ -231,7 +228,35 @@ export default function CustomerDetailPage() {
                     <Field label="聯絡手機" name="phone" value={form.phone} editing={editing} onChange={handleChange} />
                     <Field label="Email" name="email" value={form.email} editing={editing} onChange={handleChange} />
                     <Field label="地址" name="address" value={form.address} editing={editing} onChange={handleChange} />
-                    <SelectField label="轉換狀態" name="conversionStatus" value={form.conversionStatus} editing={editing} onChange={handleChange} options={CONVERSION_STATUSES} labels={CONVERSION_LABELS} />
+                    <div>
+                        <div className="flex items-center justify-between mb-1">
+                            <label className="block text-sm font-medium text-gray-500">轉換狀態</label>
+                            {customer.manualConversionOverride && (
+                                <button
+                                    type="button"
+                                    onClick={handleResetConversion}
+                                    className="text-xs text-blue-600 hover:text-blue-800"
+                                    title={`目前為手動覆寫，自動推導值：${customer.derivedStatus || '未開始'}`}
+                                >
+                                    ↻ 重設為自動（{customer.derivedStatus || '未開始'}）
+                                </button>
+                            )}
+                        </div>
+                        {editing ? (
+                            <select name="conversionStatus" value={form.conversionStatus || ''} onChange={handleChange}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">未設定</option>
+                                {CONVERSION_STATUSES.map((o) => <option key={o} value={o}>{o}</option>)}
+                            </select>
+                        ) : (
+                            <p className="text-sm text-gray-900">
+                                {customer.conversionStatus || '-'}
+                                {!customer.manualConversionOverride && customer.derivedStatus && (
+                                    <span className="ml-2 text-xs text-gray-400">（自動）</span>
+                                )}
+                            </p>
+                        )}
+                    </div>
                     <div className="sm:col-span-2">
                         <label className="block text-sm font-medium text-gray-500 mb-1">備註</label>
                         {editing ? (
