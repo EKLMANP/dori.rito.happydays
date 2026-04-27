@@ -8,10 +8,11 @@ const PERIODS = [
     { key: 'year', label: '年' },
 ];
 
-export default function TimePeriodSelector({ value = 'week', onChange, className = '' }) {
+export default function TimePeriodSelector({ value = 'week', onChange, className = '', options }) {
+    const periods = options || PERIODS;
     return (
         <div className={`inline-flex gap-0.5 bg-gray-100 rounded-lg p-0.5 ${className}`}>
-            {PERIODS.map((p) => (
+            {periods.map((p) => (
                 <button
                     key={p.key}
                     onClick={() => onChange(p.key)}
