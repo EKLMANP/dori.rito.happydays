@@ -3,30 +3,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
-
-const CONVERSION_STATUSES = ['Not started', 'booked call', 'Lost', 'In progress(1-6/8)', '1st session', 'Done'];
-
-const CONVERSION_LABELS = {
-    'Not started': '未開始',
-    'booked call': '已預約諮詢',
-    'Lost': '已流失',
-    'In progress(1-6/8)': '進行中',
-    '1st session': '第一堂課',
-    'Done': '已完成',
-};
+import { CONVERSION_STATUSES, CONVERSION_BADGE_STYLES } from '@/lib/order-status';
 
 function StatusBadge({ status }) {
-    const styles = {
-        'Not started': 'bg-gray-100 text-gray-700',
-        'booked call': 'bg-blue-100 text-blue-700',
-        'Lost': 'bg-red-100 text-red-700',
-        'In progress(1-6/8)': 'bg-yellow-100 text-yellow-700',
-        '1st session': 'bg-purple-100 text-purple-700',
-        'Done': 'bg-green-100 text-green-700',
-    };
     return (
-        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-700'}`}>
-            {CONVERSION_LABELS[status] || status}
+        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${CONVERSION_BADGE_STYLES[status] || 'bg-gray-100 text-gray-700'}`}>
+            {status || '未開始'}
+        </span>
+    );
+}
+
+function CourseProgress({ customer }) {
+    if (customer.conversionStatus !== '進行中' || !customer.purchasedSessions) {
+        return <span className="text-gray-400">-</span>;
+    }
+    return (
+        <span className="text-gray-700">
+            {customer.usedSessions ?? 0}/{customer.purchasedSessions}
+            <span className="text-gray-500">（剩 {customer.remainingSessions ?? 0}）</span>
         </span>
     );
 }
@@ -235,7 +229,7 @@ export default function CustomersPage() {
                 <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
                     className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">全部狀態</option>
-                    {CONVERSION_STATUSES.map((s) => <option key={s} value={s}>{CONVERSION_LABELS[s] || s}</option>)}
+                    {CONVERSION_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
             </div>
 
@@ -251,6 +245,7 @@ export default function CustomersPage() {
                                     <th className="px-4 py-2 text-left text-gray-600">聯絡手機</th>
                                     <th className="px-4 py-2 text-left text-gray-600">訂單數</th>
                                     <th className="px-4 py-2 text-left text-gray-600">總消費</th>
+                                    <th className="px-4 py-2 text-left text-gray-600">課堂進度</th>
                                     <th className="px-4 py-2 text-left text-gray-600">轉換狀態</th>
                                 </tr>
                             </thead>
@@ -267,6 +262,9 @@ export default function CustomersPage() {
                                         <td className="px-4 py-3 text-gray-700">{c.orderCount ?? 0}</td>
                                         <td className="px-4 py-3 text-gray-700">
                                             {c.totalSpent != null ? `$${c.totalSpent.toLocaleString()}` : '$0'}
+                                        </td>
+                                        <td className="px-4 py-3 text-sm">
+                                            <CourseProgress customer={c} />
                                         </td>
                                         <td className="px-4 py-3">
                                             <StatusBadge status={c.conversionStatus} />

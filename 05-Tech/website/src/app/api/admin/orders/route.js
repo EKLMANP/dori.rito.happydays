@@ -20,6 +20,7 @@ export async function GET(request) {
             paymentStatus: searchParams.get('paymentStatus') || undefined,
             trainer: searchParams.get('trainer') || undefined,
             service: searchParams.get('service') || undefined,
+            customerId: searchParams.get('customerId') || undefined,
             startCursor: searchParams.get('cursor') || undefined,
             pageSize: parseInt(searchParams.get('pageSize')) || 20,
         });
