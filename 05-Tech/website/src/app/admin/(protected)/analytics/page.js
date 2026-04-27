@@ -432,20 +432,47 @@ const FINANCE_PERIOD_OPTIONS = [
 
 const SERVICE_COLORS = ['#F75000', '#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#06B6D4'];
 
-function useFinanceTrendData(period) {
-    const cacheKey = `finance_trend_${period}`;
+// Returns YYYY-MM string for n months ago (n=0 = current month)
+function monthOffset(n) {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - n);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+const TREND_PRESETS = [
+    { label: '近3月',  start: () => monthOffset(2),  end: () => monthOffset(0) },
+    { label: '近6月',  start: () => monthOffset(5),  end: () => monthOffset(0) },
+    { label: '近12月', start: () => monthOffset(11), end: () => monthOffset(0) },
+    {
+        label: '今年',
+        start: () => `${new Date().getFullYear()}-01`,
+        end: () => monthOffset(0),
+    },
+    {
+        label: '去年',
+        start: () => `${new Date().getFullYear() - 1}-01`,
+        end: () => `${new Date().getFullYear() - 1}-12`,
+    },
+];
+
+function useFinanceTrendData(period, startDate, endDate) {
+    const cacheKey = `finance_trend_${period}_${startDate}_${endDate}`;
     const [data, setData] = useState(tabDataCache[cacheKey] || null);
     const [loading, setLoading] = useState(!tabDataCache[cacheKey]);
 
     useEffect(() => {
         if (tabDataCache[cacheKey]) { setData(tabDataCache[cacheKey]); setLoading(false); return; }
         setLoading(true);
-        fetch(`/api/admin/analytics/finance?section=trend&period=${period}`)
+        const params = new URLSearchParams({ section: 'trend', period });
+        if (startDate) params.set('startDate', startDate);
+        if (endDate) params.set('endDate', endDate);
+        fetch(`/api/admin/analytics/finance?${params}`)
             .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
             .then((json) => { tabDataCache[cacheKey] = json; setData(json); })
             .catch((e) => console.error('[Finance Trend]', e))
             .finally(() => setLoading(false));
-    }, [period, cacheKey]);
+    }, [period, startDate, endDate, cacheKey]);
 
     return { data, loading };
 }
@@ -453,8 +480,21 @@ function useFinanceTrendData(period) {
 function FinanceTab() {
     const { data, loading, error } = useTabData('finance');
     const [trendPeriod, setTrendPeriod] = useState('month');
-    const [mixView, setMixView] = useState('pct'); // 'pct' | 'revenue'
-    const { data: trendData, loading: trendLoading } = useFinanceTrendData(trendPeriod);
+    const [mixView, setMixView] = useState('pct');
+    const [dateRange, setDateRange] = useState({ start: monthOffset(11), end: monthOffset(0) });
+    const [activePreset, setActivePreset] = useState('近12月');
+
+    const applyPreset = (preset) => {
+        setDateRange({ start: preset.start(), end: preset.end() });
+        setActivePreset(preset.label);
+    };
+
+    const handleDateChange = (field, value) => {
+        setDateRange((prev) => ({ ...prev, [field]: value }));
+        setActivePreset(''); // clear preset highlight on manual change
+    };
+
+    const { data: trendData, loading: trendLoading } = useFinanceTrendData(trendPeriod, dateRange.start, dateRange.end);
 
     const serviceLines = (trendData?.services || []).map((svc, i) => ({
         key: svc,
@@ -514,19 +554,63 @@ function FinanceTab() {
                 />
             </div>
 
+            {/* ── 共用篩選列 ── */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+                <div className="flex flex-wrap items-center gap-3">
+                    {/* 快速 Preset */}
+                    <div className="inline-flex gap-0.5 bg-gray-100 rounded-lg p-0.5">
+                        {TREND_PRESETS.map((p) => (
+                            <button
+                                key={p.label}
+                                onClick={() => applyPreset(p)}
+                                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                                    activePreset === p.label
+                                        ? 'bg-white text-brand-orange shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                            >
+                                {p.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* 自訂日期區間 */}
+                    <div className="flex items-center gap-1.5">
+                        <input
+                            type="month"
+                            value={dateRange.start}
+                            max={dateRange.end || undefined}
+                            onChange={(e) => handleDateChange('start', e.target.value)}
+                            className="border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-orange/30"
+                        />
+                        <span className="text-gray-400 text-xs">—</span>
+                        <input
+                            type="month"
+                            value={dateRange.end}
+                            min={dateRange.start || undefined}
+                            onChange={(e) => handleDateChange('end', e.target.value)}
+                            className="border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-brand-orange/30"
+                        />
+                    </div>
+
+                    {/* 分組粒度 */}
+                    <div className="flex items-center gap-1.5 ml-auto">
+                        <span className="text-xs text-gray-400">分組：</span>
+                        <TimePeriodSelector
+                            value={trendPeriod}
+                            onChange={setTrendPeriod}
+                            options={FINANCE_PERIOD_OPTIONS}
+                        />
+                    </div>
+                </div>
+            </div>
+
             {/* ① 營收趨勢 — Line Chart */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                    <h3 className="text-sm font-semibold text-gray-700">
-                        營收趨勢
-                        <MetricTooltip text="依 processed_at 分組計算的已付款訂單營收趨勢。月＝近 12 個月；季＝近 2 年；年＝歷年全部。" />
-                    </h3>
-                    <TimePeriodSelector
-                        value={trendPeriod}
-                        onChange={setTrendPeriod}
-                        options={FINANCE_PERIOD_OPTIONS}
-                    />
-                </div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-4">
+                    營收趨勢
+                    <MetricTooltip text="依 processed_at 分組的已付款訂單營收折線圖。篩選列的日期區間與分組粒度同時套用。" />
+                </h3>
                 <SimpleLineChart
                     data={trendData?.revenueTrend || []}
                     xKey="label"
@@ -541,29 +625,21 @@ function FinanceTab() {
             <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                     <h3 className="text-sm font-semibold text-gray-700">
-                        各服務營收佔比趨勢
-                        <MetricTooltip text="每個時間區間內各服務的營收佔比（%）或絕對金額趨勢。可切換「佔比」與「金額」視角，以判斷各服務的成長或消退。" />
+                        各服務營收趨勢
+                        <MetricTooltip text="各服務在每個時間區間的營收佔比（%）或絕對金額趨勢。切換「佔比/金額」視角，判斷各服務的成長或消退。" />
                     </h3>
-                    <div className="flex items-center gap-2">
-                        {/* 佔比 / 金額 toggle */}
-                        <div className="inline-flex gap-0.5 bg-gray-100 rounded-lg p-0.5">
-                            {[{ key: 'pct', label: '佔比' }, { key: 'revenue', label: '金額' }].map((v) => (
-                                <button
-                                    key={v.key}
-                                    onClick={() => setMixView(v.key)}
-                                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                                        mixView === v.key ? 'bg-white text-brand-orange shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                                    }`}
-                                >
-                                    {v.label}
-                                </button>
-                            ))}
-                        </div>
-                        <TimePeriodSelector
-                            value={trendPeriod}
-                            onChange={setTrendPeriod}
-                            options={FINANCE_PERIOD_OPTIONS}
-                        />
+                    <div className="inline-flex gap-0.5 bg-gray-100 rounded-lg p-0.5">
+                        {[{ key: 'pct', label: '佔比 %' }, { key: 'revenue', label: '金額' }].map((v) => (
+                            <button
+                                key={v.key}
+                                onClick={() => setMixView(v.key)}
+                                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                                    mixView === v.key ? 'bg-white text-brand-orange shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                            >
+                                {v.label}
+                            </button>
+                        ))}
                     </div>
                 </div>
                 <SimpleLineChart

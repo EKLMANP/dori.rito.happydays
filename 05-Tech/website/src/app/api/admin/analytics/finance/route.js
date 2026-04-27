@@ -12,8 +12,10 @@ export async function GET(request) {
     const period = searchParams.get('period') || 'month';
 
     if (section === 'trend') {
+        const startDate = searchParams.get('startDate') || '';
+        const endDate = searchParams.get('endDate') || '';
         try {
-            return NextResponse.json(await fetchTrendData(period));
+            return NextResponse.json(await fetchTrendData(period, startDate, endDate));
         } catch (err) {
             console.error('[Analytics Finance Trend] Error:', err);
             return NextResponse.json({ error: 'Failed to load trend data' }, { status: 500 });
@@ -186,33 +188,69 @@ export async function GET(request) {
     }
 }
 
-async function fetchTrendData(period) {
-    const intervals = { month: '12 months', quarter: '2 years', year: '10 years' };
+async function fetchTrendData(period, startDate = '', endDate = '') {
     const truncUnit = period === 'year' ? 'year' : period === 'quarter' ? 'quarter' : 'month';
-    const intervalStr = intervals[period] || '12 months';
 
-    const [revenueRows, serviceMixRows] = await Promise.all([
-        sql`
-            SELECT
-                TO_CHAR(DATE_TRUNC(${truncUnit}, processed_at), 'YYYY-MM') as period,
-                SUM((booking_data->>'price')::int) as revenue,
-                COUNT(*) as bookings
-            FROM processed_orders
-            WHERE processed_at IS NOT NULL
-            AND processed_at >= CURRENT_DATE - CAST(${intervalStr} AS INTERVAL)
-            GROUP BY 1 ORDER BY 1
-        `,
-        sql`
-            SELECT
-                TO_CHAR(DATE_TRUNC(${truncUnit}, processed_at), 'YYYY-MM') as period,
-                booking_data->>'serviceName' as service,
-                SUM((booking_data->>'price')::int) as revenue
-            FROM processed_orders
-            WHERE processed_at IS NOT NULL
-            AND processed_at >= CURRENT_DATE - CAST(${intervalStr} AS INTERVAL)
-            GROUP BY 1, 2 ORDER BY 1, 3 DESC
-        `,
-    ]);
+    let revenueRows, serviceMixRows;
+
+    if (startDate && endDate) {
+        // Custom range: startDate and endDate are YYYY-MM strings
+        const start = `${startDate}-01`;
+        const [ey, em] = endDate.split('-').map(Number);
+        const endExclusive = new Date(ey, em, 1); // first day of month AFTER endDate
+        const end = `${endExclusive.getFullYear()}-${String(endExclusive.getMonth() + 1).padStart(2, '0')}-01`;
+
+        [revenueRows, serviceMixRows] = await Promise.all([
+            sql`
+                SELECT
+                    TO_CHAR(DATE_TRUNC(${truncUnit}, processed_at), 'YYYY-MM') as period,
+                    SUM((booking_data->>'price')::int) as revenue,
+                    COUNT(*) as bookings
+                FROM processed_orders
+                WHERE processed_at IS NOT NULL
+                AND processed_at >= ${start}::date
+                AND processed_at < ${end}::date
+                GROUP BY 1 ORDER BY 1
+            `,
+            sql`
+                SELECT
+                    TO_CHAR(DATE_TRUNC(${truncUnit}, processed_at), 'YYYY-MM') as period,
+                    booking_data->>'serviceName' as service,
+                    SUM((booking_data->>'price')::int) as revenue
+                FROM processed_orders
+                WHERE processed_at IS NOT NULL
+                AND processed_at >= ${start}::date
+                AND processed_at < ${end}::date
+                GROUP BY 1, 2 ORDER BY 1, 3 DESC
+            `,
+        ]);
+    } else {
+        const intervals = { month: '12 months', quarter: '2 years', year: '10 years' };
+        const intervalStr = intervals[period] || '12 months';
+
+        [revenueRows, serviceMixRows] = await Promise.all([
+            sql`
+                SELECT
+                    TO_CHAR(DATE_TRUNC(${truncUnit}, processed_at), 'YYYY-MM') as period,
+                    SUM((booking_data->>'price')::int) as revenue,
+                    COUNT(*) as bookings
+                FROM processed_orders
+                WHERE processed_at IS NOT NULL
+                AND processed_at >= CURRENT_DATE - CAST(${intervalStr} AS INTERVAL)
+                GROUP BY 1 ORDER BY 1
+            `,
+            sql`
+                SELECT
+                    TO_CHAR(DATE_TRUNC(${truncUnit}, processed_at), 'YYYY-MM') as period,
+                    booking_data->>'serviceName' as service,
+                    SUM((booking_data->>'price')::int) as revenue
+                FROM processed_orders
+                WHERE processed_at IS NOT NULL
+                AND processed_at >= CURRENT_DATE - CAST(${intervalStr} AS INTERVAL)
+                GROUP BY 1, 2 ORDER BY 1, 3 DESC
+            `,
+        ]);
+    }
 
     const formatLabel = (p) => {
         const [y, m] = p.split('-');
