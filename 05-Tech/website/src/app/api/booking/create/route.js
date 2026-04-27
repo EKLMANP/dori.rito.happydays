@@ -89,15 +89,51 @@ export async function POST(request) {
     };
 
     // 5b. Persist pending booking data (processed_at = NULL means awaiting payment)
+    // Initial state: payment_status='pending', order_status='not_started'
     try {
         await sql`
-            INSERT INTO processed_orders (merchant_trade_no, booking_data, processed_at)
-            VALUES (${merchantTradeNo}, ${JSON.stringify(bookingData)}, NULL)
+            INSERT INTO processed_orders
+                (merchant_trade_no, booking_data, processed_at, payment_status, order_status)
+            VALUES
+                (${merchantTradeNo}, ${JSON.stringify(bookingData)}, NULL, 'pending', 'not_started')
             ON CONFLICT (merchant_trade_no) DO NOTHING
         `;
     } catch (dbErr) {
         console.warn('[booking/create] Failed to persist pending booking:', dbErr.message);
         // Non-fatal — continue to payment even if DB persist fails
+    }
+
+    // 5c. Create Notion pending order (non-blocking; failure won't block ECPay flow)
+    // If notionPageId (customer page) is missing — because questionnaire-submit lost the race
+    // or failed — create the customer page first so every order always has a linked customer.
+    if (process.env.NOTION_ORDER_DB_ID) {
+        (async () => {
+            try {
+                const { createCustomerPage, createPendingOrder } = await import('@/lib/notion-crm');
+                let customerPageId = notionPageId || null;
+
+                if (!customerPageId && process.env.NOTION_CUSTOMER_DB_ID) {
+                    try {
+                        const customer = await createCustomerPage(formSections || [], formResponses || {});
+                        customerPageId = customer?.pageId || null;
+                        console.log('[booking/create] Created missing customer page:', customerPageId);
+                    } catch (err) {
+                        console.warn('[booking/create] Customer page creation failed:', err.message);
+                    }
+                }
+
+                const result = await createPendingOrder(bookingData, customerPageId);
+                if (result?.pageId) {
+                    await sql`
+                        UPDATE processed_orders
+                        SET notion_order_id = ${result.pageId}
+                        WHERE merchant_trade_no = ${merchantTradeNo}
+                    `;
+                }
+            } catch (err) {
+                console.warn('[booking/create] Notion pending order failed:', err.message);
+            }
+        })();
     }
 
     // 6. Create ECPay payment order

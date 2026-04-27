@@ -171,6 +171,11 @@ function formatOrder(page) {
         endDate: p['結束日期']?.date?.start || null,
         createdTime: page.created_time,
         notes: plainText(p['備註']?.rich_text),
+        // Phase 2 payment lifecycle fields (may be null if Notion columns don't exist yet)
+        paymentMethod: p['付款方式']?.select?.name || null,
+        paymentExpireAt: p['付款截止日期']?.date?.start || null,
+        paymentPaidAt: p['付款日期']?.date?.start || null,
+        paymentEmailTarget: plainText(p['付款Email寄送目標']?.rich_text) || null,
     };
 }
 
@@ -547,6 +552,10 @@ export async function updateOrder(pageId, updates) {
     if (updates.startDate !== undefined) properties['開始日期'] = { date: updates.startDate ? { start: updates.startDate } : null };
     if (updates.endDate !== undefined) properties['結束日期'] = { date: updates.endDate ? { start: updates.endDate } : null };
     if (updates.notes !== undefined) properties['備註'] = { rich_text: [{ text: { content: updates.notes } }] };
+    if (updates.paymentMethod !== undefined) properties['付款方式'] = updates.paymentMethod ? { select: { name: updates.paymentMethod } } : { select: null };
+    if (updates.paymentExpireAt !== undefined) properties['付款截止日期'] = updates.paymentExpireAt ? { date: { start: updates.paymentExpireAt } } : { date: null };
+    if (updates.paymentPaidAt !== undefined) properties['付款日期'] = updates.paymentPaidAt ? { date: { start: updates.paymentPaidAt } } : { date: null };
+    if (updates.paymentEmailTarget !== undefined) properties['付款Email寄送目標'] = { rich_text: [{ text: { content: updates.paymentEmailTarget || '' } }] };
 
     const page = await getClient().pages.update({ page_id: pageId, properties });
     return formatOrder(page);

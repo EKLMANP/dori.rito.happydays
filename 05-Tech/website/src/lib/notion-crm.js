@@ -304,7 +304,7 @@ export async function createNotionOrder(bookingData, customerPageId) {
     const properties = {
         '訂單編號': { title: [{ text: { content: bookingData.merchantTradeNo || '' } }] },
         '付款狀態': { status: { name: '已付款' } },
-        '訂單狀態': { status: { name: '已確認' } },
+        '訂單狀態': { status: { name: '待排課' } },
         '購買課堂數': { number: serviceInfo.sessions },
         '剩餘課堂數': { number: serviceInfo.sessions },
         '單堂課報價': { number: serviceInfo.unitPrice },
@@ -346,6 +346,118 @@ export async function createNotionOrder(bookingData, customerPageId) {
 
     console.log('[notion-crm] Created order:', page.id);
     return { pageId: page.id, url: page.url };
+}
+
+/**
+ * Phase 2 — Create a pending Notion order at booking creation time.
+ * Status: 訂單狀態=未開始, 付款狀態=待付款.
+ * Used before user completes ECPay flow so admin can see in-flight orders.
+ */
+export async function createPendingOrder(bookingData, customerPageId) {
+    const orderDbId = process.env.NOTION_ORDER_DB_ID;
+    if (!orderDbId) throw new Error('Notion Order DB not configured');
+
+    const serviceInfo = SERVICE_NOTION_MAP[bookingData.serviceId] || SERVICE_NOTION_MAP['online-consult'];
+
+    const properties = {
+        '訂單編號': { title: [{ text: { content: bookingData.merchantTradeNo || '' } }] },
+        '訂單狀態': { status: { name: '未開始' } },
+        '付款狀態': { status: { name: '待付款' } },
+        '購買課堂數': { number: serviceInfo.sessions },
+        '剩餘課堂數': { number: serviceInfo.sessions },
+        '單堂課報價': { number: serviceInfo.unitPrice },
+    };
+
+    if (bookingData.slotDate) {
+        properties['開始日期'] = { date: { start: bookingData.slotDate } };
+    }
+
+    if (customerPageId) {
+        properties['客戶姓名'] = { relation: [{ id: customerPageId }] };
+    }
+
+    const serviceDbId = process.env.NOTION_SERVICE_CATALOG_DB_ID || process.env.NOTION_SERVICE_DB_ID;
+    if (serviceDbId) {
+        try {
+            const searchData = await notionFetch(`/databases/${serviceDbId}/query`, {
+                method: 'POST',
+                body: {
+                    filter: { property: '代碼', rich_text: { equals: bookingData.serviceId || 'single-session' } },
+                    page_size: 1,
+                },
+            });
+            if (searchData.results.length > 0) {
+                properties['服務項目'] = { relation: [{ id: searchData.results[0].id }] };
+            }
+        } catch (err) {
+            console.warn('[createPendingOrder] Could not look up service page:', err.message);
+        }
+    }
+
+    const page = await notionFetch('/pages', {
+        method: 'POST',
+        body: { parent: { database_id: orderDbId }, properties },
+    });
+
+    console.log('[notion-crm] Created pending order:', page.id);
+    return { pageId: page.id, url: page.url };
+}
+
+/**
+ * Phase 2 — Mark a Notion order as 付款中 once user picks a payment method.
+ * `paymentMethod` ∈ { '信用卡', 'ATM', '超商代碼', '超商條碼' }.
+ * `expireAt` should be a JS Date or ISO string.
+ */
+export async function updateOrderPaymentMethod(orderPageId, { paymentMethod, expireAt, paymentEmail } = {}) {
+    if (!orderPageId) return;
+    const properties = {
+        '付款狀態': { status: { name: '付款中' } },
+    };
+    if (paymentMethod) properties['付款方式'] = { select: { name: paymentMethod } };
+    if (expireAt) {
+        const iso = expireAt instanceof Date ? expireAt.toISOString() : new Date(expireAt).toISOString();
+        properties['付款截止日期'] = { date: { start: iso } };
+    }
+    if (paymentEmail) {
+        properties['付款Email寄送目標'] = { rich_text: [{ text: { content: paymentEmail } }] };
+    }
+    await notionFetch(`/pages/${orderPageId}`, { method: 'PATCH', body: { properties } });
+    console.log('[notion-crm] Order payment method updated:', orderPageId, paymentMethod);
+}
+
+/**
+ * Phase 3 — Mark a Notion order as superseded (used when user changes payment method).
+ * Sets 訂單狀態=已取消, 付款狀態=付款失敗, 備註=「已換為新訂單：DR...」.
+ */
+export async function markOrderSuperseded(orderPageId, newTradeNo) {
+    if (!orderPageId) return;
+    const note = `已換為新訂單：${newTradeNo}`;
+    await notionFetch(`/pages/${orderPageId}`, {
+        method: 'PATCH',
+        body: {
+            properties: {
+                '訂單狀態': { status: { name: '已取消' } },
+                '付款狀態': { status: { name: '付款失敗' } },
+                '備註': { rich_text: [{ text: { content: note } }] },
+            },
+        },
+    });
+    console.log('[notion-crm] Order superseded:', orderPageId, '→', newTradeNo);
+}
+
+/**
+ * Phase 2 — Mark a Notion order as 已付款 + 已確認 after ECPay success.
+ */
+export async function updateOrderPaid(orderPageId, paidAt) {
+    if (!orderPageId) return;
+    const iso = paidAt instanceof Date ? paidAt.toISOString() : new Date(paidAt || Date.now()).toISOString();
+    const properties = {
+        '付款狀態': { status: { name: '已付款' } },
+        '訂單狀態': { status: { name: '待排課' } },
+        '付款日期': { date: { start: iso } },
+    };
+    await notionFetch(`/pages/${orderPageId}`, { method: 'PATCH', body: { properties } });
+    console.log('[notion-crm] Order marked paid:', orderPageId);
 }
 
 /**

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ConfirmDialog from '@/components/admin/ConfirmDialog';
@@ -8,11 +8,13 @@ import ConfirmDialog from '@/components/admin/ConfirmDialog';
 function StatusBadge({ status }) {
     const styles = {
         '報價中': 'bg-gray-100 text-gray-700',
-        '已確認': 'bg-blue-100 text-blue-700',
-        '進行中': 'bg-yellow-100 text-yellow-700',
-        '已完成': 'bg-green-100 text-green-700',
+        '未開始': 'bg-gray-100 text-gray-500',
+        '待排課': 'bg-blue-100 text-blue-700',
+        '已排課': 'bg-indigo-100 text-indigo-700',
+        '上課中': 'bg-yellow-100 text-yellow-700',
+        '完課': 'bg-green-100 text-green-700',
         '已取消': 'bg-red-100 text-red-700',
-        '待付款': 'bg-red-100 text-red-700',
+        '待付款': 'bg-orange-100 text-orange-700',
         '付款中': 'bg-yellow-100 text-yellow-700',
         '已付款': 'bg-green-100 text-green-700',
         '付款失敗': 'bg-red-100 text-red-700',
@@ -34,17 +36,22 @@ function InfoRow({ label, children }) {
 }
 
 const STATUS_TRANSITIONS = {
-    '報價中': [{ label: '確認訂單', next: '已確認' }],
-    '已確認': [
-        { label: '開始上課', next: '進行中' },
+    '報價中': [{ label: '確認訂單', next: '待排課' }],
+    '待排課': [
+        { label: '開始排課', next: '已排課' },
         { label: '取消', next: '已取消', danger: true },
     ],
-    '進行中': [
-        { label: '完成', next: '已完成' },
+    '已排課': [
+        { label: '開始上課', next: '上課中' },
         { label: '取消', next: '已取消', danger: true },
     ],
-    '已完成': [],
+    '上課中': [
+        { label: '完課', next: '完課' },
+        { label: '取消', next: '已取消', danger: true },
+    ],
+    '完課': [],
     '已取消': [],
+    '未開始': [],
 };
 
 const PAYMENT_STATUSES = ['待付款', '付款中', '已付款', '付款失敗'];
@@ -63,6 +70,17 @@ export default function OrderDetailPage() {
     const [transferDate, setTransferDate] = useState('');
     const [bankLast5, setBankLast5] = useState('');
 
+    // Notes inline edit
+    const [editingNotes, setEditingNotes] = useState(false);
+    const [notesValue, setNotesValue] = useState('');
+
+    // Resend email
+    const [resendEmail, setResendEmail] = useState('');
+    const [resendNote, setResendNote] = useState('');
+    const [resendLoading, setResendLoading] = useState(false);
+    const [resendMsg, setResendMsg] = useState(null); // { type: 'success'|'error', text }
+    const [resendCooldown, setResendCooldown] = useState(0); // seconds remaining
+
     // ConfirmDialog state
     const [confirmStatus, setConfirmStatus] = useState(null); // { next, label }
     const [confirmArchive, setConfirmArchive] = useState(false);
@@ -76,12 +94,48 @@ export default function OrderDetailPage() {
             setPaymentStatus(data.paymentStatus || '');
             setTransferDate(data.transferDate || '');
             setBankLast5(data.bankLast5 || '');
+            setNotesValue(data.notes || '');
         } catch (err) {
             console.error('Failed to fetch order:', err);
         } finally {
             setLoading(false);
         }
     };
+
+    const handleResendEmail = async (useOriginal) => {
+        setResendLoading(true);
+        setResendMsg(null);
+        try {
+            const res = await fetch(`/api/admin/orders/${id}/resend-payment-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    targetEmail: useOriginal ? undefined : (resendEmail || undefined),
+                    adminNote: resendNote || undefined,
+                }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                if (data.rateLimitRemaining) setResendCooldown(data.rateLimitRemaining);
+                setResendMsg({ type: 'error', text: data.error || '發送失敗' });
+            } else {
+                setResendMsg({ type: 'success', text: `已成功寄送至 ${data.sentTo}` });
+                setResendCooldown(60);
+                await fetchOrder();
+            }
+        } catch (err) {
+            setResendMsg({ type: 'error', text: err.message });
+        } finally {
+            setResendLoading(false);
+        }
+    };
+
+    // Countdown for rate limit
+    useEffect(() => {
+        if (resendCooldown <= 0) return;
+        const t = setTimeout(() => setResendCooldown((c) => Math.max(0, c - 1)), 1000);
+        return () => clearTimeout(t);
+    }, [resendCooldown]);
 
     useEffect(() => {
         if (id) fetchOrder();
@@ -165,6 +219,7 @@ export default function OrderDetailPage() {
 
     const transitions = STATUS_TRANSITIONS[order.orderStatus] || [];
     const formatDate = (d) => d ? new Date(d).toLocaleDateString('zh-TW') : '-';
+    const formatDateTime = (d) => d ? new Date(d).toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '-';
 
     return (
         <div>
@@ -230,16 +285,98 @@ export default function OrderDetailPage() {
                 <div className="bg-white rounded-lg border border-gray-200 p-6">
                     <h2 className="text-lg font-semibold text-gray-900 mb-3">付款資訊</h2>
                     <div className="divide-y divide-gray-100">
+                        <InfoRow label="付款方式">{order.pgPaymentMethod || order.paymentMethod || '-'}</InfoRow>
+                        <InfoRow label="付款截止日期">
+                            <span className={order.pgPaymentExpireAt && new Date(order.pgPaymentExpireAt) < new Date() ? 'text-red-600 font-semibold' : ''}>
+                                {formatDateTime(order.pgPaymentExpireAt || order.paymentExpireAt)}
+                            </span>
+                        </InfoRow>
+                        <InfoRow label="付款日期">{formatDateTime(order.pgPaymentPaidAt || order.paymentPaidAt)}</InfoRow>
                         <InfoRow label="匯款日期">{formatDate(order.transferDate)}</InfoRow>
                         <InfoRow label="帳號後五碼">{order.bankLast5 || '-'}</InfoRow>
+                        <InfoRow label="最後寄信時間">{formatDateTime(order.lastEmailSentAt)}</InfoRow>
+                        <InfoRow label="付款 Email">{order.customerEmailOverride || order.customer?.email || '-'}</InfoRow>
                     </div>
                 </div>
 
-                {/* Notes */}
-                {order.notes && (
+                {/* Notes — inline editable */}
+                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                    <div className="flex items-center justify-between mb-3">
+                        <h2 className="text-lg font-semibold text-gray-900">備註</h2>
+                        {!editingNotes ? (
+                            <button onClick={() => setEditingNotes(true)} className="text-xs text-blue-600 hover:underline">編輯</button>
+                        ) : (
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => { patchOrder({ notes: notesValue }); setEditingNotes(false); }}
+                                    disabled={updating}
+                                    className="text-xs bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                                >儲存</button>
+                                <button onClick={() => { setNotesValue(order.notes || ''); setEditingNotes(false); }} className="text-xs text-gray-500 hover:text-gray-700">取消</button>
+                            </div>
+                        )}
+                    </div>
+                    {editingNotes ? (
+                        <textarea
+                            value={notesValue}
+                            onChange={(e) => setNotesValue(e.target.value)}
+                            rows={4}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm resize-y"
+                            placeholder="輸入備註…"
+                        />
+                    ) : (
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap min-h-[24px]">{order.notes || <span className="text-gray-400">（無備註）</span>}</p>
+                    )}
+                </div>
+
+                {/* Resend Payment Email */}
+                {order.merchantTradeNo && (
                     <div className="bg-white rounded-lg border border-gray-200 p-6">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-3">備註</h2>
-                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{order.notes}</p>
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">重發付款 Email</h2>
+                        <div className="space-y-3">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">寄到指定信箱（空白則寄到原始信箱）</label>
+                                <input
+                                    type="email"
+                                    value={resendEmail}
+                                    onChange={(e) => setResendEmail(e.target.value)}
+                                    placeholder={order.customerEmailOverride || order.customer?.email || '原始客戶信箱'}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">客服備註（選填，將出現在 email 內）</label>
+                                <textarea
+                                    value={resendNote}
+                                    onChange={(e) => setResendNote(e.target.value)}
+                                    rows={2}
+                                    placeholder="例：您原本收到的 email 可能進垃圾郵件，請以此信為準"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm resize-y"
+                                />
+                            </div>
+                            {resendMsg && (
+                                <p className={`text-sm ${resendMsg.type === 'success' ? 'text-green-700' : 'text-red-700'}`}>
+                                    {resendMsg.type === 'success' ? '✅ ' : '❌ '}{resendMsg.text}
+                                </p>
+                            )}
+                            <div className="flex gap-2 flex-wrap">
+                                <button
+                                    onClick={() => handleResendEmail(true)}
+                                    disabled={resendLoading || resendCooldown > 0}
+                                    className="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 text-sm font-medium disabled:opacity-50"
+                                >
+                                    {resendCooldown > 0 ? `等待 ${resendCooldown}s` : '寄到原信箱'}
+                                </button>
+                                <button
+                                    onClick={() => handleResendEmail(false)}
+                                    disabled={resendLoading || resendCooldown > 0 || !resendEmail}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
+                                >
+                                    寄到指定信箱
+                                </button>
+                            </div>
+                            <p className="text-xs text-gray-400">每次寄送間隔至少 60 秒，操作記錄至操作紀錄</p>
+                        </div>
                     </div>
                 )}
 
@@ -272,7 +409,7 @@ export default function OrderDetailPage() {
                         )}
 
                         {/* Decrement session */}
-                        {order.orderStatus === '進行中' && order.remainingSessions > 0 && (
+                        {order.orderStatus === '上課中' && order.remainingSessions > 0 && (
                             <div>
                                 <p className="text-sm text-gray-500 mb-2">課堂紀錄</p>
                                 <button

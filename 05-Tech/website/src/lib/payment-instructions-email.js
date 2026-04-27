@@ -73,7 +73,28 @@ function renderInstructionsBlock(paymentInfo, price) {
     return '';
 }
 
-function renderEmailHtml({ customerName, serviceName, slotDate, slotTime, merchantTradeNo, instructionsHtml }) {
+function renderRepayButton(repayUrl) {
+    if (!repayUrl) return '';
+    const e = escapeHtml;
+    return `
+    <div style="margin-top:20px;padding:16px;background:#f9fafb;border:1px dashed #d1d5db;border-radius:8px;text-align:center;">
+      <p style="font-size:13px;color:#555;margin:0 0 12px;">想改用其他付款方式？（信用卡 / ATM / 超商）</p>
+      <a href="${e(repayUrl)}" style="display:inline-block;padding:10px 20px;background:#f97316;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px;">重新選擇付款方式</a>
+      <p style="font-size:11px;color:#888;margin:10px 0 0;">點擊後將作廢上方代碼，請勿重複付款。</p>
+    </div>`;
+}
+
+function renderAdminNote(note) {
+    if (!note) return '';
+    const e = escapeHtml;
+    return `
+    <div style="margin-top:20px;padding:12px 16px;background:#fef3c7;border-left:3px solid #f59e0b;border-radius:4px;">
+      <p style="font-size:12px;color:#92400e;margin:0 0 4px;font-weight:600;">客服備註</p>
+      <p style="font-size:13px;color:#78350f;margin:0;white-space:pre-wrap;">${e(note)}</p>
+    </div>`;
+}
+
+function renderEmailHtml({ customerName, serviceName, slotDate, slotTime, merchantTradeNo, instructionsHtml, repayUrl, adminNote }) {
     const e = escapeHtml;
     return `<!doctype html>
 <html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fafafa;padding:24px;color:#1f2937;">
@@ -81,6 +102,8 @@ function renderEmailHtml({ customerName, serviceName, slotDate, slotTime, mercha
     <h1 style="font-size:20px;color:#b45309;margin:0 0 12px;">請於期限內完成繳費</h1>
     <p style="font-size:14px;color:#555;margin:0 0 20px;">Hi ${e(customerName)}，感謝你預約 ${e(serviceName)}（${e(slotDate)} ${e(slotTime)}）。請依下方資訊完成繳費，**款項到帳後**我們會立即寄出預約確認信、Google Calendar 邀請與 Google Meet 連結。</p>
     ${instructionsHtml}
+    ${renderRepayButton(repayUrl)}
+    ${renderAdminNote(adminNote)}
     <p style="font-size:12px;color:#888;margin-top:24px;">訂單編號 Order Reference：<span style="font-family:monospace;">${e(merchantTradeNo)}</span></p>
     <hr style="border:0;border-top:1px solid #f3f4f6;margin:24px 0;" />
     <p style="font-size:12px;color:#888;">如有任何問題，回覆此 email 即可聯絡我們，或加入 LINE 官方帳號：<a href="https://lin.ee/j1DjGlk" style="color:#06C755;">@dori.rito</a></p>
@@ -90,6 +113,7 @@ function renderEmailHtml({ customerName, serviceName, slotDate, slotTime, mercha
 
 export async function sendPaymentInstructionsEmail({
     to, customerName, serviceName, price, slotDate, slotTime, merchantTradeNo, paymentInfo,
+    repayUrl, adminNote,
 }) {
     const apiKey = process.env.MAILGUN_API_KEY;
     const domain = process.env.MAILGUN_DOMAIN;
@@ -112,6 +136,7 @@ export async function sendPaymentInstructionsEmail({
     const instructionsHtml = renderInstructionsBlock(paymentInfo || {}, price);
     const html = renderEmailHtml({
         customerName, serviceName, slotDate, slotTime, merchantTradeNo, instructionsHtml,
+        repayUrl, adminNote,
     });
 
     const form = new URLSearchParams();

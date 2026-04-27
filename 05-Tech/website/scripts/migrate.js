@@ -131,6 +131,22 @@ async function migrate() {
     `;
     console.log('✅ processed_orders.automation_completed_at column ensured');
 
+    // Phase 1 — payment lifecycle columns
+    // payment_status: pending | in_progress | paid | failed | cancelled
+    // order_status:   not_started | pending_schedule | scheduled | in_progress | done | cancelled | reselect_payment
+    await sql`ALTER TABLE processed_orders ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'pending'`;
+    await sql`ALTER TABLE processed_orders ADD COLUMN IF NOT EXISTS order_status TEXT DEFAULT 'not_started'`;
+    await sql`ALTER TABLE processed_orders ADD COLUMN IF NOT EXISTS payment_method TEXT`;
+    await sql`ALTER TABLE processed_orders ADD COLUMN IF NOT EXISTS payment_expire_at TIMESTAMPTZ`;
+    await sql`ALTER TABLE processed_orders ADD COLUMN IF NOT EXISTS payment_paid_at TIMESTAMPTZ`;
+    await sql`ALTER TABLE processed_orders ADD COLUMN IF NOT EXISTS superseded_by TEXT`;
+    await sql`ALTER TABLE processed_orders ADD COLUMN IF NOT EXISTS notion_order_id TEXT`;
+    await sql`ALTER TABLE processed_orders ADD COLUMN IF NOT EXISTS customer_email_override TEXT`;
+    await sql`ALTER TABLE processed_orders ADD COLUMN IF NOT EXISTS last_email_sent_at TIMESTAMPTZ`;
+    await sql`ALTER TABLE processed_orders ADD COLUMN IF NOT EXISTS notes TEXT`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_processed_orders_expire ON processed_orders (payment_expire_at) WHERE payment_status = 'in_progress'`;
+    console.log('✅ processed_orders payment lifecycle columns ensured');
+
     console.log('\n🎉 Migration complete — all 7 tables created.');
 }
 
