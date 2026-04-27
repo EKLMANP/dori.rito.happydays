@@ -1,5 +1,6 @@
 import { sql } from '@/lib/db';
 import { verifyCheckMacValue } from '@/lib/ecpay';
+import { sendPaymentInstructionsEmail } from '@/lib/payment-instructions-email';
 
 /**
  * POST /api/booking/payment-info
@@ -65,6 +66,33 @@ export async function POST(request) {
     } catch (err) {
         console.error('[booking/payment-info] DB update failed:', err);
         // Still return 1|OK so ECPay doesn't retry indefinitely
+    }
+
+    // Send payment instructions email to the customer (ECPay doesn't have their email).
+    // Failure here must not block the 1|OK response.
+    try {
+        const rows = await sql`
+            SELECT booking_data FROM processed_orders WHERE merchant_trade_no = ${merchantTradeNo} LIMIT 1
+        `;
+        if (rows.length > 0) {
+            const data = typeof rows[0].booking_data === 'string'
+                ? JSON.parse(rows[0].booking_data)
+                : rows[0].booking_data || {};
+            if (data.email) {
+                await sendPaymentInstructionsEmail({
+                    to: data.email,
+                    customerName: data.customerName,
+                    serviceName: data.serviceName,
+                    price: data.price,
+                    slotDate: data.slotDate,
+                    slotTime: data.slotTime,
+                    merchantTradeNo,
+                    paymentInfo,
+                });
+            }
+        }
+    } catch (err) {
+        console.error('[booking/payment-info] Email send failed:', err);
     }
 
     return new Response('1|OK');
