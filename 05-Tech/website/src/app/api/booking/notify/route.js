@@ -2,6 +2,93 @@ import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { verifyCheckMacValue } from '@/lib/ecpay';
 import { runBookingAutomations } from '@/lib/booking-automations';
+import { generateRepayToken } from '@/lib/booking-token';
+import { sendPaymentInstructionsEmail } from '@/lib/payment-instructions-email';
+
+function buildRepayUrl(merchantTradeNo) {
+    const base = process.env.NEXT_PUBLIC_SITE_URL || 'https://doriritohappydays.com';
+    return `${base}/booking/repay/${encodeURIComponent(merchantTradeNo)}?token=${generateRepayToken(merchantTradeNo)}`;
+}
+
+async function handlePaymentFailure(merchantTradeNo, rtnCode, rtnMsg) {
+    const rows = await sql`
+        SELECT booking_data, payment_expire_at, notion_order_id, payment_status
+        FROM processed_orders WHERE merchant_trade_no = ${merchantTradeNo} LIMIT 1
+    `;
+    if (rows.length === 0) return;
+    const row = rows[0];
+    if (row.payment_status === 'paid' || row.payment_status === 'cancelled') return;
+
+    const isExpired = row.payment_expire_at && new Date(row.payment_expire_at) < new Date();
+
+    if (isExpired) {
+        // Silently cancel — user let it expire
+        await sql`
+            UPDATE processed_orders
+            SET payment_status = 'cancelled', order_status = 'cancelled'
+            WHERE merchant_trade_no = ${merchantTradeNo}
+        `;
+        // Sync Notion
+        if (row.notion_order_id) {
+            try {
+                const { markOrderSuperseded } = await import('@/lib/notion-crm');
+                // Reuse markOrderSuperseded to set cancelled/failed in Notion
+                const { notionFetch } = await import('@/lib/notion-crm').catch(() => ({}));
+                const apiKey = process.env.NOTION_API_KEY_CRM || process.env.NOTION_API_KEY;
+                await fetch(`https://api.notion.com/v1/pages/${row.notion_order_id}`, {
+                    method: 'PATCH',
+                    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'Notion-Version': '2022-06-28' },
+                    body: JSON.stringify({ properties: { '訂單狀態': { status: { name: '已取消' } }, '付款狀態': { status: { name: '付款失敗' } } } }),
+                });
+            } catch (err) {
+                console.warn('[notify] Notion expire cancel failed:', err.message);
+            }
+        }
+        console.log(`[booking/notify] Expired order cancelled: ${merchantTradeNo}`);
+        return;
+    }
+
+    // Non-expiry failure → reselect_payment + resend email with repay link
+    await sql`
+        UPDATE processed_orders
+        SET payment_status = 'pending', order_status = 'reselect_payment'
+        WHERE merchant_trade_no = ${merchantTradeNo}
+    `;
+
+    const data = typeof row.booking_data === 'string' ? JSON.parse(row.booking_data) : row.booking_data || {};
+    if (data.email) {
+        try {
+            await sendPaymentInstructionsEmail({
+                to: data.email,
+                customerName: data.customerName,
+                serviceName: data.serviceName,
+                price: data.price,
+                slotDate: data.slotDate,
+                slotTime: data.slotTime,
+                merchantTradeNo,
+                paymentInfo: data.paymentInfo || {},
+                repayUrl: buildRepayUrl(merchantTradeNo),
+                adminNote: `付款未成功（代碼 ${rtnCode}），請點擊按鈕重新選擇付款方式。`,
+            });
+            await sql`UPDATE processed_orders SET last_email_sent_at = NOW() WHERE merchant_trade_no = ${merchantTradeNo}`;
+        } catch (err) {
+            console.error('[notify] Resend failure email failed:', err.message);
+        }
+    }
+
+    // Notify admin via Telegram
+    const botToken = process.env.TELEGRAM_DR_FNACC_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_GROUP_DR_CS_TEAM;
+    if (botToken && chatId) {
+        const msg = `⚠️ 付款失敗\n訂單：${merchantTradeNo}\n客戶：${data.customerName}\nRtnCode：${rtnCode}\n已自動重寄付款通知`;
+        fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: chatId, text: msg }),
+        }).catch(() => {});
+    }
+    console.log(`[booking/notify] Payment failed (non-expiry), reselect triggered: ${merchantTradeNo}`);
+}
 
 /**
  * POST /api/booking/notify
@@ -34,9 +121,12 @@ export async function POST(request) {
     const merchantTradeNo = params.MerchantTradeNo;
     const rtnCode = params.RtnCode; // "1" = success
 
-    // 2. Only process successful payments
+    // 2. Handle failed payments
     if (rtnCode !== '1') {
-        console.warn(`[booking/notify] Payment failed for ${merchantTradeNo}: RtnCode=${rtnCode}`);
+        console.warn(`[booking/notify] Payment failed for ${merchantTradeNo}: RtnCode=${rtnCode}, Msg=${params.RtnMsg}`);
+        handlePaymentFailure(merchantTradeNo, rtnCode, params.RtnMsg).catch((err) =>
+            console.error('[booking/notify] handlePaymentFailure error:', err)
+        );
         return new Response('1|OK');
     }
 
@@ -53,9 +143,12 @@ export async function POST(request) {
     // 4. Atomic claim: only the first caller gets to process (prevents race with /return)
     const claimed = await sql`
         UPDATE processed_orders
-        SET processed_at = NOW()
+        SET processed_at = NOW(),
+            payment_status = 'paid',
+            order_status = 'pending_schedule',
+            payment_paid_at = NOW()
         WHERE merchant_trade_no = ${merchantTradeNo} AND processed_at IS NULL
-        RETURNING booking_data
+        RETURNING booking_data, notion_order_id
     `;
 
     if (claimed.length === 0) {
@@ -93,6 +186,7 @@ export async function POST(request) {
         email: storedData.email || params.CustomField2 || '',
         dogName: storedData.dogName || params.CustomField3 || '',
         serviceName: storedData.serviceName || params.CustomField4 || '',
+        notionOrderId: claimed[0].notion_order_id || null,
     };
 
     // 6. Persist merged booking data back to DB

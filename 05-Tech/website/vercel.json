@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/expire-payments",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/marketing-snapshot",
+      "schedule": "0 2 * * *"
+    }
+  ]
+}

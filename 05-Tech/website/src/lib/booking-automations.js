@@ -7,7 +7,7 @@
 
 import { sql } from '@/lib/db';
 import { renderEmailTemplate, renderSubject } from '@/lib/email-renderer';
-import { updateCustomerPayment, createCustomerPageWithPayment, createNotionOrder as createNotionOrderFn, linkOrderToCustomer } from '@/lib/notion-crm';
+import { updateCustomerPayment, createCustomerPageWithPayment, createNotionOrder as createNotionOrderFn, linkOrderToCustomer, updateOrderPaid } from '@/lib/notion-crm';
 import { createEvent } from '@/lib/google-calendar';
 
 /** Service-specific display names for emails and calendar events */
@@ -202,12 +202,23 @@ async function createOrderInNotion(bookingData) {
         return;
     }
 
-    // Use notionPageId from questionnaire submission as customer relation
     const customerPageId = bookingData.notionPageId || null;
+
+    // Phase 2: prefer updating the pending order created at booking/create time.
+    if (bookingData.notionOrderId) {
+        try {
+            await updateOrderPaid(bookingData.notionOrderId, bookingData.paymentDate || new Date());
+            console.log('[createOrderInNotion] Updated pending order to paid:', bookingData.notionOrderId);
+            return;
+        } catch (err) {
+            console.warn('[createOrderInNotion] Update pending order failed, falling back to create:', err.message);
+        }
+    }
+
+    // Fallback: create order from scratch (legacy path)
     const result = await createNotionOrderFn(bookingData, customerPageId);
     console.log('[createOrderInNotion] Created order:', result.pageId);
 
-    // Link order back to customer page (訂單編號 with hyperlink)
     if (customerPageId && result.pageId) {
         try {
             await linkOrderToCustomer(customerPageId, result.pageId, bookingData.merchantTradeNo);

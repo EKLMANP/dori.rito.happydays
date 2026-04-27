@@ -39,3 +39,18 @@ export function verifyBookingToken(token, payload, timestamp) {
     const expected = createHmac('sha256', SECRET).update(data).digest('hex');
     return token === expected;
 }
+
+/**
+ * Generate a repay token for the "重新選擇付款方式" email button.
+ * Bound to merchantTradeNo only — no timestamp; expiry is enforced by
+ * checking processed_orders.payment_expire_at server-side.
+ */
+export function generateRepayToken(merchantTradeNo) {
+    return createHmac('sha256', SECRET).update(`repay:${merchantTradeNo}`).digest('hex');
+}
+
+export function verifyRepayToken(token, merchantTradeNo) {
+    if (!token || !merchantTradeNo) return false;
+    const expected = createHmac('sha256', SECRET).update(`repay:${merchantTradeNo}`).digest('hex');
+    return token === expected;
+}
