@@ -11,9 +11,9 @@ const GOOGLE_API = 'https://www.googleapis.com/calendar/v3';
  * Get a fresh access token using the stored refresh token.
  */
 async function getAccessToken() {
-    const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET;
-    const refreshToken = process.env.GOOGLE_CALENDAR_REFRESH_TOKEN;
+    const clientId = (process.env.GOOGLE_CALENDAR_CLIENT_ID || '').trim();
+    const clientSecret = (process.env.GOOGLE_CALENDAR_CLIENT_SECRET || '').trim();
+    const refreshToken = (process.env.GOOGLE_CALENDAR_REFRESH_TOKEN || '').trim();
 
     if (!clientId || !clientSecret || !refreshToken) {
         throw new Error('Google Calendar credentials not configured');
