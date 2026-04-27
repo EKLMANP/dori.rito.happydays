@@ -92,6 +92,44 @@ export async function GET(request) {
         }
     }
 
+    // Booking conversion funnel from Postgres
+    if (section === 'funnel') {
+        const [ordersCreated, ordersPaid, ordersConsumed] = await Promise.all([
+            sql`SELECT COUNT(*)::int as count FROM processed_orders`,
+            sql`SELECT COUNT(*)::int as count FROM processed_orders WHERE processed_at IS NOT NULL`,
+            sql`SELECT COUNT(*)::int as count FROM processed_orders WHERE processed_at IS NOT NULL AND (booking_data->>'slotDate')::date < NOW()`,
+        ]);
+
+        return NextResponse.json({
+            funnel: [
+                { stage: '建立訂單', count: ordersCreated[0].count },
+                { stage: '完成付款', count: ordersPaid[0].count },
+                { stage: '已上課', count: ordersConsumed[0].count },
+            ],
+            conversionRates: {
+                paymentRate: ordersCreated[0].count > 0 ? Math.round(ordersPaid[0].count / ordersCreated[0].count * 100) : 0,
+                consumptionRate: ordersPaid[0].count > 0 ? Math.round(ordersConsumed[0].count / ordersPaid[0].count * 100) : 0,
+            },
+        });
+    }
+
+    // Service trends by month (last 3 months)
+    if (section === 'trends') {
+        const rows = await sql`
+            SELECT
+                DATE_TRUNC('month', processed_at) as month,
+                booking_data->>'serviceName' as service,
+                COUNT(*)::int as count,
+                SUM((booking_data->>'price')::numeric)::int as revenue
+            FROM processed_orders
+            WHERE processed_at IS NOT NULL AND processed_at > NOW() - INTERVAL '3 months'
+            GROUP BY 1, 2
+            ORDER BY 1, 3 DESC
+        `;
+
+        return NextResponse.json({ trends: rows });
+    }
+
     return NextResponse.json(result);
 }
 

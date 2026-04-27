@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin-auth';
 import { cached } from '@/lib/cache';
+import { evaluateAlerts, CS_RULES } from '@/lib/alerts/index.js';
 
 const NOTION_API = 'https://api.notion.com/v1';
 const NOTION_VERSION = '2022-06-28';
@@ -22,17 +23,14 @@ export async function GET() {
 
 /** Fetch and aggregate all customer data from Notion CRM */
 async function fetchNotionCustomerData() {
-    const apiKey = process.env.NOTION_API_KEY;
+    const apiKey = process.env.NOTION_API_KEY_CRM || process.env.NOTION_API_KEY;
     const dbId = process.env.NOTION_CUSTOMER_DB_ID;
 
     if (!apiKey || !dbId) {
-        return {
-            totalCustomers: 0,
-            statusBreakdown: [],
-            serviceBreakdown: [],
-            recentCustomers: [],
-            error: 'Notion not configured',
-        };
+        const missing = [];
+        if (!apiKey) missing.push('NOTION_API_KEY_CRM');
+        if (!dbId) missing.push('NOTION_CUSTOMER_DB_ID');
+        return { error: 'ENV_MISSING', missing };
     }
 
     // Paginate through all customers
@@ -67,7 +65,16 @@ async function fetchNotionCustomerData() {
     // Aggregate data
     const statusMap = {};
     const serviceMap = {};
+    const journeyMap = {};
     const customers = [];
+    const now = Date.now();
+    const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000;
+
+    // Health score breakdown counters
+    const healthBreakdown = { high: 0, medium: 0, low: 0 };
+    const atRiskCustomers = [];
+
+    let activeCustomers = 0;
 
     for (const page of allPages) {
         const props = page.properties;
@@ -79,9 +86,15 @@ async function fetchNotionCustomerData() {
         // Extract email
         const email = props['聯絡Email']?.email || '';
 
-        // Extract status
+        // Extract payment status
         const status = props['付款狀態']?.status?.name || '未知';
         statusMap[status] = (statusMap[status] || 0) + 1;
+
+        // Extract journey/conversion status
+        const journeyStatus = props['轉換狀態']?.status?.name || props['轉換狀態']?.select?.name || null;
+        if (journeyStatus) {
+            journeyMap[journeyStatus] = (journeyMap[journeyStatus] || 0) + 1;
+        }
 
         // Extract services
         const services = props['付費服務類別']?.multi_select || [];
@@ -89,18 +102,69 @@ async function fetchNotionCustomerData() {
             serviceMap[svc.name] = (serviceMap[svc.name] || 0) + 1;
         }
 
+        // Compute health score
+        const hasPaid = status !== '未知' && status !== '未付款' && status !== '';
+        const hasServices = services.length > 0;
+        const createdAt = page.created_time;
+        const isRecent = createdAt && (now - new Date(createdAt).getTime()) < ninetyDaysMs;
+
+        let healthScore = 0;
+        if (hasPaid) healthScore += 40;
+        if (hasServices) healthScore += 30;
+        if (isRecent) healthScore += 30;
+
+        if (healthScore >= 70) {
+            healthBreakdown.high += 1;
+        } else if (healthScore >= 40) {
+            healthBreakdown.medium += 1;
+        } else {
+            healthBreakdown.low += 1;
+        }
+
+        // Active vs dormant: recent (90 days) OR paid
+        if (isRecent || hasPaid) {
+            activeCustomers += 1;
+        }
+
         // Collect for list (most recent first by created_time)
-        customers.push({
+        const customer = {
             name,
             email,
             status,
             services: services.map((s) => s.name).join(', ') || '—',
-            createdAt: page.created_time,
-        });
+            createdAt,
+            healthScore,
+        };
+        customers.push(customer);
+
+        // At-risk customers (health score < 40), collect up to 10
+        if (healthScore < 40 && atRiskCustomers.length < 10) {
+            atRiskCustomers.push({
+                name,
+                status,
+                services: customer.services,
+                createdAt,
+                healthScore,
+            });
+        }
     }
 
     // Sort by created date desc
     customers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    const dormantCustomers = allPages.length - activeCustomers;
+
+    // Journey breakdown
+    const journeyBreakdown = Object.entries(journeyMap).map(([stage, count]) => ({ stage, count }));
+
+    // CS alerts
+    const alertMetrics = {
+        churnRateChange: 0, // placeholder
+        surveyFillRate: 100, // we don't have this yet
+        hasLowRating: false, // placeholder
+        repurchaseRate30d: 0, // placeholder
+    };
+    const alerts = evaluateAlerts(CS_RULES, alertMetrics);
 
     return {
         totalCustomers: allPages.length,
@@ -113,5 +177,11 @@ async function fetchNotionCustomerData() {
             count,
         })),
         recentCustomers: customers.slice(0, 20),
+        journeyBreakdown,
+        healthBreakdown,
+        atRiskCustomers,
+        activeCustomers,
+        dormantCustomers,
+        alerts,
     };
 }
