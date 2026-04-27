@@ -7,7 +7,6 @@ import ConfirmDialog from '@/components/admin/ConfirmDialog';
 
 function StatusBadge({ status }) {
     const styles = {
-        '報價中': 'bg-gray-100 text-gray-700',
         '未開始': 'bg-gray-100 text-gray-500',
         '待排課': 'bg-blue-100 text-blue-700',
         '已排課': 'bg-indigo-100 text-indigo-700',
@@ -36,22 +35,11 @@ function InfoRow({ label, children }) {
 }
 
 const STATUS_TRANSITIONS = {
-    '報價中': [{ label: '確認訂單', next: '待排課' }],
-    '待排課': [
-        { label: '開始排課', next: '已排課' },
-        { label: '取消', next: '已取消', danger: true },
-    ],
-    '已排課': [
-        { label: '開始上課', next: '上課中' },
-        { label: '取消', next: '已取消', danger: true },
-    ],
-    '上課中': [
-        { label: '完課', next: '完課' },
-        { label: '取消', next: '已取消', danger: true },
-    ],
+    '未開始': [{ label: '確認排課', next: '待排課' }],
+    '待排課': [{ label: '開始排課', next: '已排課' }],
+    '已排課': [{ label: '開始上課', next: '上課中' }],
+    '上課中': [{ label: '完課', next: '完課' }],
     '完課': [],
-    '已取消': [],
-    '未開始': [],
 };
 
 const PAYMENT_STATUSES = ['待付款', '付款中', '已付款', '付款失敗'];
@@ -84,6 +72,7 @@ export default function OrderDetailPage() {
     // ConfirmDialog state
     const [confirmStatus, setConfirmStatus] = useState(null); // { next, label }
     const [confirmArchive, setConfirmArchive] = useState(false);
+    const [confirmCancel, setConfirmCancel] = useState(false);
 
     const fetchOrder = async () => {
         try {
@@ -173,6 +162,13 @@ export default function OrderDetailPage() {
         if (notes) fields.notes = notes;
         await patchOrder(fields);
         setConfirmStatus(null);
+    };
+
+    const handleCancelConfirm = async (notes) => {
+        const fields = { paymentStatus: '付款失敗' };
+        if (notes) fields.notes = notes;
+        await patchOrder(fields);
+        setConfirmCancel(false);
     };
 
     const handleArchiveConfirm = async (notes) => {
@@ -483,8 +479,22 @@ export default function OrderDetailPage() {
                                 </div>
                             )}
                         </div>
-                        {/* Archive button */}
-                        {(order.orderStatus === '報價中' || order.orderStatus === '已取消') && (
+                        {/* Cancel button — 寫入 付款狀態=付款失敗，訂單狀態 不動 */}
+                        {order.paymentStatus !== '付款失敗' && (
+                            <div>
+                                <p className="text-sm text-gray-500 mb-2">取消訂單</p>
+                                <button
+                                    onClick={() => setConfirmCancel(true)}
+                                    disabled={updating}
+                                    className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-md hover:bg-red-100 text-sm font-medium disabled:opacity-50"
+                                >
+                                    取消此訂單
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Archive button — 已取消（付款失敗）或未開始的訂單可封存 */}
+                        {(order.paymentStatus === '付款失敗' || order.orderStatus === '未開始') && (
                             <div>
                                 <p className="text-sm text-gray-500 mb-2">封存</p>
                                 <button
@@ -512,6 +522,19 @@ export default function OrderDetailPage() {
                 {confirmStatus && (
                     <p>確認要將訂單狀態從「{order.orderStatus}」改為「{confirmStatus.next}」嗎？</p>
                 )}
+            </ConfirmDialog>
+
+            {/* Confirm Cancel Dialog */}
+            <ConfirmDialog
+                open={confirmCancel}
+                title="取消訂單"
+                variant="danger"
+                confirmLabel="確認取消"
+                onConfirm={handleCancelConfirm}
+                onCancel={() => setConfirmCancel(false)}
+            >
+                <p>確定要取消訂單「{order.orderNumber}」嗎？</p>
+                <p style={{ color: '#dc2626', marginTop: '8px' }}>付款狀態將被標記為「付款失敗」。</p>
             </ConfirmDialog>
 
             {/* Confirm Archive Dialog */}

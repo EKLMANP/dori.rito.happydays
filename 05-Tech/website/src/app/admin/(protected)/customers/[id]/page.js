@@ -34,12 +34,13 @@ function StatusBadge({ status }) {
 
 function OrderStatusBadge({ status }) {
     const styles = {
-        '報價中': 'bg-gray-100 text-gray-700',
-        '已確認': 'bg-blue-100 text-blue-700',
-        '進行中': 'bg-yellow-100 text-yellow-700',
-        '已完成': 'bg-green-100 text-green-700',
+        '未開始': 'bg-gray-100 text-gray-500',
+        '待排課': 'bg-blue-100 text-blue-700',
+        '已排課': 'bg-indigo-100 text-indigo-700',
+        '上課中': 'bg-yellow-100 text-yellow-700',
+        '完課': 'bg-green-100 text-green-700',
         '已取消': 'bg-red-100 text-red-700',
-        '待付款': 'bg-red-100 text-red-700',
+        '待付款': 'bg-orange-100 text-orange-700',
         '付款中': 'bg-yellow-100 text-yellow-700',
         '已付款': 'bg-green-100 text-green-700',
         '付款失敗': 'bg-red-100 text-red-700',

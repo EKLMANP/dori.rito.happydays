@@ -523,7 +523,7 @@ export async function createOrder({ customerId, serviceId, trainer, sessions, un
         '購買課堂數': { number: sessions },
         '單堂課報價': { number: unitPrice },
         '剩餘課堂數': { number: sessions },
-        '訂單狀態': { status: { name: '報價中' } },
+        '訂單狀態': { status: { name: '未開始' } },
         '付款狀態': { status: { name: '待付款' } },
     };
     if (trainer) properties['訓犬師'] = { select: { name: trainer } };
@@ -651,10 +651,10 @@ export async function getDashboardStats() {
         .reduce((sum, o) => sum + o.totalAmount, 0);
 
     const pendingPaymentAmount = orders
-        .filter(o => ['待付款', '付款中'].includes(o.paymentStatus) && o.orderStatus !== '已取消')
+        .filter(o => ['待付款', '付款中'].includes(o.paymentStatus))
         .reduce((sum, o) => sum + o.totalAmount, 0);
 
-    const activeOrderCount = orders.filter(o => o.orderStatus === '進行中').length;
+    const activeOrderCount = orders.filter(o => ['已排課', '上課中'].includes(o.orderStatus)).length;
     const monthNewCustomers = monthCustomers.results.length;
 
     // --- Conversion funnel ---
@@ -665,7 +665,7 @@ export async function getDashboardStats() {
     }));
 
     // --- Trainer workload ---
-    const activeOrders = orders.filter(o => o.orderStatus === '進行中');
+    const activeOrders = orders.filter(o => ['已排課', '上課中'].includes(o.orderStatus));
     const trainerWorkload = {};
     for (const o of activeOrders) {
         const name = o.trainer || '未指派';
@@ -679,7 +679,7 @@ export async function getDashboardStats() {
 
     // Overdue payments (> 7 days, still 待付款)
     for (const o of orders) {
-        if (o.paymentStatus === '待付款' && o.createdTime < sevenDaysAgo && o.orderStatus !== '已取消') {
+        if (o.paymentStatus === '待付款' && o.createdTime < sevenDaysAgo) {
             const days = Math.floor((now - new Date(o.createdTime)) / 86400000);
             alerts.push({
                 type: 'overdue_payment',
