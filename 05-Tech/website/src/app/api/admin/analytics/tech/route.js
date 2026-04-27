@@ -25,6 +25,28 @@ export async function GET() {
             checkAllServices(),
         ]);
 
+        const ENV_VARS = [
+            { key: 'DATABASE_URL', label: 'Neon DB' },
+            { key: 'NOTION_API_KEY_CRM', label: 'Notion API Key', alt: 'NOTION_API_KEY' },
+            { key: 'NOTION_CUSTOMER_DB_ID', label: 'Notion Customer DB' },
+            { key: 'NOTION_ORDER_DB_ID', label: 'Notion Order DB' },
+            { key: 'ECPAY_MERCHANT_ID', label: 'ECPay Merchant ID' },
+            { key: 'ECPAY_HASH_KEY', label: 'ECPay Hash Key' },
+            { key: 'TELEGRAM_DR_FNACC_BOT_TOKEN', label: 'Telegram Bot Token' },
+            { key: 'LINE_CHANNEL_ACCESS_TOKEN', label: 'LINE Channel Token' },
+            { key: 'IG_ACCESS_TOKEN', label: 'Instagram Token' },
+            { key: 'GHOST_URL', label: 'Ghost URL' },
+            { key: 'GHOST_ADMIN_API_KEY', label: 'Ghost Admin API Key' },
+            { key: 'MAILGUN_API_KEY', label: 'Mailgun API Key' },
+            { key: 'GOOGLE_CALENDAR_ID', label: 'Google Calendar ID' },
+        ];
+
+        const envCheck = ENV_VARS.map(({ key, label, alt }) => ({
+            key,
+            label,
+            present: !!process.env[key] || (alt ? !!process.env[alt] : false),
+        }));
+
         return NextResponse.json({
             database: {
                 tables: tableCounts.map((r) => ({
@@ -34,6 +56,8 @@ export async function GET() {
                 status: 'connected',
             },
             services: serviceChecks,
+            envCheck,
+            lastChecked: new Date().toISOString(),
         });
     } catch (err) {
         console.error('[Analytics Tech] Error:', err);
@@ -48,6 +72,11 @@ async function checkAllServices() {
         { key: 'notion', label: 'Notion CRM', check: checkNotion },
         { key: 'ghost', label: 'Ghost CMS', check: checkGhost },
         { key: 'mailgun', label: 'Mailgun', check: checkMailgun },
+        { key: 'ecpay', label: 'ECPay 金流', check: checkECPay },
+        { key: 'telegram', label: 'Telegram Bot', check: checkTelegram },
+        { key: 'line', label: 'LINE OA', check: checkLINE },
+        { key: 'instagram', label: 'Instagram API', check: checkInstagram },
+        { key: 'gcal', label: 'Google Calendar', check: checkGoogleCal },
     ];
 
     const results = await Promise.all(
@@ -109,4 +138,29 @@ async function checkMailgun() {
         signal: AbortSignal.timeout(5000),
     });
     return res.ok;
+}
+
+async function checkECPay() {
+    return !!(process.env.ECPAY_MERCHANT_ID && process.env.ECPAY_HASH_KEY && process.env.ECPAY_HASH_IV);
+}
+
+async function checkTelegram() {
+    const token = process.env.TELEGRAM_DR_FNACC_BOT_TOKEN;
+    if (!token) return false;
+    const res = await fetch(`https://api.telegram.org/bot${token}/getMe`, {
+        signal: AbortSignal.timeout(5000),
+    });
+    return res.ok;
+}
+
+async function checkLINE() {
+    return !!(process.env.LINE_CHANNEL_SECRET && process.env.LINE_CHANNEL_ACCESS_TOKEN);
+}
+
+async function checkInstagram() {
+    return !!(process.env.IG_ACCESS_TOKEN && process.env.IG_USER_ID);
+}
+
+async function checkGoogleCal() {
+    return !!(process.env.GOOGLE_CALENDAR_ID && process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
 }

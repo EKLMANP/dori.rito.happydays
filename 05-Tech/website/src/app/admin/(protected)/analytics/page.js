@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import AnalyticsTabs from '@/components/admin/AnalyticsTabs';
-import StatCard from '@/components/admin/StatCard';
+import StatCard, { MetricTooltip } from '@/components/admin/StatCard';
 import PlaceholderCard from '@/components/admin/PlaceholderCard';
 import SimpleBarChart from '@/components/admin/charts/SimpleBarChart';
 import SimplePieChart from '@/components/admin/charts/SimplePieChart';
@@ -61,12 +61,56 @@ function useTabData(tabKey) {
 // ─────────────────────────────────────────────
 function OpsTab() {
     const { data, loading, error } = useTabData('ops');
+    const q = data?.qualityMetrics;
 
     return (
         <div className="space-y-6">
             {error && <ErrorBanner message={error} />}
 
-            {/* Top Stats */}
+            {/* Alerts */}
+            <AlertsPanel alerts={data?.alerts} loading={loading} />
+
+            {/* ① 今日重點 4 卡 */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard
+                    title="今日預約數"
+                    value={loading ? '—' : data?.todayStats?.bookings ?? 0}
+                    subtitle="今天上課筆數"
+                    icon="📅"
+                    color="blue"
+                    loading={loading}
+                    tooltip="今天日期對應 slotDate 的已建立訂單總數（包含已付款與待付款）。"
+                />
+                <StatCard
+                    title="未指派教練"
+                    value={loading ? '—' : data?.todayStats?.unassigned ?? 0}
+                    subtitle="待確認排課"
+                    icon="👤"
+                    color={(!loading && (data?.todayStats?.unassigned ?? 0) > 0) ? 'red' : 'green'}
+                    loading={loading}
+                    tooltip="已付款但尚未指定負責教練（trainer 欄位為空）的未來預約訂單數。需盡快完成排課。"
+                />
+                <StatCard
+                    title="待付款"
+                    value={loading ? '—' : data?.todayStats?.pendingPayment ?? 0}
+                    subtitle="今日未付款訂單"
+                    icon="💳"
+                    color="orange"
+                    loading={loading}
+                    tooltip="今日預約中，processed_at 為空（尚未完成付款）的訂單數。"
+                />
+                <StatCard
+                    title="取消筆數"
+                    value={loading ? '—' : data?.todayStats?.cancellations ?? 0}
+                    subtitle="今日取消（追蹤中）"
+                    icon="❌"
+                    color="purple"
+                    loading={loading}
+                    tooltip="今日已取消的預約數。目前為追蹤規劃中，暫顯示為 0。"
+                />
+            </div>
+
+            {/* ② 核心 KPI 4 卡（保留） */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                     title="預約完成率"
@@ -75,6 +119,7 @@ function OpsTab() {
                     icon="✅"
                     color="green"
                     loading={loading}
+                    tooltip="已付款訂單數 ÷ 全部訂單數 × 100%。反映訂單從建立到付款完成的成功比例。"
                 />
                 <StatCard
                     title="平均提前天數"
@@ -83,6 +128,7 @@ function OpsTab() {
                     icon="📆"
                     color="blue"
                     loading={loading}
+                    tooltip="所有已付款訂單中，付款日（processed_at）到上課日（slotDate）的平均天數差。數值越高代表客戶越提早預約。"
                 />
                 <StatCard
                     title="熱門服務"
@@ -91,6 +137,7 @@ function OpsTab() {
                     icon="🏆"
                     color="orange"
                     loading={loading}
+                    tooltip="所有已付款訂單中，被預約次數最多的服務名稱（依 serviceName 欄位分組計算）。"
                 />
                 <StatCard
                     title="熱門時段"
@@ -99,13 +146,56 @@ function OpsTab() {
                     icon="⏰"
                     color="purple"
                     loading={loading}
+                    tooltip="所有已付款訂單中，預約人數最多的課程時段（依 slotTime 欄位分組計算）。"
                 />
             </div>
 
-            {/* Charts Row */}
+            {/* ③ 容量利用率 Heatmap */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-4">
+                    容量利用率 — 未來 14 天 × 時段
+                    <MetricTooltip text="未來 14 天每個日期 × 時段的預約數熱圖。綠色＝尚有空位，黃色＝即將額滿，紅色＝接近滿額（相對於同期最高值）。" />
+                </h3>
+                {loading ? (
+                    <SkeletonRows count={4} />
+                ) : (
+                    <BookingHeatmap data={data?.heatmap14d || []} />
+                )}
+            </div>
+
+            {/* ④ 預約品質 4 卡 */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white rounded-xl border border-gray-200 p-5">
+                    <p className="text-xs text-gray-500 mb-1">取消率 <MetricTooltip text="取消的訂單 ÷ 全部訂單 × 100%。目前為追蹤規劃中，暫顯示 0%。" /></p>
+                    <p className="text-2xl font-bold text-gray-800">{loading ? '—' : `${q?.cancellationRate ?? 0}%`}</p>
+                    <p className="text-xs text-gray-400 mt-1">追蹤中</p>
+                </div>
+                <div className="bg-white rounded-xl border border-gray-200 p-5">
+                    <p className="text-xs text-gray-500 mb-1">改期率 <MetricTooltip text="要求改期的訂單 ÷ 全部訂單 × 100%。目前為追蹤規劃中，暫顯示 0%。" /></p>
+                    <p className="text-2xl font-bold text-gray-800">{loading ? '—' : `${q?.rescheduleRate ?? 0}%`}</p>
+                    <p className="text-xs text-gray-400 mt-1">追蹤中</p>
+                </div>
+                <div className="bg-white rounded-xl border border-gray-200 p-5">
+                    <p className="text-xs text-gray-500 mb-1">No-show 率 <MetricTooltip text="已付款預約但上課當天實際未出席的比例。目前為追蹤規劃中，暫顯示 0%。" /></p>
+                    <p className="text-2xl font-bold text-gray-800">{loading ? '—' : `${q?.noShowRate ?? 0}%`}</p>
+                    <p className="text-xs text-gray-400 mt-1">追蹤中</p>
+                </div>
+                <div className="bg-white rounded-xl border border-gray-200 p-5">
+                    <p className="text-xs text-gray-500 mb-1">複購率 <MetricTooltip text="所有付款客戶中，擁有超過 1 筆已付款訂單的客戶比例。計算方式：重複購買客戶數 ÷ 總客戶數 × 100%。" /></p>
+                    <p className={`text-2xl font-bold ${(!loading && (q?.repurchaseRate ?? 0) >= 30) ? 'text-green-600' : 'text-amber-600'}`}>
+                        {loading ? '—' : `${q?.repurchaseRate ?? 0}%`}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">有 &gt;1 筆訂單客戶</p>
+                </div>
+            </div>
+
+            {/* ⑤ 服務組合 + 線上 vs 線下 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-4">服務預約佔比</h3>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-4">
+                        服務預約佔比
+                        <MetricTooltip text="各服務名稱的已付款預約筆數佔全部已付款訂單的比例。" />
+                    </h3>
                     <SimplePieChart
                         data={data?.serviceBreakdown || []}
                         nameKey="service"
@@ -115,22 +205,121 @@ function OpsTab() {
                     />
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-4">時段預約熱度</h3>
-                    <SimpleBarChart
-                        data={data?.timeSlotHeat || []}
-                        xKey="timeSlot"
-                        yKey="count"
-                        color="#8B5CF6"
-                        height={260}
-                        yLabel="筆"
-                        loading={loading}
-                    />
+                    <h3 className="text-sm font-semibold text-gray-700 mb-4">
+                        線上 vs 線下
+                        <MetricTooltip text="服務名稱含「線上」或「online」字樣歸類為線上，其餘歸類為線下。" />
+                    </h3>
+                    {loading ? (
+                        <SkeletonRows count={3} />
+                    ) : !data?.onlineOfflineBreakdown?.length ? (
+                        <EmptyState text="暫無分類資料" />
+                    ) : (
+                        <div className="space-y-4 mt-6">
+                            {data.onlineOfflineBreakdown.map((item, i) => {
+                                const total = data.onlineOfflineBreakdown.reduce((s, x) => s + x.count, 0);
+                                const pct = total > 0 ? Math.round((item.count / total) * 100) : 0;
+                                const colors = ['#6366F1', '#F59E0B'];
+                                return (
+                                    <div key={i}>
+                                        <div className="flex justify-between text-sm mb-2">
+                                            <span className="font-medium text-gray-700">{item.type}</span>
+                                            <span className="text-gray-500">{item.count} 筆 ({pct}%)</span>
+                                        </div>
+                                        <div className="h-4 bg-gray-100 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full rounded-full"
+                                                style={{ width: `${pct}%`, backgroundColor: colors[i] }}
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {/* Upcoming Bookings Table */}
+            {/* ⑥ 流程健康清單 */}
+            {!loading && (data?.pendingAssignmentOrders?.length > 0 || data?.slaOverdueOrders?.length > 0) && (
+                <div className="space-y-4">
+                    {/* Unassigned Orders */}
+                    {data?.pendingAssignmentOrders?.length > 0 && (
+                        <div className="bg-white rounded-xl border border-red-200 p-6">
+                            <h3 className="text-sm font-semibold text-red-700 mb-4 flex items-center gap-2">
+                                🚨 未指派教練的訂單
+                                <span className="bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded-full">
+                                    {data.pendingAssignmentOrders.length}
+                                </span>
+                            </h3>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b border-gray-100">
+                                            <th className="text-left py-2 px-2 text-gray-500 font-medium">客戶</th>
+                                            <th className="text-left py-2 px-2 text-gray-500 font-medium">服務</th>
+                                            <th className="text-left py-2 px-2 text-gray-500 font-medium">上課日期</th>
+                                            <th className="text-left py-2 px-2 text-gray-500 font-medium">時間</th>
+                                            <th className="text-left py-2 px-2 text-gray-500 font-medium">訂單編號</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {data.pendingAssignmentOrders.map((o, i) => (
+                                            <tr key={i} className="border-b border-gray-50 bg-red-50/50 hover:bg-red-50">
+                                                <td className="py-2 px-2 font-medium text-gray-800">{o.customerName}</td>
+                                                <td className="py-2 px-2 text-gray-600">{o.serviceName}</td>
+                                                <td className="py-2 px-2 text-gray-600">{o.slotDate}</td>
+                                                <td className="py-2 px-2 text-gray-600">{o.slotTime}</td>
+                                                <td className="py-2 px-2 font-mono text-xs text-gray-400">{o.tradeNo}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* SLA Overdue Orders */}
+                    {data?.slaOverdueOrders?.length > 0 && (
+                        <div className="bg-white rounded-xl border border-amber-200 p-6">
+                            <h3 className="text-sm font-semibold text-amber-700 mb-4 flex items-center gap-2">
+                                ⚠️ 超過 SLA（付款逾 4 小時未確認）
+                                <span className="bg-amber-100 text-amber-600 text-xs px-2 py-0.5 rounded-full">
+                                    {data.slaOverdueOrders.length}
+                                </span>
+                            </h3>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b border-gray-100">
+                                            <th className="text-left py-2 px-2 text-gray-500 font-medium">客戶</th>
+                                            <th className="text-left py-2 px-2 text-gray-500 font-medium">服務</th>
+                                            <th className="text-left py-2 px-2 text-gray-500 font-medium">上課日期</th>
+                                            <th className="text-right py-2 px-2 text-gray-500 font-medium">等待時數</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {data.slaOverdueOrders.map((o, i) => (
+                                            <tr key={i} className="border-b border-gray-50 bg-amber-50/50 hover:bg-amber-50">
+                                                <td className="py-2 px-2 font-medium text-gray-800">{o.customerName}</td>
+                                                <td className="py-2 px-2 text-gray-600">{o.serviceName}</td>
+                                                <td className="py-2 px-2 text-gray-600">{o.slotDate}</td>
+                                                <td className="py-2 px-2 text-right font-bold text-amber-700">{o.hoursSincePaid}h</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ⑦ 未來 7 天預約 table（保留） */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-4">未來 7 天預約</h3>
+                <h3 className="text-sm font-semibold text-gray-700 mb-4">
+                    未來 7 天預約
+                    <MetricTooltip text="slotDate 落在今日到 7 天後之間的已付款預約清單，依日期與時間升序排列。" />
+                </h3>
                 {loading ? (
                     <SkeletonRows count={3} />
                 ) : !data?.upcomingBookings?.length ? (
@@ -170,6 +359,67 @@ function OpsTab() {
     );
 }
 
+/** 14-day × hour booking heatmap */
+function BookingHeatmap({ data }) {
+    if (!data.length) return <EmptyState text="未來 14 天暫無預約資料" />;
+
+    // Build date × hour matrix
+    const dates = [...new Set(data.map((d) => d.slotDate))].sort();
+    const hours = [...new Set(data.map((d) => d.hour))].sort();
+    const map = {};
+    data.forEach(({ slotDate, hour, count }) => {
+        map[`${slotDate}_${hour}`] = count;
+    });
+    const maxCount = Math.max(...data.map((d) => d.count), 1);
+
+    const cellColor = (count) => {
+        if (!count) return 'bg-gray-50 text-gray-300';
+        const ratio = count / maxCount;
+        if (ratio >= 0.8) return 'bg-red-400 text-white';
+        if (ratio >= 0.5) return 'bg-amber-300 text-gray-800';
+        return 'bg-green-200 text-gray-700';
+    };
+
+    return (
+        <div className="overflow-x-auto">
+            <table className="text-xs border-collapse w-full">
+                <thead>
+                    <tr>
+                        <th className="py-1 px-2 text-gray-400 font-normal text-left w-12">時段</th>
+                        {dates.map((d) => (
+                            <th key={d} className="py-1 px-1 text-gray-500 font-medium text-center min-w-[52px]">
+                                {d.slice(5)}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {hours.map((h) => (
+                        <tr key={h}>
+                            <td className="py-1 px-2 text-gray-500 font-medium">{h}:00</td>
+                            {dates.map((d) => {
+                                const count = map[`${d}_${h}`] || 0;
+                                return (
+                                    <td key={d} className="py-0.5 px-1 text-center">
+                                        <div className={`rounded text-center py-1 px-1 font-medium ${cellColor(count)}`}>
+                                            {count || '·'}
+                                        </div>
+                                    </td>
+                                );
+                            })}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+            <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-200 inline-block" /> 尚有空位</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-300 inline-block" /> 即將額滿</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-400 inline-block" /> 接近滿額</span>
+            </div>
+        </div>
+    );
+}
+
 // ─────────────────────────────────────────────
 // Finance Tab
 // ─────────────────────────────────────────────
@@ -180,8 +430,11 @@ function FinanceTab() {
         <div className="space-y-6">
             {error && <ErrorBanner message={error} />}
 
+            {/* Alerts */}
+            <AlertsPanel alerts={data?.alerts} loading={loading} />
+
             {/* Top Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
                     title="客單價"
                     value={loading ? '—' : `NT$${(data?.avgPrice ?? 0).toLocaleString()}`}
@@ -189,29 +442,49 @@ function FinanceTab() {
                     icon="💵"
                     color="green"
                     loading={loading}
+                    tooltip="所有已付款訂單的平均金額。計算方式：已付款總金額 ÷ 已付款訂單筆數。"
                 />
                 <StatCard
                     title="本期營收"
                     value={loading ? '—' : `NT$${(data?.monthlyTrend?.slice(-1)[0]?.revenue ?? 0).toLocaleString()}`}
-                    subtitle={data?.monthlyTrend?.slice(-1)[0]?.label || ''}
+                    subtitle={loading ? '' : (() => {
+                        const chg = data?.revenueMomChange;
+                        if (chg == null) return data?.monthlyTrend?.slice(-1)[0]?.label || '';
+                        const sign = chg >= 0 ? '+' : '';
+                        return `${data?.monthlyTrend?.slice(-1)[0]?.label || ''} (${sign}${chg}% MoM)`;
+                    })()}
                     icon="📈"
                     color="orange"
                     loading={loading}
+                    tooltip="本月（依 processed_at 日期）所有已付款訂單的金額加總。括號顯示與上個月的環比漲跌幅（MoM）。"
+                />
+                <StatCard
+                    title="預收款項"
+                    value={loading ? '—' : `NT$${(data?.deferredRevenue ?? 0).toLocaleString()}`}
+                    subtitle="已付款未上課"
+                    icon="🗓️"
+                    color="blue"
+                    loading={loading}
+                    tooltip="已付款但 slotDate 尚未到來的訂單金額總計（Deferred Revenue）。代表未來須履行的課程服務義務。"
                 />
                 <StatCard
                     title="未付款訂單"
                     value={loading ? '—' : data?.unpaidOrders?.length ?? 0}
-                    subtitle="筆待處理"
+                    subtitle={loading ? '' : `逾 72h: ${data?.unpaidAging?.over72h ?? 0} 筆`}
                     icon="⚠️"
                     color="red"
                     loading={loading}
+                    tooltip="processed_at 為空（尚未付款）的訂單筆數。逾 72 小時未付款的訂單需優先追蹤聯繫。"
                 />
             </div>
 
             {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-4">月度營收趨勢（近 6 個月）</h3>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-4">
+                        月度營收趨勢（近 6 個月）
+                        <MetricTooltip text="依 processed_at 月份分組計算的已付款訂單月度營收，顯示最近 6 個月趨勢。" />
+                    </h3>
                     <SimpleBarChart
                         data={data?.monthlyTrend || []}
                         xKey="month"
@@ -223,7 +496,10 @@ function FinanceTab() {
                     />
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-4">各服務營收佔比</h3>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-4">
+                        各服務營收佔比
+                        <MetricTooltip text="各服務名稱的已付款訂單金額加總，佔全部已付款總營收的比例。" />
+                    </h3>
                     <SimplePieChart
                         data={data?.serviceRevenue || []}
                         nameKey="service"
@@ -233,6 +509,38 @@ function FinanceTab() {
                     />
                 </div>
             </div>
+
+            {/* Unit Economics Table */}
+            {!loading && data?.serviceUnitEcon?.length > 0 && (
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                    <h3 className="text-sm font-semibold text-gray-700 mb-4">
+                        各服務單位經濟
+                        <MetricTooltip text="按服務名稱分組顯示：訂單筆數、已付款總營收，以及平均客單價（AOV = 總營收 ÷ 筆數）。" />
+                    </h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-gray-100">
+                                    <th className="text-left py-3 px-2 text-gray-500 font-medium">服務</th>
+                                    <th className="text-right py-3 px-2 text-gray-500 font-medium">筆數</th>
+                                    <th className="text-right py-3 px-2 text-gray-500 font-medium">總營收</th>
+                                    <th className="text-right py-3 px-2 text-gray-500 font-medium">平均客單價</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {data.serviceUnitEcon.map((s, i) => (
+                                    <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
+                                        <td className="py-3 px-2 text-gray-800">{s.service}</td>
+                                        <td className="py-3 px-2 text-right text-gray-600">{s.count}</td>
+                                        <td className="py-3 px-2 text-right font-medium text-gray-800">NT${s.totalRevenue?.toLocaleString()}</td>
+                                        <td className="py-3 px-2 text-right text-gray-600">NT${s.avgPrice?.toLocaleString()}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
             {/* Unpaid Orders Table */}
             {data?.unpaidOrders?.length > 0 && (
@@ -283,9 +591,30 @@ function FinanceTab() {
 function CSTab() {
     const { data, loading, error } = useTabData('cs');
 
+    const isEnvMissing = !loading && data?.error === 'ENV_MISSING';
+
     return (
         <div className="space-y-6">
             {error && <ErrorBanner message={error} />}
+
+            {/* Env Missing Guide */}
+            {isEnvMissing && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+                    <p className="text-sm font-semibold text-amber-800 mb-2">⚙️ Notion CRM 尚未設定</p>
+                    <p className="text-xs text-amber-700 mb-3">
+                        缺少環境變數：{data.missing?.join(', ')}
+                    </p>
+                    <ol className="list-decimal list-inside space-y-1 text-xs text-amber-700">
+                        <li>在 Notion 取得 Integration Token</li>
+                        <li>在 Vercel 設定 <code className="bg-amber-100 px-1 rounded">NOTION_API_KEY_CRM</code></li>
+                        <li>設定 <code className="bg-amber-100 px-1 rounded">NOTION_CUSTOMER_DB_ID</code> 為客戶資料庫 ID</li>
+                        <li>重新部署後重新整理此頁面</li>
+                    </ol>
+                </div>
+            )}
+
+            {/* Alerts */}
+            <AlertsPanel alerts={data?.alerts} loading={loading} />
 
             {/* Customer Search */}
             <CustomerSearch />
@@ -299,6 +628,7 @@ function CSTab() {
                     icon="👥"
                     color="purple"
                     loading={loading}
+                    tooltip="Notion CRM 客戶資料庫（NOTION_CUSTOMER_DB_ID）中的全部記錄筆數，包含各種付款狀態的客戶。"
                 />
                 <StatCard
                     title="已付款"
@@ -307,6 +637,7 @@ function CSTab() {
                     icon="✅"
                     color="green"
                     loading={loading}
+                    tooltip="Notion CRM 中「付款狀態」欄位標記為「已付款」的客戶數量。"
                 />
                 <StatCard
                     title="服務類別數"
@@ -315,13 +646,83 @@ function CSTab() {
                     icon="🏷️"
                     color="blue"
                     loading={loading}
+                    tooltip="CRM 客戶記錄中出現的不同付費服務類別（multi-select 欄位「付費服務類別」）數量。"
                 />
             </div>
+
+            {/* Active / Dormant */}
+            {!loading && (data?.activeCustomers != null) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <StatCard title="活躍客戶" value={data.activeCustomers} subtitle="90 天內有互動或已付款" icon="🟢" color="green" tooltip="Notion 建立時間在 90 天內，或付款狀態為「已付款」的客戶數（兩者取聯集）。" />
+                    <StatCard title="沉睡客戶" value={data.dormantCustomers ?? 0} subtitle="超過 90 天無互動" icon="💤" color="purple" tooltip="Notion 建立時間超過 90 天，且未被歸入活躍客戶的記錄數。可能代表長期未互動的流失風險客戶。" />
+                </div>
+            )}
+
+            {/* Health Breakdown */}
+            {!loading && data?.healthBreakdown && (
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                    <h3 className="text-sm font-semibold text-gray-700 mb-4">
+                        客戶健康度分布
+                        <MetricTooltip text="健康分數計算：有付款記錄 +40分、有服務類別 +30分、90天內建立 +30分。高≥70、中40-69、低<40。" />
+                    </h3>
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center p-4 bg-green-50 rounded-lg">
+                            <p className="text-2xl font-bold text-green-700">{data.healthBreakdown.high}</p>
+                            <p className="text-xs text-green-600 mt-1">健康（≥70分）</p>
+                        </div>
+                        <div className="text-center p-4 bg-amber-50 rounded-lg">
+                            <p className="text-2xl font-bold text-amber-700">{data.healthBreakdown.medium}</p>
+                            <p className="text-xs text-amber-600 mt-1">待關注（40-69分）</p>
+                        </div>
+                        <div className="text-center p-4 bg-red-50 rounded-lg">
+                            <p className="text-2xl font-bold text-red-700">{data.healthBreakdown.low}</p>
+                            <p className="text-xs text-red-600 mt-1">高風險（&lt;40分）</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* At-Risk Customers */}
+            {!loading && data?.atRiskCustomers?.length > 0 && (
+                <div className="bg-white rounded-xl border border-red-100 p-6">
+                    <h3 className="text-sm font-semibold text-red-700 mb-4">
+                        🚨 高風險客戶（需主動跟進）
+                        <span className="ml-2 text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{data.atRiskCustomers.length}</span>
+                    </h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-gray-100">
+                                    <th className="text-left py-3 px-2 text-gray-500 font-medium">姓名</th>
+                                    <th className="text-left py-3 px-2 text-gray-500 font-medium">付款狀態</th>
+                                    <th className="text-left py-3 px-2 text-gray-500 font-medium">服務類別</th>
+                                    <th className="text-right py-3 px-2 text-gray-500 font-medium">健康分數</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {data.atRiskCustomers.map((c, i) => (
+                                    <tr key={i} className="border-b border-gray-50 hover:bg-red-50 transition-colors">
+                                        <td className="py-3 px-2 font-medium text-gray-800">{c.name}</td>
+                                        <td className="py-3 px-2"><StatusBadge status={c.status} /></td>
+                                        <td className="py-3 px-2 text-gray-600 text-xs">{c.services || '—'}</td>
+                                        <td className="py-3 px-2 text-right">
+                                            <span className="text-xs font-bold text-red-600">{c.healthScore}</span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
             {/* Charts Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-4">客戶付款狀態分布</h3>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-4">
+                        客戶付款狀態分布
+                        <MetricTooltip text="依 Notion CRM「付款狀態」欄位分類的客戶數量圓餅圖。" />
+                    </h3>
                     <SimplePieChart
                         data={data?.statusBreakdown || []}
                         nameKey="status"
@@ -331,7 +732,10 @@ function CSTab() {
                     />
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-4">付費服務類別分布</h3>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-4">
+                        付費服務類別分布
+                        <MetricTooltip text="依 Notion CRM「付費服務類別」multi-select 欄位分類的客戶數量圓餅圖。一位客戶可能對應多個服務類別。" />
+                    </h3>
                     <SimplePieChart
                         data={data?.serviceBreakdown || []}
                         nameKey="service"
@@ -345,7 +749,10 @@ function CSTab() {
 
             {/* Recent Customers Table */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-4">近期客戶</h3>
+                <h3 className="text-sm font-semibold text-gray-700 mb-4">
+                    近期客戶
+                    <MetricTooltip text="依 Notion 建立時間（created_time）降序排列的最近 20 筆客戶記錄。" />
+                </h3>
                 {loading ? (
                     <SkeletonRows count={5} />
                 ) : !data?.recentCustomers?.length ? (
@@ -574,6 +981,9 @@ function MKTTab() {
 
     return (
         <div className="space-y-8">
+            {/* ── Booking Funnel (Postgres) ── */}
+            <MKTBookingFunnelSection />
+
             {/* ── Instagram Section ── */}
             <MKTInstagramSection period={igPeriod} onPeriodChange={setIgPeriod} configured={configured.instagram} />
 
@@ -582,6 +992,57 @@ function MKTTab() {
 
             {/* ── Website / GA4 Section ── */}
             <MKTWebsiteSection period={webPeriod} onPeriodChange={setWebPeriod} configured={configured.ga4} />
+        </div>
+    );
+}
+
+function MKTBookingFunnelSection() {
+    const { data, loading } = useMktData('funnel', 'all');
+
+    return (
+        <div className="space-y-4">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-800 flex items-center gap-2">
+                <span>🎯</span> 預約轉換漏斗
+                <MetricTooltip text="從「建立訂單」→「完成付款」→「已上課」的轉換漏斗，數據來源為 Postgres processed_orders 資料表。" />
+            </h2>
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+                {loading ? (
+                    <SkeletonRows count={3} />
+                ) : data?.funnel?.length ? (
+                    <div className="space-y-3">
+                        {data.funnel.map((step, i) => {
+                            const maxCount = data.funnel[0]?.count || 1;
+                            const pct = Math.round((step.count / maxCount) * 100);
+                            return (
+                                <div key={i}>
+                                    <div className="flex justify-between text-sm mb-1">
+                                        <span className="text-gray-700 font-medium">{step.stage}</span>
+                                        <span className="text-gray-500">{step.count.toLocaleString()} 筆</span>
+                                    </div>
+                                    <div className="h-6 bg-gray-100 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full rounded-full bg-brand-orange transition-all"
+                                            style={{ width: `${pct}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        <div className="mt-4 flex gap-6 pt-3 border-t border-gray-100">
+                            <div>
+                                <p className="text-xs text-gray-400">付款轉換率 <MetricTooltip text="完成付款的訂單數 ÷ 建立訂單總數 × 100%。反映預約意願轉化為實際付款的效率。" /></p>
+                                <p className="text-lg font-bold text-gray-800">{data.conversionRates?.paymentRate ?? 0}%</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-gray-400">課程消費率 <MetricTooltip text="已上課的訂單數 ÷ 完成付款的訂單數 × 100%。反映付款後實際消費課程的比例（以 processed_at 為準）。" /></p>
+                                <p className="text-lg font-bold text-gray-800">{data.conversionRates?.consumptionRate ?? 0}%</p>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <EmptyState text="暫無漏斗資料" />
+                )}
+            </div>
         </div>
     );
 }
@@ -621,6 +1082,7 @@ function MKTInstagramSection({ period, onPeriodChange, configured }) {
                             icon="👥"
                             color="purple"
                             loading={loading}
+                            tooltip="Instagram 帳號目前的追蹤人數總計，數據來自 Instagram Graph API followers_count 欄位。"
                         />
                         <StatCard
                             title="24h 新增粉絲"
@@ -628,6 +1090,7 @@ function MKTInstagramSection({ period, onPeriodChange, configured }) {
                             icon="📈"
                             color="green"
                             loading={loading}
+                            tooltip="過去 24 小時內新增的 IG 追蹤人數（與昨日快照比較差值）。"
                         />
                         <StatCard
                             title="24h 退追蹤"
@@ -635,6 +1098,7 @@ function MKTInstagramSection({ period, onPeriodChange, configured }) {
                             icon="📉"
                             color="red"
                             loading={loading}
+                            tooltip="過去 24 小時內取消追蹤的人數（與昨日快照比較差值）。"
                         />
                     </div>
 
@@ -695,6 +1159,7 @@ function MKTNewsletterSection({ period, onPeriodChange, configured }) {
                             icon="📬"
                             color="orange"
                             loading={loading}
+                            tooltip="Ghost 電子報平台目前的有效訂閱人數（已點擊確認信完成訂閱），數據來自 Ghost Admin API。"
                         />
                         <StatCard
                             title="24h 新增訂閱"
@@ -702,6 +1167,7 @@ function MKTNewsletterSection({ period, onPeriodChange, configured }) {
                             icon="📈"
                             color="green"
                             loading={loading}
+                            tooltip="過去 24 小時內成功完成訂閱（含確認）的新增人數。"
                         />
                         <StatCard
                             title="24h 退訂"
@@ -709,6 +1175,7 @@ function MKTNewsletterSection({ period, onPeriodChange, configured }) {
                             icon="📉"
                             color="red"
                             loading={loading}
+                            tooltip="過去 24 小時內取消電子報訂閱的人數。退訂率高（>1%/期）需檢視內容相關度與寄送頻率。"
                         />
                         <StatCard
                             title="24h 未確認"
@@ -716,6 +1183,7 @@ function MKTNewsletterSection({ period, onPeriodChange, configured }) {
                             icon="⏳"
                             color="amber"
                             loading={loading}
+                            tooltip="已提交訂閱申請但尚未點擊確認信（double opt-in）完成訂閱的人數。這些訂閱尚未生效。"
                         />
                     </div>
 
@@ -775,6 +1243,7 @@ function MKTWebsiteSection({ period, onPeriodChange, configured }) {
                             icon="👁️"
                             color="blue"
                             loading={loading}
+                            tooltip="GA4 工作階段數：使用者在 30 分鐘內連續的網站互動計為一個 Session。數據來自 GA4 Data API。"
                         />
                         <StatCard
                             title="Users"
@@ -782,6 +1251,7 @@ function MKTWebsiteSection({ period, onPeriodChange, configured }) {
                             icon="👤"
                             color="purple"
                             loading={loading}
+                            tooltip="GA4 使用者數，包含新訪客（New Users）與回訪者（Returning Users），以 Client ID 識別。"
                         />
                         <StatCard
                             title="預約諮詢轉換率"
@@ -789,6 +1259,7 @@ function MKTWebsiteSection({ period, onPeriodChange, configured }) {
                             icon="🎯"
                             color="green"
                             loading={loading}
+                            tooltip="網站使用者中最終進入預約諮詢流程的比例。計算方式：表單送出事件數 ÷ 頁面瀏覽數 × 100%。"
                         />
                     </div>
 
@@ -847,15 +1318,58 @@ function MKTWebsiteSection({ period, onPeriodChange, configured }) {
 // Tech Tab
 // ─────────────────────────────────────────────
 function TechTab() {
-    const { data, loading, error } = useTabData('tech');
+    const { data, loading, error, refresh } = useTabData('tech');
+
+    const allOk = data?.services?.every((s) => s.status === 'ok');
+    const hasError = data?.services?.some((s) => s.status === 'error');
+    const overallStatus = loading ? null : hasError ? 'error' : allOk ? 'ok' : 'warn';
 
     return (
         <div className="space-y-6">
             {error && <ErrorBanner message={error} />}
 
-            {/* Service Health */}
+            {/* Overall Status Banner */}
+            {!loading && overallStatus && (
+                <div className={`rounded-xl p-5 flex items-center justify-between ${
+                    overallStatus === 'ok' ? 'bg-green-50 border border-green-200' :
+                    overallStatus === 'error' ? 'bg-red-50 border border-red-200' :
+                    'bg-amber-50 border border-amber-200'
+                }`}>
+                    <div className="flex items-center gap-3">
+                        <span className={`w-4 h-4 rounded-full ${
+                            overallStatus === 'ok' ? 'bg-green-400' :
+                            overallStatus === 'error' ? 'bg-red-500' : 'bg-amber-400'
+                        }`} />
+                        <div>
+                            <p className={`text-sm font-bold ${
+                                overallStatus === 'ok' ? 'text-green-700' :
+                                overallStatus === 'error' ? 'text-red-700' : 'text-amber-700'
+                            }`}>
+                                {overallStatus === 'ok' ? '所有系統正常運行' :
+                                 overallStatus === 'error' ? '有服務異常，請立即檢查' : '部分服務需要關注'}
+                            </p>
+                            {data?.lastChecked && (
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                    上次檢查：{new Date(data.lastChecked).toLocaleString('zh-TW')}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                    <button
+                        onClick={refresh}
+                        className="text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg px-3 py-1.5 bg-white"
+                    >
+                        重新檢查
+                    </button>
+                </div>
+            )}
+
+            {/* Service Health Grid */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-4">服務健康狀態</h3>
+                <h3 className="text-sm font-semibold text-gray-700 mb-4">
+                    服務健康狀態
+                    <MetricTooltip text="對各整合服務發送 API 請求（或檢查環境變數），記錄回應狀態與耗時（毫秒）。正常＝綠色，異常＝紅色閃爍。" />
+                </h3>
                 {loading ? (
                     <SkeletonRows count={4} />
                 ) : (
@@ -863,18 +1377,44 @@ function TechTab() {
                         {data?.services?.map((svc) => (
                             <div
                                 key={svc.key}
-                                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                                className={`flex items-center justify-between p-4 rounded-lg ${
+                                    svc.status === 'ok' ? 'bg-green-50' : 'bg-red-50'
+                                }`}
                             >
                                 <div className="flex items-center gap-3">
-                                    <span
-                                        className={`w-3 h-3 rounded-full ${
-                                            svc.status === 'ok' ? 'bg-green-400' : 'bg-red-400'
-                                        }`}
-                                    />
+                                    <span className={`w-3 h-3 rounded-full ${svc.status === 'ok' ? 'bg-green-400' : 'bg-red-500 animate-pulse'}`} />
                                     <span className="text-sm font-medium text-gray-700">{svc.label}</span>
                                 </div>
-                                <span className="text-xs text-gray-400">
-                                    {svc.responseMs}ms
+                                <div className="flex items-center gap-2">
+                                    <span className={`text-xs font-semibold ${svc.status === 'ok' ? 'text-green-600' : 'text-red-600'}`}>
+                                        {svc.status === 'ok' ? '正常' : '異常'}
+                                    </span>
+                                    {svc.responseMs != null && (
+                                        <span className="text-xs text-gray-400">{svc.responseMs}ms</span>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Env Var Checklist */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-4">
+                    環境變數完整性
+                    <MetricTooltip text="確認 Vercel 執行環境中所有必要的環境變數是否已設定。缺失（紅色）代表對應功能可能無法正常運作。" />
+                </h3>
+                {loading ? (
+                    <SkeletonRows count={4} />
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {data?.envCheck?.map((env) => (
+                            <div key={env.key} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${env.present ? 'bg-green-400' : 'bg-red-500'}`} />
+                                <span className="text-xs text-gray-700 flex-1">{env.label}</span>
+                                <span className={`text-xs font-medium ${env.present ? 'text-green-600' : 'text-red-600'}`}>
+                                    {env.present ? '已設定' : '缺失'}
                                 </span>
                             </div>
                         ))}
@@ -886,6 +1426,7 @@ function TechTab() {
             <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h3 className="text-sm font-semibold text-gray-700 mb-4">
                     資料庫概況
+                    <MetricTooltip text="透過 SQL COUNT(*) 取得 Postgres（Neon）各資料表的目前記錄筆數。" />
                     {data?.database?.status && (
                         <span className="ml-2 text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">
                             {data.database.status}
@@ -924,6 +1465,40 @@ function TechTab() {
 // ─────────────────────────────────────────────
 // Shared tiny components
 // ─────────────────────────────────────────────
+
+const SEVERITY_STYLES = {
+    critical: { bg: 'bg-red-50', border: 'border-red-200', dot: 'bg-red-500', text: 'text-red-700', label: '緊急' },
+    warning:  { bg: 'bg-amber-50', border: 'border-amber-200', dot: 'bg-amber-400', text: 'text-amber-700', label: '警告' },
+    info:     { bg: 'bg-blue-50', border: 'border-blue-200', dot: 'bg-blue-400', text: 'text-blue-700', label: '提示' },
+};
+
+function AlertsPanel({ alerts, loading }) {
+    if (loading || !alerts?.length) return null;
+    return (
+        <div className="space-y-3">
+            {alerts.map((a) => {
+                const s = SEVERITY_STYLES[a.severity] || SEVERITY_STYLES.info;
+                return (
+                    <div key={a.id} className={`${s.bg} border ${s.border} rounded-xl p-4`}>
+                        <div className="flex items-start gap-3">
+                            <span className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${s.dot}`} />
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className={`text-xs font-semibold ${s.text}`}>{s.label}</span>
+                                    <span className={`text-sm font-medium ${s.text}`}>{a.message}</span>
+                                </div>
+                                {a.suggestion && (
+                                    <p className="text-xs text-gray-600">建議：{a.suggestion}</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
 function ErrorBanner({ message }) {
     return (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4">
@@ -967,8 +1542,6 @@ const TAB_COMPONENTS = {
     ops: OpsTab,
     finance: FinanceTab,
     cs: CSTab,
-    mkt: MKTTab,
-    tech: TechTab,
     mkt: MKTTab,
     tech: TechTab,
 };
