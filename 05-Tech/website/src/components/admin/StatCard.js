@@ -1,5 +1,18 @@
 'use client';
 
+/** Inline ⓘ info icon with hover tooltip. Export for use in section headers. */
+export function MetricTooltip({ text }) {
+    return (
+        <span className="group relative inline-flex items-center ml-1 align-middle">
+            <span className="text-gray-400 hover:text-gray-600 cursor-help text-xs select-none">ⓘ</span>
+            <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-64 bg-gray-800 text-white text-xs rounded-lg p-3 shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-normal leading-relaxed">
+                {text}
+                <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800" />
+            </span>
+        </span>
+    );
+}
+
 const COLOR_MAP = {
     orange: 'border-l-brand-orange',
     green: 'border-l-green-500',
@@ -31,11 +44,15 @@ export default function StatCard({
     loading = false,
     trend,
     trendColor = 'text-green-600',
+    tooltip,
 }) {
     return (
         <div className={`bg-white rounded-xl border border-gray-200 border-l-4 ${COLOR_MAP[color] || COLOR_MAP.orange} p-4 sm:p-6`}>
             <div className="flex items-center justify-between mb-1">
-                <p className="text-xs sm:text-sm text-gray-500">{title}</p>
+                <p className="text-xs sm:text-sm text-gray-500">
+                    {title}
+                    {tooltip && <MetricTooltip text={tooltip} />}
+                </p>
                 {icon && <span className="text-lg">{icon}</span>}
             </div>
 
