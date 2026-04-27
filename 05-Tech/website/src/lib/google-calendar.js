@@ -7,11 +7,21 @@
 
 const GOOGLE_API = 'https://www.googleapis.com/calendar/v3';
 
+/** Strip whitespace + trailing literal \n that Vercel sometimes appends to env values. */
+const stripEnv = v => {
+    const s = (v || '').trim();
+    return s.endsWith('\\n') ? s.slice(0, -2) : s;
+};
+
+/** Read an env var with safe stripping applied. */
+export function getCleanEnv(name) {
+    return stripEnv(process.env[name]);
+}
+
 /**
  * Get a fresh access token using the stored refresh token.
  */
 async function getAccessToken() {
-    const stripEnv = v => { const s = (v || '').trim(); return s.endsWith('\\n') ? s.slice(0, -2) : s; };
     const clientId = stripEnv(process.env.GOOGLE_CALENDAR_CLIENT_ID);
     const clientSecret = stripEnv(process.env.GOOGLE_CALENDAR_CLIENT_SECRET);
     const refreshToken = stripEnv(process.env.GOOGLE_CALENDAR_REFRESH_TOKEN);
@@ -50,7 +60,7 @@ async function getAccessToken() {
  */
 export async function getFreeBusy(timeMin, timeMax) {
     const token = await getAccessToken();
-    const calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
+    const calendarId = stripEnv(process.env.GOOGLE_CALENDAR_ID) || 'primary';
 
     const res = await fetch(`${GOOGLE_API}/freeBusy`, {
         method: 'POST',
@@ -90,7 +100,7 @@ export async function getFreeBusy(timeMin, timeMax) {
  * @returns {Array<{start: Date, end: Date}>|null} Availability windows, or null if not configured
  */
 export async function getAvailabilityWindows(timeMin, timeMax) {
-    const calendarId = process.env.GOOGLE_AVAILABILITY_CALENDAR_ID;
+    const calendarId = stripEnv(process.env.GOOGLE_AVAILABILITY_CALENDAR_ID);
     if (!calendarId) return null;
 
     const token = await getAccessToken();
@@ -186,7 +196,7 @@ function mergeOverlappingWindows(windows) {
  */
 export async function createEvent({ summary, description, startDateTime, endDateTime, attendeeEmails = [] }) {
     const token = await getAccessToken();
-    const calendarId = process.env.GOOGLE_CALENDAR_ID || 'primary';
+    const calendarId = stripEnv(process.env.GOOGLE_CALENDAR_ID) || 'primary';
 
     const event = {
         summary,

@@ -8,11 +8,32 @@ import { getFreeBusy, getAvailabilityWindows } from '@/lib/google-calendar';
  * Reports OAuth health, freeBusy availability, and availability calendar config.
  */
 export async function GET() {
+    const inspect = (v, opts = {}) => {
+        if (!v) return { present: false };
+        const trimmed = v.trim().replace(/\\n$/, '');
+        const out = {
+            present: true,
+            rawLen: v.length,
+            trimmedLen: trimmed.length,
+        };
+        if (opts.showPrefix) {
+            // Google OAuth client_id format: <project_number>-<hash>.apps.googleusercontent.com
+            // The project_number prefix is public info (visible in GCP project URLs)
+            const m = trimmed.match(/^(\d+)-/);
+            if (m) out.projectNumber = m[1];
+        }
+        if (opts.showTokenHead) {
+            // Refresh token format: 1//<base64>. The "1//" prefix + first few chars
+            // can verify which client/scope it was issued for (still safe).
+            out.head = trimmed.slice(0, 6);
+        }
+        return out;
+    };
     const status = {
         config: {
-            clientId: !!process.env.GOOGLE_CALENDAR_CLIENT_ID,
-            clientSecret: !!process.env.GOOGLE_CALENDAR_CLIENT_SECRET,
-            refreshToken: !!process.env.GOOGLE_CALENDAR_REFRESH_TOKEN,
+            clientId: inspect(process.env.GOOGLE_CALENDAR_CLIENT_ID, { showPrefix: true }),
+            clientSecret: inspect(process.env.GOOGLE_CALENDAR_CLIENT_SECRET),
+            refreshToken: inspect(process.env.GOOGLE_CALENDAR_REFRESH_TOKEN, { showTokenHead: true }),
             calendarId: process.env.GOOGLE_CALENDAR_ID || 'primary (default)',
             availabilityCalendarId: process.env.GOOGLE_AVAILABILITY_CALENDAR_ID
                 ? `...${process.env.GOOGLE_AVAILABILITY_CALENDAR_ID.slice(-20)}`

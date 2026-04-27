@@ -8,10 +8,16 @@
 
 import { createHash } from 'crypto';
 
-const MERCHANT_ID = () => process.env.ECPAY_MERCHANT_ID;
-const HASH_KEY = () => process.env.ECPAY_HASH_KEY;
-const HASH_IV = () => process.env.ECPAY_HASH_IV;
-const API_URL = () => process.env.ECPAY_API_URL || 'https://payment-stage.ecpay.com.tw';
+/** Strip whitespace + trailing literal \n that Vercel sometimes appends to env values. */
+const stripEnv = v => {
+    const s = (v || '').trim();
+    return s.endsWith('\\n') ? s.slice(0, -2) : s;
+};
+
+const MERCHANT_ID = () => stripEnv(process.env.ECPAY_MERCHANT_ID);
+const HASH_KEY = () => stripEnv(process.env.ECPAY_HASH_KEY);
+const HASH_IV = () => stripEnv(process.env.ECPAY_HASH_IV);
+const API_URL = () => stripEnv(process.env.ECPAY_API_URL) || 'https://payment-stage.ecpay.com.tw';
 
 /**
  * Generate a MerchantTradeNo (unique order ID).
@@ -104,6 +110,8 @@ export async function createPaymentOrder({
     tradeDesc,
     returnUrl,
     clientBackUrl,
+    paymentInfoUrl,
+    clientRedirectUrl,
 }) {
     const merchantId = MERCHANT_ID();
     const apiUrl = API_URL();
@@ -124,7 +132,13 @@ export async function createPaymentOrder({
         ClientBackURL: clientBackUrl,
         ChoosePayment: 'ALL',
         EncryptType: '1',
+        // ATM/CVS/BARCODE require PaymentInfoURL for virtual account / payment code delivery.
+        // Without it, ECPay hides these payment options from the UI.
+        ExpireDate: '3',           // ATM 繳費期限（天）, max 60
+        StoreExpireDate: '10080',  // CVS 繳費期限（分鐘）= 7 days
     };
+    if (paymentInfoUrl) params.PaymentInfoURL = paymentInfoUrl;
+    if (clientRedirectUrl) params.ClientRedirectURL = clientRedirectUrl;
 
     params.CheckMacValue = generateCheckMacValue(params);
 

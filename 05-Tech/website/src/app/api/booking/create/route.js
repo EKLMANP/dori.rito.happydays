@@ -116,6 +116,10 @@ export async function POST(request) {
             tradeDesc: `Dori & Rito ${service.name}`,
             returnUrl: `${webhookBase}/api/booking/notify`,
             clientBackUrl: `${clientBackBase}/api/booking/return?order=${merchantTradeNo}`,
+            // For ATM/CVS/BARCODE: ECPay posts virtual account info here when assigned.
+            paymentInfoUrl: `${webhookBase}/api/booking/payment-info`,
+            // After viewing the ATM/CVS payment code page, customer is redirected here.
+            clientRedirectUrl: `${clientBackBase}/api/booking/return?order=${merchantTradeNo}`,
         });
 
         return NextResponse.json({
