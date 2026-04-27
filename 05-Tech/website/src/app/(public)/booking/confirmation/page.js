@@ -28,11 +28,120 @@ export default function BookingConfirmationPage() {
     );
 }
 
+// ATM payment-type code from ECPay: WebATM_<bank>, ATM_<bank>, CVS, BARCODE
+function classifyPaymentType(paymentInfo) {
+    const t = paymentInfo?.paymentType || '';
+    if (t.startsWith('ATM') || t.startsWith('WebATM')) return 'ATM';
+    if (t === 'CVS' || t.startsWith('CVS_')) return 'CVS';
+    if (t === 'BARCODE' || t.startsWith('BARCODE_')) return 'BARCODE';
+    return 'OTHER';
+}
+
+function PendingPaymentView({ orderNo, orderData }) {
+    const info = orderData?.paymentInfo || {};
+    const kind = classifyPaymentType(info);
+    const price = orderData?.price;
+
+    return (
+        <div className="min-h-screen bg-gradient-to-b from-orange-50/50 to-white">
+            <div className="max-w-lg mx-auto px-4 py-16">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
+                    <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <span className="text-4xl">⏳</span>
+                    </div>
+                    <h1 className="text-2xl font-bold text-amber-700 mb-2">
+                        請於期限內完成繳費
+                    </h1>
+                    <p className="text-sm text-gray-500 mb-6">
+                        Please complete the payment before the deadline.
+                    </p>
+
+                    {kind === 'ATM' && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6 text-left">
+                            <p className="text-xs text-gray-500 mb-1">銀行代號 Bank Code</p>
+                            <p className="text-lg font-mono font-bold text-gray-800 mb-3">{info.bankCode || '—'}</p>
+                            <p className="text-xs text-gray-500 mb-1">虛擬帳號 Virtual Account</p>
+                            <p className="text-lg font-mono font-bold text-gray-800 mb-3 break-all">{info.vAccount || '—'}</p>
+                            <p className="text-xs text-gray-500 mb-1">繳費金額 Amount</p>
+                            <p className="text-lg font-bold text-gray-800 mb-3">NT$ {price ?? '—'}</p>
+                            <p className="text-xs text-gray-500 mb-1">繳費期限 Pay Before</p>
+                            <p className="text-sm font-medium text-amber-700">{info.expireDate || '—'}</p>
+                        </div>
+                    )}
+
+                    {kind === 'CVS' && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6 text-left">
+                            <p className="text-xs text-gray-500 mb-1">超商繳費代碼 CVS Code</p>
+                            <p className="text-xl font-mono font-bold text-gray-800 mb-3 break-all">{info.paymentNo || '—'}</p>
+                            <p className="text-xs text-gray-500 mb-1">繳費金額 Amount</p>
+                            <p className="text-lg font-bold text-gray-800 mb-3">NT$ {price ?? '—'}</p>
+                            <p className="text-xs text-gray-500 mb-1">繳費期限 Pay Before</p>
+                            <p className="text-sm font-medium text-amber-700">{info.expireDate || '—'}</p>
+                            {info.paymentURL && (
+                                <a href={info.paymentURL} target="_blank" rel="noopener noreferrer"
+                                    className="inline-block mt-3 text-sm text-brand-orange underline">
+                                    查看繳費說明 →
+                                </a>
+                            )}
+                        </div>
+                    )}
+
+                    {kind === 'BARCODE' && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mb-6 text-left">
+                            <p className="text-xs text-gray-500 mb-2">超商條碼 BARCODE（請至超商出示繳費）</p>
+                            {[info.barcode1, info.barcode2, info.barcode3].filter(Boolean).map((b, i) => (
+                                <p key={i} className="text-xs font-mono text-gray-700 mb-1 break-all">
+                                    Code{i + 1}: {b}
+                                </p>
+                            ))}
+                            <p className="text-xs text-gray-500 mt-3 mb-1">繳費金額 Amount</p>
+                            <p className="text-lg font-bold text-gray-800 mb-3">NT$ {price ?? '—'}</p>
+                            <p className="text-xs text-gray-500 mb-1">繳費期限 Pay Before</p>
+                            <p className="text-sm font-medium text-amber-700">{info.expireDate || '—'}</p>
+                            {info.paymentURL && (
+                                <a href={info.paymentURL} target="_blank" rel="noopener noreferrer"
+                                    className="inline-block mt-3 text-sm text-brand-orange underline">
+                                    查看繳費說明 →
+                                </a>
+                            )}
+                        </div>
+                    )}
+
+                    <div className="text-left text-sm text-gray-600 leading-relaxed mb-6">
+                        <p className="mb-2">
+                            繳費完成後，系統會自動寄送預約確認信、Google Calendar 邀請與 Google Meet 連結到你的 Email。
+                        </p>
+                        <p className="text-xs text-gray-500">
+                            Once payment is received, your booking confirmation, Google Calendar invite, and Google Meet link will be emailed automatically.
+                        </p>
+                    </div>
+
+                    {orderNo && (
+                        <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                            <p className="text-xs text-gray-400 mb-1">訂單編號 Order Reference</p>
+                            <p className="text-sm font-mono font-medium text-gray-700">{orderNo}</p>
+                        </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                        <Link href="/" className="px-6 py-3 bg-brand-orange text-white rounded-xl font-medium hover:opacity-90">
+                            回到首頁
+                        </Link>
+                        <Link href="/contact" className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200">
+                            聯繫我們
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function ConfirmationContent() {
     const searchParams = useSearchParams();
     const orderNo = searchParams.get('order');
-    const initialStatus = searchParams.get('status'); // 'pending' if webhook hasn't fired yet
-    const [status, setStatus] = useState(initialStatus === 'pending' ? 'pending' : 'loading');
+    const [status, setStatus] = useState('loading');
+    const [orderData, setOrderData] = useState(null);
 
     useEffect(() => {
         if (!orderNo) {
@@ -40,44 +149,55 @@ function ConfirmationContent() {
             return;
         }
 
-        // Track page view
         trackEvent('booking_complete', { booking_id: orderNo });
 
-        // If pending, poll for webhook completion; otherwise assume success
-        // (ECPay only redirects here after successful payment)
-        if (status === 'pending') {
-            let attempts = 0;
-            const maxAttempts = 10;
+        // Single source of truth: fetch /api/booking/status which inspects DB
+        // for both `automation_completed_at` (paid) and `paymentInfo` (ATM/CVS pending).
+        let cancelled = false;
+        let attempts = 0;
+        const maxAttempts = 15;
 
+        async function check() {
+            try {
+                const res = await fetch(`/api/booking/status?order=${orderNo}`);
+                const data = await res.json();
+                if (cancelled) return;
+
+                if (data.status === 'paid') {
+                    setOrderData(data);
+                    setStatus('success');
+                    return true;
+                }
+                if (data.status === 'pending_payment') {
+                    setOrderData(data);
+                    setStatus('pending_payment');
+                    return true;
+                }
+                // 'unknown' — order not found yet, keep polling
+            } catch {
+                /* network error, retry */
+            }
+            return false;
+        }
+
+        // Initial check + poll if still unknown
+        (async () => {
+            const done = await check();
+            if (done || cancelled) return;
             const poll = setInterval(async () => {
                 attempts++;
-                try {
-                    const res = await fetch(`/api/booking/status?order=${orderNo}`);
-                    const data = await res.json();
-                    if (data.processed) {
-                        clearInterval(poll);
-                        setStatus('success');
-                    } else if (attempts >= maxAttempts) {
-                        clearInterval(poll);
-                        // After max attempts, show success anyway — ECPay already confirmed
-                        setStatus('success');
-                    }
-                } catch {
-                    if (attempts >= maxAttempts) {
-                        clearInterval(poll);
-                        setStatus('success');
-                    }
+                const ok = await check();
+                if (ok || attempts >= maxAttempts) {
+                    clearInterval(poll);
+                    if (!ok && !cancelled) setStatus('error');
                 }
             }, 2000);
+        })();
 
-            return () => clearInterval(poll);
-        } else {
-            // Non-pending: ECPay redirected here, payment succeeded
-            setStatus('success');
-        }
+        return () => { cancelled = true; };
     }, [orderNo]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    if (status === 'loading' || status === 'pending') {
+    if (status === 'loading') {
         return (
             <div className="min-h-screen bg-gradient-to-b from-orange-50/50 to-white flex items-center justify-center">
                 <div className="text-center">
@@ -87,6 +207,10 @@ function ConfirmationContent() {
                 </div>
             </div>
         );
+    }
+
+    if (status === 'pending_payment') {
+        return <PendingPaymentView orderNo={orderNo} orderData={orderData} />;
     }
 
     if (status === 'error') {
