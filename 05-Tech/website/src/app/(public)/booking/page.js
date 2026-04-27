@@ -238,10 +238,10 @@ function BookingWizard() {
                 {/* Page title */}
                 <div className="text-center mb-8">
                     <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
-                        預約線上諮詢
+                        預約線上課程
                     </h1>
                     <p className="text-sm text-gray-500 mt-2">
-                        一對一線上諮詢，讓我們一起幫助你和毛孩
+                        一對一線上課程，讓我們一起幫助你和毛孩
                     </p>
                 </div>
 
