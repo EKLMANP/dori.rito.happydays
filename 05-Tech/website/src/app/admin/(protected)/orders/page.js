@@ -2,26 +2,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { ORDER_STATUSES, ORDER_STATUS_BADGE_STYLES } from '@/lib/order-status';
 
-const ORDER_STATUSES = ['報價中', '已確認', '進行中', '已完成', '已取消'];
 const PAYMENT_STATUSES = ['待付款', '付款中', '已付款', '付款失敗'];
 const TRAINERS = ['Eric', 'Pennee'];
 const PAGE_SIZE = 20;
 
 function StatusBadge({ status }) {
-    const styles = {
-        '報價中': 'bg-gray-100 text-gray-700',
-        '已確認': 'bg-blue-100 text-blue-700',
-        '進行中': 'bg-yellow-100 text-yellow-700',
-        '已完成': 'bg-green-100 text-green-700',
-        '已取消': 'bg-red-100 text-red-700',
-        '待付款': 'bg-red-100 text-red-700',
-        '付款中': 'bg-yellow-100 text-yellow-700',
-        '已付款': 'bg-green-100 text-green-700',
-        '付款失敗': 'bg-red-100 text-red-700',
-    };
     return (
-        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-700'}`}>
+        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${ORDER_STATUS_BADGE_STYLES[status] || 'bg-gray-100 text-gray-700'}`}>
             {status}
         </span>
     );
