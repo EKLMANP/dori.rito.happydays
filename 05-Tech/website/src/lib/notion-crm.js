@@ -427,7 +427,7 @@ export async function updateOrderPaymentMethod(orderPageId, { paymentMethod, exp
 
 /**
  * Phase 3 — Mark a Notion order as superseded (used when user changes payment method).
- * Sets 訂單狀態=已取消, 付款狀態=付款失敗, 備註=「已換為新訂單：DR...」.
+ * Sets 付款狀態=付款失敗, 備註=「已換為新訂單：DR...」. 訂單狀態 不動（取消語意統一在 付款狀態）。
  */
 export async function markOrderSuperseded(orderPageId, newTradeNo) {
     if (!orderPageId) return;
@@ -436,7 +436,6 @@ export async function markOrderSuperseded(orderPageId, newTradeNo) {
         method: 'PATCH',
         body: {
             properties: {
-                '訂單狀態': { status: { name: '已取消' } },
                 '付款狀態': { status: { name: '付款失敗' } },
                 '備註': { rich_text: [{ text: { content: note } }] },
             },

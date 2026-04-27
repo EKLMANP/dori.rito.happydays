@@ -38,7 +38,7 @@ async function handlePaymentFailure(merchantTradeNo, rtnCode, rtnMsg) {
                 await fetch(`https://api.notion.com/v1/pages/${row.notion_order_id}`, {
                     method: 'PATCH',
                     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'Notion-Version': '2022-06-28' },
-                    body: JSON.stringify({ properties: { '訂單狀態': { status: { name: '已取消' } }, '付款狀態': { status: { name: '付款失敗' } } } }),
+                    body: JSON.stringify({ properties: { '付款狀態': { status: { name: '付款失敗' } } } }),
                 });
             } catch (err) {
                 console.warn('[notify] Notion expire cancel failed:', err.message);

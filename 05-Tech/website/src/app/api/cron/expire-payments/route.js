@@ -56,7 +56,6 @@ export async function GET(request) {
                         },
                         body: JSON.stringify({
                             properties: {
-                                '訂單狀態': { status: { name: '已取消' } },
                                 '付款狀態': { status: { name: '付款失敗' } },
                             },
                         }),
