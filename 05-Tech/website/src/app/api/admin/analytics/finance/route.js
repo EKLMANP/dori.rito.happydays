@@ -3,9 +3,22 @@ import { sql } from '@/lib/db';
 import { requireAdmin } from '@/lib/admin-auth';
 import { evaluateAlerts, FINANCE_RULES } from '@/lib/alerts/index.js';
 
-export async function GET() {
+export async function GET(request) {
     const { error } = await requireAdmin();
     if (error) return error;
+
+    const { searchParams } = new URL(request.url);
+    const section = searchParams.get('section');
+    const period = searchParams.get('period') || 'month';
+
+    if (section === 'trend') {
+        try {
+            return NextResponse.json(await fetchTrendData(period));
+        } catch (err) {
+            console.error('[Analytics Finance Trend] Error:', err);
+            return NextResponse.json({ error: 'Failed to load trend data' }, { status: 500 });
+        }
+    }
 
     try {
         const [
@@ -171,4 +184,73 @@ export async function GET() {
         console.error('[Analytics Finance] Error:', err);
         return NextResponse.json({ error: 'Failed to load finance data' }, { status: 500 });
     }
+}
+
+async function fetchTrendData(period) {
+    const intervals = { month: '12 months', quarter: '2 years', year: '10 years' };
+    const truncUnit = period === 'year' ? 'year' : period === 'quarter' ? 'quarter' : 'month';
+    const intervalStr = intervals[period] || '12 months';
+
+    const [revenueRows, serviceMixRows] = await Promise.all([
+        sql`
+            SELECT
+                TO_CHAR(DATE_TRUNC(${truncUnit}, processed_at), 'YYYY-MM') as period,
+                SUM((booking_data->>'price')::int) as revenue,
+                COUNT(*) as bookings
+            FROM processed_orders
+            WHERE processed_at IS NOT NULL
+            AND processed_at >= CURRENT_DATE - CAST(${intervalStr} AS INTERVAL)
+            GROUP BY 1 ORDER BY 1
+        `,
+        sql`
+            SELECT
+                TO_CHAR(DATE_TRUNC(${truncUnit}, processed_at), 'YYYY-MM') as period,
+                booking_data->>'serviceName' as service,
+                SUM((booking_data->>'price')::int) as revenue
+            FROM processed_orders
+            WHERE processed_at IS NOT NULL
+            AND processed_at >= CURRENT_DATE - CAST(${intervalStr} AS INTERVAL)
+            GROUP BY 1, 2 ORDER BY 1, 3 DESC
+        `,
+    ]);
+
+    const formatLabel = (p) => {
+        const [y, m] = p.split('-');
+        if (period === 'year') return `${y}年`;
+        if (period === 'quarter') return `Q${Math.ceil(parseInt(m) / 3)} '${y.slice(2)}`;
+        return `${y.slice(2)}/${m}`;
+    };
+
+    const revenueTrend = revenueRows.map((r) => ({
+        label: formatLabel(r.period),
+        revenue: parseInt(r.revenue || 0),
+        bookings: parseInt(r.bookings || 0),
+    }));
+
+    // Pivot service mix → % per period
+    const periods = [...new Set(serviceMixRows.map((r) => r.period))].sort();
+    const services = [...new Set(serviceMixRows.map((r) => r.service).filter(Boolean))];
+    const lookup = {};
+    serviceMixRows.forEach((r) => {
+        if (!lookup[r.period]) lookup[r.period] = {};
+        lookup[r.period][r.service] = parseInt(r.revenue || 0);
+    });
+
+    const serviceMixTrend = periods.map((p) => {
+        const row = { label: formatLabel(p) };
+        const total = Object.values(lookup[p] || {}).reduce((s, v) => s + v, 0);
+        services.forEach((svc) => {
+            row[svc] = total > 0 ? Math.round(((lookup[p]?.[svc] || 0) / total) * 100) : 0;
+        });
+        return row;
+    });
+
+    // Also include absolute revenue per service per period
+    const serviceMixRevenue = periods.map((p) => {
+        const row = { label: formatLabel(p) };
+        services.forEach((svc) => { row[svc] = lookup[p]?.[svc] || 0; });
+        return row;
+    });
+
+    return { revenueTrend, serviceMixTrend, serviceMixRevenue, services };
 }

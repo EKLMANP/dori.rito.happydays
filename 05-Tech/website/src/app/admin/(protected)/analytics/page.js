@@ -423,8 +423,44 @@ function BookingHeatmap({ data }) {
 // ─────────────────────────────────────────────
 // Finance Tab
 // ─────────────────────────────────────────────
+
+const FINANCE_PERIOD_OPTIONS = [
+    { key: 'month', label: '月' },
+    { key: 'quarter', label: '季' },
+    { key: 'year', label: '年' },
+];
+
+const SERVICE_COLORS = ['#F75000', '#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#06B6D4'];
+
+function useFinanceTrendData(period) {
+    const cacheKey = `finance_trend_${period}`;
+    const [data, setData] = useState(tabDataCache[cacheKey] || null);
+    const [loading, setLoading] = useState(!tabDataCache[cacheKey]);
+
+    useEffect(() => {
+        if (tabDataCache[cacheKey]) { setData(tabDataCache[cacheKey]); setLoading(false); return; }
+        setLoading(true);
+        fetch(`/api/admin/analytics/finance?section=trend&period=${period}`)
+            .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+            .then((json) => { tabDataCache[cacheKey] = json; setData(json); })
+            .catch((e) => console.error('[Finance Trend]', e))
+            .finally(() => setLoading(false));
+    }, [period, cacheKey]);
+
+    return { data, loading };
+}
+
 function FinanceTab() {
     const { data, loading, error } = useTabData('finance');
+    const [trendPeriod, setTrendPeriod] = useState('month');
+    const [mixView, setMixView] = useState('pct'); // 'pct' | 'revenue'
+    const { data: trendData, loading: trendLoading } = useFinanceTrendData(trendPeriod);
+
+    const serviceLines = (trendData?.services || []).map((svc, i) => ({
+        key: svc,
+        label: svc,
+        color: SERVICE_COLORS[i % SERVICE_COLORS.length],
+    }));
 
     return (
         <div className="space-y-6">
@@ -478,36 +514,66 @@ function FinanceTab() {
                 />
             </div>
 
-            {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-4">
-                        月度營收趨勢（近 6 個月）
-                        <MetricTooltip text="依 processed_at 月份分組計算的已付款訂單月度營收，顯示最近 6 個月趨勢。" />
+            {/* ① 營收趨勢 — Line Chart */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                    <h3 className="text-sm font-semibold text-gray-700">
+                        營收趨勢
+                        <MetricTooltip text="依 processed_at 分組計算的已付款訂單營收趨勢。月＝近 12 個月；季＝近 2 年；年＝歷年全部。" />
                     </h3>
-                    <SimpleBarChart
-                        data={data?.monthlyTrend || []}
-                        xKey="month"
-                        yKey="revenue"
-                        color="#10B981"
-                        height={260}
-                        yLabel="元"
-                        loading={loading}
+                    <TimePeriodSelector
+                        value={trendPeriod}
+                        onChange={setTrendPeriod}
+                        options={FINANCE_PERIOD_OPTIONS}
                     />
                 </div>
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-4">
-                        各服務營收佔比
-                        <MetricTooltip text="各服務名稱的已付款訂單金額加總，佔全部已付款總營收的比例。" />
+                <SimpleLineChart
+                    data={trendData?.revenueTrend || []}
+                    xKey="label"
+                    lines={[{ key: 'revenue', label: '營收', color: '#F75000' }]}
+                    height={260}
+                    yLabel=" 元"
+                    loading={trendLoading}
+                />
+            </div>
+
+            {/* ② 各服務營收佔比趨勢 — Multi-line */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                    <h3 className="text-sm font-semibold text-gray-700">
+                        各服務營收佔比趨勢
+                        <MetricTooltip text="每個時間區間內各服務的營收佔比（%）或絕對金額趨勢。可切換「佔比」與「金額」視角，以判斷各服務的成長或消退。" />
                     </h3>
-                    <SimplePieChart
-                        data={data?.serviceRevenue || []}
-                        nameKey="service"
-                        valueKey="revenue"
-                        height={260}
-                        loading={loading}
-                    />
+                    <div className="flex items-center gap-2">
+                        {/* 佔比 / 金額 toggle */}
+                        <div className="inline-flex gap-0.5 bg-gray-100 rounded-lg p-0.5">
+                            {[{ key: 'pct', label: '佔比' }, { key: 'revenue', label: '金額' }].map((v) => (
+                                <button
+                                    key={v.key}
+                                    onClick={() => setMixView(v.key)}
+                                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                                        mixView === v.key ? 'bg-white text-brand-orange shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                                >
+                                    {v.label}
+                                </button>
+                            ))}
+                        </div>
+                        <TimePeriodSelector
+                            value={trendPeriod}
+                            onChange={setTrendPeriod}
+                            options={FINANCE_PERIOD_OPTIONS}
+                        />
+                    </div>
                 </div>
+                <SimpleLineChart
+                    data={mixView === 'pct' ? (trendData?.serviceMixTrend || []) : (trendData?.serviceMixRevenue || [])}
+                    xKey="label"
+                    lines={serviceLines}
+                    height={280}
+                    yLabel={mixView === 'pct' ? '%' : ' 元'}
+                    loading={trendLoading}
+                />
             </div>
 
             {/* Unit Economics Table */}
