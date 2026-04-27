@@ -122,7 +122,7 @@ export async function createPaymentOrder({
         ItemName: itemName,
         ReturnURL: returnUrl,
         ClientBackURL: clientBackUrl,
-        ChoosePayment: 'Credit',
+        ChoosePayment: 'ALL',
         EncryptType: '1',
     };
 
