@@ -38,10 +38,10 @@ export const ORDER_STATUS_BADGE_STYLES = {
 };
 
 export const CONVERSION_BADGE_STYLES = {
-    '未開始': 'bg-gray-100 text-gray-700',
-    '進行中': 'bg-yellow-100 text-yellow-700',
-    '已完成': 'bg-green-100 text-green-700',
-    '已流失': 'bg-red-100 text-red-700',
+    '未開始': 'bg-gray-100 text-gray-700 ring-1 ring-gray-300',
+    '進行中': 'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-300',
+    '已完成': 'bg-green-100 text-green-800 ring-1 ring-green-300',
+    '已流失': 'bg-red-100 text-red-700 ring-1 ring-red-300',
 };
 
 /** Treat an order as cancelled by looking at its payment status. */

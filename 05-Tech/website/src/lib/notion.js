@@ -228,6 +228,41 @@ export async function listCustomers({ startCursor, pageSize = 20, status } = {})
     };
 }
 
+/**
+ * Count customers grouped by 轉換狀態.
+ * Paginates the Notion data source and returns counts per status + total.
+ * Cached in-memory for 60s to avoid full-table scans on every page load.
+ */
+let _customerCountsCache = { at: 0, data: null };
+const COUNTS_CACHE_TTL_MS = 60 * 1000;
+
+export async function countCustomersByStatus({ force = false } = {}) {
+    const now = Date.now();
+    if (!force && _customerCountsCache.data && now - _customerCountsCache.at < COUNTS_CACHE_TTL_MS) {
+        return _customerCountsCache.data;
+    }
+
+    const counts = {};
+    let total = 0;
+    let cursor;
+    do {
+        const res = await queryDS(DS.customers, {
+            page_size: 100,
+            ...(cursor ? { start_cursor: cursor } : {}),
+        });
+        for (const page of res.results) {
+            const status = page.properties?.['轉換狀態']?.status?.name || '未開始';
+            counts[status] = (counts[status] || 0) + 1;
+            total += 1;
+        }
+        cursor = res.has_more ? res.next_cursor : null;
+    } while (cursor);
+
+    const data = { counts, total };
+    _customerCountsCache = { at: now, data };
+    return data;
+}
+
 /** Search customers by name, phone, or email */
 export async function searchCustomers(query) {
     if (!query?.trim()) return [];
@@ -362,7 +397,11 @@ async function enrichCustomersWithOrderStats(customers) {
         const orders = ordersMap.get(c.id) || [];
         const stats = aggregateOrderStats(orders);
         const derivedStatus = deriveConversionStatus(orders);
-        const effectiveStatus = c.manualConversionOverride ? c.conversionStatus : derivedStatus;
+        // Prefer manual override; fall back to raw Notion value when there are no orders
+        // to derive from (otherwise derivedStatus would clobber a manually set status).
+        const effectiveStatus = c.manualConversionOverride
+            ? c.conversionStatus
+            : (orders.length === 0 && c.conversionStatus ? c.conversionStatus : derivedStatus);
         return {
             ...c,
             ...stats,

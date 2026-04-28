@@ -131,6 +131,8 @@ export default function CustomersPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [searching, setSearching] = useState(false);
     const [showForm, setShowForm] = useState(false);
+    const [counts, setCounts] = useState(null);
+    const [isSearchMode, setIsSearchMode] = useState(false);
 
     const fetchCustomers = useCallback(async (nextCursor = null, append = false) => {
         if (!append) setLoading(true);
@@ -155,13 +157,29 @@ export default function CustomersPage() {
 
     useEffect(() => {
         if (!searchQuery.trim()) {
+            setIsSearchMode(false);
             fetchCustomers();
         }
     }, [fetchCustomers, searchQuery]);
 
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await fetch('/api/admin/customers/counts');
+                const data = await res.json();
+                if (!cancelled && res.ok) setCounts(data);
+            } catch (err) {
+                console.error('Failed to fetch counts:', err);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, []);
+
     const handleSearch = async () => {
         const q = searchQuery.trim();
-        if (!q) { fetchCustomers(); return; }
+        if (!q) { setIsSearchMode(false); fetchCustomers(); return; }
+        setIsSearchMode(true);
         setSearching(true);
         try {
             const res = await fetch('/api/admin/customers/search', {
@@ -278,6 +296,16 @@ export default function CustomersPage() {
                     <p className="px-4 py-8 text-center text-gray-500">找不到符合條件的客戶</p>
                 )}
             </div>
+
+            {/* Summary count */}
+            {!isSearchMode && counts && (
+                <div className="mt-3 text-sm text-gray-600">
+                    {statusFilter
+                        ? <>共 <span className="font-semibold text-gray-900">{counts.counts?.[statusFilter] ?? 0}</span> 筆「{statusFilter}」 · 全部 {counts.total ?? 0} 筆</>
+                        : <>共 <span className="font-semibold text-gray-900">{counts.total ?? 0}</span> 筆</>
+                    }
+                </div>
+            )}
 
             {/* Load More */}
             {hasMore && (
