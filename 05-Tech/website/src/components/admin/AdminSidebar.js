@@ -13,6 +13,7 @@ const NAV_ITEMS = [
     { label: '成本紀錄', href: '/admin/lesson-cost', icon: '✏️' },
     { label: '問卷管理', href: '/admin/forms', icon: '📋' },
     { label: 'Email 模板', href: '/admin/emails', icon: '📧' },
+    { label: '空間規劃器', href: '/admin/tools/puppy-space-planner', icon: '🏠' },
     { label: '操作紀錄', href: '/admin/logs', icon: '📝' },
 ];
 
