@@ -165,32 +165,35 @@ export function drawScene(ctx, room, items, scale, errorIds, warnIds, options = 
 
     ctx.restore();
 
-    // 比例尺 (右下)
-    const scaleBarCm = 50;
-    const scaleBarPx = scaleBarCm * scale;
-    const sbX = fullW - PAD - scaleBarPx;
-    const sbY = fullH - Math.round(20 * fs);
-    ctx.strokeStyle = '#374151';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(sbX, sbY);
-    ctx.lineTo(sbX + scaleBarPx, sbY);
-    ctx.moveTo(sbX, sbY - 4);
-    ctx.lineTo(sbX, sbY + 4);
-    ctx.moveTo(sbX + scaleBarPx, sbY - 4);
-    ctx.lineTo(sbX + scaleBarPx, sbY + 4);
-    ctx.stroke();
     const uiSz = Math.round(11 * fs);
-    ctx.fillStyle = '#374151';
-    ctx.font = `${uiSz}px system-ui, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText(`${scaleBarCm}`, sbX + scaleBarPx / 2, sbY + 6);
+    const sbY = fullH - Math.round(20 * fs);
 
-    // 標題 (左下)
+    if (!options.hideScaleBar) {
+        const scaleBarCm = 50;
+        const scaleBarPx = scaleBarCm * scale;
+        const sbX = fullW - PAD - scaleBarPx;
+        ctx.strokeStyle = '#374151';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(sbX, sbY);
+        ctx.lineTo(sbX + scaleBarPx, sbY);
+        ctx.moveTo(sbX, sbY - 4);
+        ctx.lineTo(sbX, sbY + 4);
+        ctx.moveTo(sbX + scaleBarPx, sbY - 4);
+        ctx.lineTo(sbX + scaleBarPx, sbY + 4);
+        ctx.stroke();
+        ctx.fillStyle = '#374151';
+        ctx.font = `${uiSz}px system-ui, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(`${scaleBarCm}`, sbX + scaleBarPx / 2, sbY + 6);
+    }
+
+    // 房間尺寸 (左下)
     ctx.fillStyle = '#9CA3AF';
     ctx.font = `${uiSz}px system-ui, sans-serif`;
     ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
     ctx.fillText(`房間 ${room.width}×${room.height}`, PAD, sbY + 6);
 
     // 單位標示（右上角）
@@ -200,11 +203,17 @@ export function drawScene(ctx, room, items, scale, errorIds, warnIds, options = 
     ctx.textBaseline = 'top';
     ctx.fillText('單位：cm', fullW - 8, titleH + 6);
 
-    // 圖片標題（只在匯出時顯示）
+    // 圖片標題（只在匯出時顯示）— 字體自動縮小以防超出畫布寬度
     if (options.title) {
         const titleSz = Math.round(22 * (options.fontScale || 1));
         ctx.fillStyle = '#1F2937';
         ctx.font = `bold ${titleSz}px "Noto Sans TC", system-ui, sans-serif`;
+        const maxTitleW = fullW - PAD * 2 - 16;
+        const measured = ctx.measureText(options.title).width;
+        const actualSz = measured > maxTitleW
+            ? Math.max(12, Math.floor(titleSz * maxTitleW / measured))
+            : titleSz;
+        ctx.font = `bold ${actualSz}px "Noto Sans TC", system-ui, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(options.title, fullW / 2, titleH / 2 + 4);

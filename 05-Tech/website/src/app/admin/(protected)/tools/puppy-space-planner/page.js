@@ -63,7 +63,7 @@ export default function PuppySpacePlannerPage() {
         const errorIds = new Set();
         const warnIds = new Set(validation.warnings.map(w => w.id));
         const title = dogName.trim() ? `${dogName.trim()}的居家佈置建議 🐾` : '幼犬居家佈置建議 🐾';
-        drawScene(ctx, room, items, scale, errorIds, warnIds, { title, fontScale: 2, showDimensions: true });
+        drawScene(ctx, room, items, scale, errorIds, warnIds, { title, fontScale: 2, showDimensions: true, hideScaleBar: true });
         const url = c.toDataURL('image/png');
         const a = document.createElement('a');
         const fileName = dogName.trim()
