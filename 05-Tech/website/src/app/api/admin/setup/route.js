@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { validateAdminPin } from '@/lib/admin-auth';
+import { requireAdmin } from '@/lib/admin-auth';
 import { getNotionClient } from '@/lib/notion';
 
 const CRM_DB_ID = process.env.NOTION_CRM_DB_ID || process.env.NOTION_CUSTOMER_DB_ID;
@@ -8,9 +8,9 @@ const CRM_DB_ID = process.env.NOTION_CRM_DB_ID || process.env.NOTION_CUSTOMER_DB
  * POST /api/admin/setup
  * 自動設定 Notion：建立課堂成本紀錄資料庫 + 新增 CRM 欄位
  */
-export async function POST(request) {
-    const auth = validateAdminPin(request);
-    if (!auth.valid) return auth.response;
+export async function POST() {
+    const { error } = await requireAdmin();
+    if (error) return error;
 
     const notion = getNotionClient();
     const results = { lessonCostsDbId: null, crmUpdated: false, errors: [] };

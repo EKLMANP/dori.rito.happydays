@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 
 const NAV_ITEMS = [
     { label: 'Overview', href: '/admin', icon: '📊' },
@@ -16,9 +17,11 @@ const NAV_ITEMS = [
     { label: '操作紀錄', href: '/admin/logs', icon: '📝' },
 ];
 
-export default function AdminSidebar({ onLogout }) {
+export default function AdminSidebar({ userEmail }) {
     const pathname = usePathname();
     const [mobileOpen, setMobileOpen] = useState(false);
+
+    const handleLogout = () => signOut({ callbackUrl: '/admin/login' });
 
     const sidebarContent = (
         <>
@@ -62,8 +65,13 @@ export default function AdminSidebar({ onLogout }) {
 
             {/* Logout */}
             <div className="p-4 border-t border-gray-100">
+                {userEmail && (
+                    <p className="px-4 pb-2 text-xs text-gray-400 truncate" title={userEmail}>
+                        {userEmail}
+                    </p>
+                )}
                 <button
-                    onClick={onLogout}
+                    onClick={handleLogout}
                     className="w-full text-left px-4 py-2 text-sm text-gray-500 hover:text-red-500 transition-colors"
                 >
                     登出
