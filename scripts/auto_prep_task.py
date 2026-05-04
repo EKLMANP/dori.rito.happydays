@@ -8,8 +8,8 @@
 
 import json
 import os
-import re
 import sys
+import time
 import urllib.request
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -56,20 +56,32 @@ SOURCES = [
 
 # --- Notion API helpers ---
 
-def notion_request(method, url, data=None, timeout=30):
-    """Make a Notion API request."""
+def notion_request(method, url, data=None, timeout=30, retries=3):
+    """Make a Notion API request with exponential backoff retry."""
     body = json.dumps(data).encode() if data else None
-    req = urllib.request.Request(url, data=body, headers=HEADERS, method=method)
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return json.loads(resp.read())
-    except urllib.error.HTTPError as e:
-        error_body = e.read().decode()
-        print(f"  API error {e.code}: {error_body[:200]}", file=sys.stderr)
-        return None
-    except TimeoutError:
-        print(f"  Timeout: {method} {url}", file=sys.stderr)
-        return None
+    for attempt in range(retries):
+        req = urllib.request.Request(url, data=body, headers=HEADERS, method=method)
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return json.loads(resp.read())
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode()
+            if e.code == 429:
+                wait = 2 ** attempt
+                print(f"  Rate limited, retrying in {wait}s...", file=sys.stderr)
+                time.sleep(wait)
+                continue
+            print(f"  API error {e.code}: {error_body[:200]}", file=sys.stderr)
+            return None
+        except (TimeoutError, ConnectionResetError, OSError) as e:
+            if attempt < retries - 1:
+                wait = 2 ** attempt
+                print(f"  Network error ({e}), retrying in {wait}s...", file=sys.stderr)
+                time.sleep(wait)
+                continue
+            print(f"  Network error after {retries} attempts: {e}", file=sys.stderr)
+            return None
+    return None
 
 def query_database(db_id, body=None):
     """Query a Notion database. Returns all results with pagination."""
@@ -97,6 +109,24 @@ def create_page(db_id, properties):
     url = "https://api.notion.com/v1/pages"
     data = {"parent": {"database_id": db_id}, "properties": properties}
     return notion_request("POST", url, data)
+
+# --- Idempotency check ---
+
+def task_card_exists(title):
+    """Check if a task card with this exact title already exists in the task database.
+
+    This is the Notion-side idempotency guard. Even if the local state file is
+    out of sync (e.g. create_page succeeded but timed out before the response
+    was received), this prevents duplicate cards from being created.
+    """
+    body = {
+        "filter": {
+            "property": "Topic 主題",
+            "title": {"equals": title},
+        }
+    }
+    results = query_database(TASK_DB_ID, body)
+    return len(results) > 0
 
 # --- State management ---
 
@@ -142,7 +172,25 @@ def find_class_record_db(customer_page_id):
     return None, None
 
 def find_today_sessions(class_db_id, today_str):
-    """Find session pages whose title starts with today's date (YYYYMMDD)."""
+    """Find session pages whose title starts with today's date.
+
+    Supports formats:
+      - YYYYMMDD     (e.g. 20260503)
+      - YYYY/MM/DD   (e.g. 2026/05/03)
+      - YYYY/M/DD    (e.g. 2026/5/03)
+      - YYYY/MM/D    (e.g. 2026/05/3)
+      - YYYY/M/D     (e.g. 2026/5/3)
+    """
+    year = today_str[:4]
+    month = today_str[4:6]
+    day = today_str[6:8]
+    slash_prefixes = {
+        f"{year}/{month}/{day}",            # 2026/05/03
+        f"{year}/{int(month)}/{int(day)}",  # 2026/5/3
+        f"{year}/{int(month)}/{day}",       # 2026/5/03
+        f"{year}/{month}/{int(day)}",       # 2026/05/3
+    }
+
     sessions = []
     for page in query_database(class_db_id):
         props = page["properties"]
@@ -150,13 +198,12 @@ def find_today_sessions(class_db_id, today_str):
         if not title_prop:
             continue
         title = "".join(t["plain_text"] for t in title_prop.get("title", []))
-        if title.startswith(today_str):
+        if title.startswith(today_str) or any(title.startswith(p) for p in slash_prefixes):
             sessions.append({"page_id": page["id"], "title": title})
     return sessions
 
 def build_task_properties(source_label, company_name, customer_name, dog_name, due_date):
     """Build Notion properties for the prep task card."""
-    # Title: [來源] 客戶姓名/狗狗名字 備課
     if dog_name:
         title = f"[{source_label}] {customer_name}/{dog_name} 備課"
     else:
@@ -203,29 +250,38 @@ def main():
         print(f"  找到 {len(customers)} 位客戶")
 
         for cust in customers:
-            class_db_id, class_db_title = find_class_record_db(cust["page_id"])
+            class_db_id, _ = find_class_record_db(cust["page_id"])
             if not class_db_id:
                 continue
 
             sessions = find_today_sessions(class_db_id, today_str)
             for session in sessions:
                 sid = session["page_id"]
+
+                # Layer 1: local state file check (fast)
                 if sid in processed:
-                    print(f"  [跳過] {cust['name']}/{cust['dog']} - {session['title']} (已處理)")
+                    print(f"  [跳過] {cust['name']}/{cust['dog']} - {session['title']} (state 已記錄)")
                     continue
 
                 props = build_task_properties(
                     source_label, company_name,
                     cust["name"], cust["dog"], due_date,
                 )
+                card_title = props["Topic 主題"]["title"][0]["text"]["content"]
+
+                # Layer 2: Notion-side idempotency check (guards against response timeout)
+                if task_card_exists(card_title):
+                    print(f"  [跳過] {card_title} (Notion 端已存在，補記 state)")
+                    processed.add(sid)
+                    continue
+
                 result = create_page(TASK_DB_ID, props)
                 if result and "id" in result:
-                    title = props["Topic 主題"]["title"][0]["text"]["content"]
-                    print(f"  [建立] {title} (Due: {due_date})")
+                    print(f"  [建立] {card_title} (Due: {due_date})")
                     processed.add(sid)
                     cards_created += 1
                 else:
-                    print(f"  [失敗] {cust['name']}/{cust['dog']} - 建卡失敗")
+                    print(f"  [失敗] {card_title} - 建卡失敗，下次重試")
 
     # Save state
     state["processed_sessions"] = list(processed)
