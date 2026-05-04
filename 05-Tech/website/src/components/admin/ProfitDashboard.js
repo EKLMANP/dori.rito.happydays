@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { useAdminPin } from './AdminPinGate';
 
 const MonthlyChart = dynamic(() => import('./MonthlyChart'), { ssr: false });
 
@@ -23,7 +22,6 @@ function SummaryCard({ label, value, subtext, color = 'gray' }) {
 }
 
 export default function ProfitDashboard() {
-    const { adminFetch } = useAdminPin();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -31,7 +29,7 @@ export default function ProfitDashboard() {
     useEffect(() => {
         async function fetchData() {
             try {
-                const res = await adminFetch('/api/admin/profit-dashboard?months=6');
+                const res = await fetch('/api/admin/profit-dashboard?months=6');
                 if (!res.ok) throw new Error('Failed to fetch');
                 const json = await res.json();
                 setData(json);
@@ -42,7 +40,7 @@ export default function ProfitDashboard() {
             }
         }
         fetchData();
-    }, [adminFetch]);
+    }, []);
 
     if (loading) {
         return (

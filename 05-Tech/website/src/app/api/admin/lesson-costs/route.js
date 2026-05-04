@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { validateAdminPin } from '@/lib/admin-auth';
+import { requireAdmin } from '@/lib/admin-auth';
 import { isNotionConfigured, queryDatabase, createPage, getPropValue } from '@/lib/notion';
 
 const LESSON_COSTS_DB_ID = process.env.NOTION_LESSON_COSTS_DB_ID;
@@ -9,8 +9,8 @@ const COMMUTE_HOURLY_RATE = Number(process.env.COMMUTE_HOURLY_RATE) || 300;
  * POST /api/admin/lesson-costs
  */
 export async function POST(request) {
-    const auth = validateAdminPin(request);
-    if (!auth.valid) return auth.response;
+    const { error } = await requireAdmin();
+    if (error) return error;
 
     if (!isNotionConfigured()) {
         return NextResponse.json({ error: '請先設定 NOTION_API_KEY' }, { status: 500 });
@@ -78,8 +78,8 @@ export async function POST(request) {
  * GET /api/admin/lesson-costs?month=2026-03&trainer=Eric Pan
  */
 export async function GET(request) {
-    const auth = validateAdminPin(request);
-    if (!auth.valid) return auth.response;
+    const { error } = await requireAdmin();
+    if (error) return error;
 
     if (!LESSON_COSTS_DB_ID) {
         return NextResponse.json({ costs: [] });

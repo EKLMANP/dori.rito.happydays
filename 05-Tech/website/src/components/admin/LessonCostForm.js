@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useAdminPin } from './AdminPinGate';
 
 const TRAINERS = ['Eric Pan', 'Pennee Tan'];
 const TRANSPORT_TYPES = ['捷運', '客運', '其他'];
@@ -12,7 +11,6 @@ function getTodayStr() {
 }
 
 export default function LessonCostForm() {
-    const { adminFetch } = useAdminPin();
     const [form, setForm] = useState({
         trainer: '',
         customerId: '',
@@ -38,7 +36,7 @@ export default function LessonCostForm() {
                 const url = customerSearch
                     ? `/api/admin/customers?search=${encodeURIComponent(customerSearch)}`
                     : '/api/admin/customers';
-                const res = await adminFetch(url);
+                const res = await fetch(url);
                 if (res.ok) {
                     const data = await res.json();
                     setCustomers(data.customers || []);
@@ -48,7 +46,7 @@ export default function LessonCostForm() {
             }
         }, 300);
         return () => clearTimeout(timer);
-    }, [customerSearch, adminFetch]);
+    }, [customerSearch]);
 
     // 點擊外部關閉下拉
     useEffect(() => {
@@ -86,7 +84,7 @@ export default function LessonCostForm() {
         setStatus('loading');
 
         try {
-            const res = await adminFetch('/api/admin/lesson-costs', {
+            const res = await fetch('/api/admin/lesson-costs', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

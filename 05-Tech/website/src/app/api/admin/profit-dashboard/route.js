@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { validateAdminPin } from '@/lib/admin-auth';
+import { requireAdmin } from '@/lib/admin-auth';
 import { isNotionConfigured, queryDatabase, getPropValue } from '@/lib/notion';
 
 const CRM_DB_ID = process.env.NOTION_CRM_DB_ID || process.env.NOTION_CUSTOMER_DB_ID;
@@ -28,9 +28,9 @@ function buildEmptyMonths(monthCount) {
 /**
  * GET /api/admin/profit-dashboard?months=6
  */
-export async function GET(request) {
-    const auth = validateAdminPin(request);
-    if (!auth.valid) return auth.response;
+export async function GET() {
+    const { error } = await requireAdmin();
+    if (error) return error;
 
     try {
         const { searchParams } = new URL(request.url);

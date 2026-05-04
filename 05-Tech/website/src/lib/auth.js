@@ -6,6 +6,12 @@ const allowedEmails = (process.env.ADMIN_ALLOWED_EMAILS || '')
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
 
+function isAllowed(email) {
+    if (!email) return false;
+    if (!allowedEmails.length) return false;
+    return allowedEmails.includes(email.toLowerCase());
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
     providers: [
         Google({
@@ -13,13 +19,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
         }),
     ],
+    session: { strategy: 'jwt' },
+    secret: process.env.NEXTAUTH_SECRET,
     callbacks: {
         async signIn({ profile }) {
-            // Only allow whitelisted emails
-            if (!allowedEmails.length) return false;
-            return allowedEmails.includes(profile?.email?.toLowerCase());
+            return isAllowed(profile?.email);
         },
-        async session({ session }) {
+        async jwt({ token, profile }) {
+            if (profile?.email) token.email = profile.email;
+            // Re-validate on every JWT refresh — if the allowlist shrinks,
+            // existing tokens stop working.
+            if (!isAllowed(token.email)) return null;
+            return token;
+        },
+        async session({ session, token }) {
+            if (token?.email) session.user = { ...(session.user || {}), email: token.email };
             return session;
         },
     },
