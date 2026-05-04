@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
@@ -11,13 +11,75 @@ const NAV_ITEMS = [
     { label: '客戶管理', href: '/admin/customers', icon: '👥' },
     { label: '訂單管理', href: '/admin/orders', icon: '📦' },
     { label: '服務項目', href: '/admin/services', icon: '🐕' },
-    { label: '狗狗作息表', href: '/admin/dog-schedule', icon: '⏰' },
+    {
+        label: '備課工具',
+        icon: '🎒',
+        children: [
+            { label: '狗狗作息表', href: '/admin/dog-schedule', icon: '🐶' },
+            { label: '空間規劃器', href: '/admin/tools/puppy-space-planner', icon: '🏠' },
+        ],
+    },
     { label: '成本紀錄', href: '/admin/lesson-cost', icon: '✏️' },
     { label: '問卷管理', href: '/admin/forms', icon: '📋' },
     { label: 'Email 模板', href: '/admin/emails', icon: '📧' },
-    { label: '空間規劃器', href: '/admin/tools/puppy-space-planner', icon: '🏠' },
     { label: '操作紀錄', href: '/admin/logs', icon: '📝' },
 ];
+
+function NavGroup({ item, pathname, onNavigate }) {
+    const hasActiveChild = item.children.some((c) => pathname.startsWith(c.href));
+    const [open, setOpen] = useState(hasActiveChild);
+
+    useEffect(() => {
+        if (hasActiveChild) setOpen(true);
+    }, [hasActiveChild]);
+
+    return (
+        <div>
+            <button
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    hasActiveChild
+                        ? 'text-brand-orange hover:bg-orange-50'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+                aria-expanded={open}
+            >
+                <span className="text-lg">{item.icon}</span>
+                <span className="flex-1 text-left">{item.label}</span>
+                <span
+                    className={`text-xs text-gray-400 transition-transform ${
+                        open ? 'rotate-0' : '-rotate-90'
+                    }`}
+                >
+                    ▾
+                </span>
+            </button>
+            {open && (
+                <div className="ml-4 mt-1 space-y-1">
+                    {item.children.map((child) => {
+                        const isActive = pathname.startsWith(child.href);
+                        return (
+                            <Link
+                                key={child.href}
+                                href={child.href}
+                                onClick={onNavigate}
+                                className={`flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                    isActive
+                                        ? 'bg-orange-50 text-brand-orange'
+                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                }`}
+                            >
+                                <span className="text-lg">{child.icon}</span>
+                                {child.label}
+                            </Link>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default function AdminSidebar({ userEmail }) {
     const pathname = usePathname();
@@ -42,6 +104,17 @@ export default function AdminSidebar({ userEmail }) {
             {/* Navigation */}
             <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
                 {NAV_ITEMS.map((item) => {
+                    if (item.children) {
+                        return (
+                            <NavGroup
+                                key={item.label}
+                                item={item}
+                                pathname={pathname}
+                                onNavigate={() => setMobileOpen(false)}
+                            />
+                        );
+                    }
+
                     const isActive =
                         item.href === '/admin'
                             ? pathname === '/admin'
