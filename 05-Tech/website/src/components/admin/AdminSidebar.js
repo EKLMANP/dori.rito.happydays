@@ -11,6 +11,7 @@ const NAV_ITEMS = [
     { label: '客戶管理', href: '/admin/customers', icon: '👥' },
     { label: '訂單管理', href: '/admin/orders', icon: '📦' },
     { label: '服務項目', href: '/admin/services', icon: '🐕' },
+    { label: '狗狗作息表', href: '/admin/dog-schedule', icon: '⏰' },
     { label: '成本紀錄', href: '/admin/lesson-cost', icon: '✏️' },
     { label: '問卷管理', href: '/admin/forms', icon: '📋' },
     { label: 'Email 模板', href: '/admin/emails', icon: '📧' },
