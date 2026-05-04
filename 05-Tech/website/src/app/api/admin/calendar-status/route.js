@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { validateAdminPin } from '@/lib/admin-auth';
+import { requireAdmin } from '@/lib/admin-auth';
 import { getFreeBusy, getAvailabilityWindows } from '@/lib/google-calendar';
 
 /**
@@ -7,15 +7,10 @@ import { getFreeBusy, getAvailabilityWindows } from '@/lib/google-calendar';
  *
  * Admin-only diagnostic endpoint for Google Calendar OAuth + availability health.
  * Reports config metadata, freeBusy reachability, and availability-calendar reachability.
- *
- * Auth: requires `x-admin-pin` header matching ADMIN_PIN env. Without auth, the
- * route returns 401 — no info leak. Behind PIN we expose richer diagnostics
- * (env-var lengths, GCP project number prefix, refresh-token head) that help
- * pinpoint OAuth misconfigurations.
  */
-export async function GET(request) {
-    const auth = validateAdminPin(request);
-    if (!auth.valid) return auth.response;
+export async function GET() {
+    const { error } = await requireAdmin();
+    if (error) return error;
 
     const inspect = (v, opts = {}) => {
         if (!v) return { present: false };
