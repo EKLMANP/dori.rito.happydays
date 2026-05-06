@@ -6,6 +6,80 @@
  * Sanitizes HTML to prevent XSS in email content.
  */
 
+const EN_TEMPLATES = {
+    'booking-confirmation': {
+        subject: '[Dori & Rito Happydays] Booking confirmed — {{service_name}}',
+        body_html: `<h2>Hi {{customer_name}}, you're all booked! 🐾</h2>
+
+<p>Thanks for booking <strong>Dori &amp; Rito Happydays</strong> — here are your session details:</p>
+
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+  <tr>
+    <td style="padding:10px 14px;border:1px solid #eee;background:#fafafa;font-weight:600;width:140px;">Date</td>
+    <td style="padding:10px 14px;border:1px solid #eee;">{{slot_date}}</td>
+  </tr>
+  <tr>
+    <td style="padding:10px 14px;border:1px solid #eee;background:#fafafa;font-weight:600;">Time</td>
+    <td style="padding:10px 14px;border:1px solid #eee;">{{slot_time}}</td>
+  </tr>
+  <tr>
+    <td style="padding:10px 14px;border:1px solid #eee;background:#fafafa;font-weight:600;">Amount</td>
+    <td style="padding:10px 14px;border:1px solid #eee;">TWD {{price}}</td>
+  </tr>
+  <tr>
+    <td style="padding:10px 14px;border:1px solid #eee;background:#fafafa;font-weight:600;">Order #</td>
+    <td style="padding:10px 14px;border:1px solid #eee;">{{order_no}}</td>
+  </tr>
+  <tr>
+    <td style="padding:10px 14px;border:1px solid #eee;background:#fafafa;font-weight:600;">Google Meet</td>
+    <td style="padding:10px 14px;border:1px solid #eee;"><a href="{{meet_link}}" style="color:#E8652B;text-decoration:underline;">Click to join the session</a></td>
+  </tr>
+</table>
+
+<p><strong>Before your consultation:</strong></p>
+<ul style="padding-left:20px;margin:8px 0 16px;">
+  <li>Join 5 minutes early using the Google Meet link above</li>
+  <li>If you have videos of your dog's behaviour, have them ready to share</li>
+  <li>Find a quiet spot and have {{dog_name}} nearby</li>
+</ul>
+
+<p>Need to reschedule or cancel? Please let us know at least 24 hours in advance.</p>
+<p>Looking forward to meeting you and {{dog_name}}! 🐾</p>`,
+    },
+    'booking-reminder': {
+        subject: '⏰ Reminder: your session tomorrow — {{service_name}}',
+        body_html: `<h2>Hi {{customer_name}}, just a friendly reminder!</h2>
+<p>You have a session booked for tomorrow:</p>
+
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+  <tr>
+    <td style="padding:8px 12px;border:1px solid #eee;background:#fafafa;font-weight:600;width:140px;">Service</td>
+    <td style="padding:8px 12px;border:1px solid #eee;">{{service_name}}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 12px;border:1px solid #eee;background:#fafafa;font-weight:600;">Date</td>
+    <td style="padding:8px 12px;border:1px solid #eee;">{{slot_date}}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 12px;border:1px solid #eee;background:#fafafa;font-weight:600;">Time</td>
+    <td style="padding:8px 12px;border:1px solid #eee;">{{slot_time}}</td>
+  </tr>
+  <tr>
+    <td style="padding:8px 12px;border:1px solid #eee;background:#fafafa;font-weight:600;">Meet link</td>
+    <td style="padding:8px 12px;border:1px solid #eee;"><a href="{{meet_link}}" style="color:#E8652B;">Click to join</a></td>
+  </tr>
+</table>
+
+<p>Please remember to prepare:</p>
+<ul>
+  <li>Any videos of your dog's behaviour (if you have them)</li>
+  <li>A quiet space with {{dog_name}} nearby</li>
+</ul>
+
+<p>See you tomorrow! 🐾</p>`,
+    },
+};
+
 /**
  * Replace {{variable}} placeholders with actual values.
  * Unmatched placeholders are replaced with empty string.
@@ -88,8 +162,9 @@ function applyServiceOverrides(html, serviceId, locale = 'zh-TW') {
  * @returns {string} Complete HTML email string
  */
 export function renderEmailTemplate(template, data = {}, serviceId, locale = 'zh-TW') {
-    const subject = interpolate(template.subject, data);
-    let bodyHtml = interpolate(template.body_html, data);
+    const enTpl = locale === 'en' && template.id ? EN_TEMPLATES[template.id] : null;
+    const subject = interpolate(enTpl ? enTpl.subject : template.subject, data);
+    let bodyHtml = interpolate(enTpl ? enTpl.body_html : template.body_html, data);
     bodyHtml = applyServiceOverrides(bodyHtml, serviceId, locale);
     const footerHtml = interpolate(template.footer_html || '', data);
 

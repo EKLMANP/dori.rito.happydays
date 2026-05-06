@@ -51,10 +51,10 @@
     },
     "confirmation": {
         "success": {
-            "title": "You're booked!",
+            "title": "Thank you for booking!",
             "message": "Thanks for booking. A Google Calendar invite has been sent to your email. Please also join our LINE account so your trainer can reach you before the session.",
-            "lineBtn": "Join on LINE",
-            "orderRef": "Order Reference",
+            "lineBtn": "Join our LINE account",
+            "orderRef": "Order number",
             "nextSteps": "What's next",
             "calendarStep": "Check your email",
             "calendarDesc": "A Google Calendar invite with your Google Meet link has been sent to your inbox",
@@ -63,7 +63,7 @@
             "prepStep": "Get ready",
             "prepDesc": "Make sure you have a stable internet connection. Join your session via the Google Meet link at the scheduled time.",
             "homeBtn": "Back to home",
-            "igBtn": "Follow on Instagram",
+            "igBtn": "Follow our Instagram",
             "ecpayNote": "Payment processed securely by ECPay"
         },
         "pending": {
