@@ -17,5 +17,11 @@
     "card": {
         "readMore": "Read more →",
         "minRead": "{n} min read"
+    },
+    "post": {
+        "home": "Home",
+        "blogSection": "Blog",
+        "readingTime": "~{n} min read",
+        "relatedTopics": "Related topics:"
     }
 }

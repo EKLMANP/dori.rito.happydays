@@ -75,6 +75,7 @@
             "cvsCode": "超商代碼",
             "barcode": "超商條碼",
             "barcodeDesc": "請至超商出示繳費",
+            "viewInstructions": "查看繳費說明 →",
             "afterPayment": "繳費完成後，系統會自動寄送預約確認信、Google Calendar 邀請與 Google Meet 連結到你的 Email。",
             "homeBtn": "回到首頁",
             "contactBtn": "聯繫我們"
