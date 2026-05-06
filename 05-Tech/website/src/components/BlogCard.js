@@ -1,11 +1,11 @@
-import Link from 'next/link';
+import { Link } from '@/i18n/navigation';
 import Image from 'next/image';
 
-export default function BlogCard({ post }) {
+export default function BlogCard({ post, locale = 'zh-TW', readMoreLabel = '閱讀更多 →', minReadSuffix = '分鐘' }) {
     const { title, slug, excerpt, feature_image, published_at, reading_time, tags } = post;
 
     const formattedDate = published_at
-        ? new Date(published_at).toLocaleDateString('zh-TW', {
+        ? new Date(published_at).toLocaleDateString(locale, {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
@@ -43,7 +43,7 @@ export default function BlogCard({ post }) {
 
                 {/* Content */}
                 <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', flex: 1 }}>
-                    {/* Tags — show all public tags */}
+                    {/* Tags */}
                     {tags && tags.filter(t => t.visibility === 'public' && !t.name.startsWith('#')).length > 0 && (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', alignSelf: 'flex-start' }}>
                             {tags
@@ -72,7 +72,6 @@ export default function BlogCard({ post }) {
                             {excerpt}
                         </p>
                     )}
-                    {/* Metadata row — date, reading time, CTA all on one line */}
                     <div style={{
                         marginTop: 'auto',
                         paddingTop: '0.75rem',
@@ -86,8 +85,8 @@ export default function BlogCard({ post }) {
                         overflow: 'hidden',
                     }}>
                         {formattedDate && <span style={{ flexShrink: 0 }}>📅 {formattedDate}</span>}
-                        {reading_time && <span style={{ flexShrink: 0 }}>⏱️ {reading_time} 分鐘</span>}
-                        <span style={{ marginLeft: 'auto', color: 'var(--color-primary)', fontWeight: 600, flexShrink: 0 }}>閱讀更多 →</span>
+                        {reading_time && <span style={{ flexShrink: 0 }}>⏱️ {reading_time} {minReadSuffix}</span>}
+                        <span style={{ marginLeft: 'auto', color: 'var(--color-primary)', fontWeight: 600, flexShrink: 0 }}>{readMoreLabel}</span>
                     </div>
                 </div>
             </article>

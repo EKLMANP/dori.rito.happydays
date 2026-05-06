@@ -1,0 +1,64 @@
+{
+    "nav": {
+        "about": "About",
+        "services": "1-on-1 Coaching",
+        "blog": "Blog",
+        "contact": "Work With Us"
+    },
+    "footer": {
+        "tagline": "Science-backed, kindness-led coaching that helps every dog–owner pair find their easiest rhythm together. Behaviour is communication — we help you read it.",
+        "quickLinks": "Quick Links",
+        "followUs": "Follow Us",
+        "location": "📍 Online globally · in-person around Greater Taipei",
+        "copyright": "© {year} DORI & RITO HAPPYDAYS. ALL RIGHTS RESERVED.",
+        "privacy": "Privacy Policy",
+        "terms": "Terms of Service"
+    },
+    "newsletter": {
+        "headline": "Practical, science-backed dog-training tips — every week, free",
+        "subhead": "Join the newsletter and get one small change you can try today 🐶",
+        "placeholder": "Your email address",
+        "button": "Subscribe free",
+        "submitting": "Sending…",
+        "successMessage": "Confirmation email sent! Please click the link in your inbox to finish subscribing 📬 (check Promotions or Spam if you don't see it).",
+        "errorMessage": "Subscription failed. Please try again, or email us directly."
+    },
+    "cta": {
+        "bookNow": "Book your session",
+        "viewAllPosts": "Read all articles →",
+        "readMore": "Read more →"
+    },
+    "menu": {
+        "open": "Open menu",
+        "close": "Close menu"
+    },
+    "thankyou": {
+        "success": {
+            "icon": "🎉",
+            "title": "You're in!",
+            "message": "Welcome to the Dori & Rito Happydays newsletter! Every week we'll share practical dog behaviour tips to help you and your dog live your best life together.",
+            "subMessage": "A welcome email is on its way to your inbox 📬"
+        },
+        "expired": {
+            "icon": "⏰",
+            "title": "Link expired",
+            "message": "This confirmation link has expired. Please head back to the site and subscribe again — we'll send you a fresh confirmation email.",
+            "subMessage": ""
+        },
+        "invalid": {
+            "icon": "❌",
+            "title": "Invalid link",
+            "message": "This confirmation link isn't valid — the URL may be incomplete. Please go back and subscribe again.",
+            "subMessage": ""
+        },
+        "error": {
+            "icon": "⚠️",
+            "title": "Something went wrong",
+            "message": "An error occurred during confirmation. Please try again — or get in touch if the problem persists.",
+            "subMessage": ""
+        },
+        "backHome": "Back to home",
+        "browseBlog": "Read dog behaviour tips",
+        "loading": "Loading..."
+    }
+}

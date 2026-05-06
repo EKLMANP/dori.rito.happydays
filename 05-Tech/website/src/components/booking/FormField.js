@@ -4,7 +4,7 @@
  * Dynamic form field renderer.
  * Supports: text, textarea, email, radio, checkbox, select
  */
-export default function FormField({ field, value, onChange }) {
+export default function FormField({ field, value, onChange, selectPlaceholder = '請選擇...' }) {
     const { id, field_type, label, description, placeholder, options, is_required } = field;
     const fieldId = `field-${id}`;
 
@@ -142,7 +142,7 @@ export default function FormField({ field, value, onChange }) {
                         required={is_required}
                         className={baseInput}
                     >
-                        <option value="">{placeholder || '請選擇...'}</option>
+                        <option value="">{placeholder || selectPlaceholder}</option>
                         {(options || []).map(opt => (
                             <option key={opt.value} value={opt.value}>{opt.label}</option>
                         ))}

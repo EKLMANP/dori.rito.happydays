@@ -38,6 +38,7 @@ export async function POST(request) {
     const body = await request.json();
     const { serviceId, slotDate, slotTime, formResponses, formSections, customerName, email, phone, dogName, notionPageId } = body;
     const paymentProvider = VALID_PROVIDERS.has(body.paymentProvider) ? body.paymentProvider : 'ecpay';
+    const locale = body.locale === 'en' ? 'en' : 'zh-TW';
 
     // Basic validation
     if (!serviceId || !slotDate || !slotTime || !customerName || !email) {
@@ -87,6 +88,7 @@ export async function POST(request) {
         formResponses,
         formSections,
         notionPageId: notionPageId || null,
+        locale,
         csrfToken,
         csrfTimestamp: timestamp,
         createdAt: new Date().toISOString(),

@@ -1,12 +1,17 @@
-// 品牌常數 — 所有頁面共用的固定資料
+// 品牌常數 — locale-agnostic 部分
 export const BRAND = {
     name: 'Dori & Rito 專業訓犬服務',
     nameShort: 'Dori & Rito',
+    nameEn: 'Dori & Rito Professional Dog Training',
     tagline: '用正向訓練，打造你與毛孩的理想生活',
+    taglineEn: 'Positive training that finally clicks — for you and your dog.',
     description:
         '台灣專業 KPA、CATCH 認證正向訓犬師。協助改善吠叫、分離焦慮、暴衝等行為問題，一對一到府與線上服務。',
+    descriptionEn:
+        'KPA & CATCH-certified positive dog trainers helping owners worldwide solve barking, separation anxiety, leash reactivity and more — online, 1-on-1.',
     email: 'dori.rito.happydays@gmail.com',
     instagram: 'https://www.instagram.com/dori.rito.happydays/',
+    lineUrl: 'https://lin.ee/j1DjGlk',
     siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'https://doriritohappydays.com',
 };
 
@@ -14,32 +19,17 @@ export const TALLY = {
     consultUrl: process.env.NEXT_PUBLIC_TALLY_CONSULT_URL || 'https://tally.so/r/KY55Bg',
 };
 
-export const NAV_LINKS = [
-    { label: '關於我們', href: '/#about-section' },
-    { label: '一對一課程', href: '/#session-section' },
-    { label: '狗狗行為文章', href: '/blog' },
-    { label: '合作洽詢', href: '/contact' },
-];
-
+// Blog tag slugs are locale-agnostic; display labels live in messages/blog.json
 export const BLOG_TAGS = [
-    { label: '全部', value: '' },
-    { label: '幼犬訓練', value: 'puppy-training' },
-    { label: '分離焦慮', value: 'separation-anxiety' },
-    { label: '反應性犬', value: 'reactive-dog' },
-    { label: '基礎服從', value: 'basic-obedience' },
-    { label: '行為問題', value: 'behavior-issues' },
+    { value: '' },
+    { value: 'puppy-training' },
+    { value: 'separation-anxiety' },
+    { value: 'reactive-dog' },
+    { value: 'basic-obedience' },
+    { value: 'behavior-issues' },
 ];
 
-export const NEWSLETTER_COPY = {
-    headline: '每週獲得免費調整毛孩行為的具體方法',
-    subhead: '訂閱電子報，一起打造你與毛孩的理想生活 🐶',
-    placeholder: '輸入你的 Email',
-    button: '免費訂閱',
-    successMessage: '確認信已寄出！請到信箱點擊確認連結完成訂閱 📬（沒看到的話，請檢查「促銷內容」或垃圾郵件資料夾）',
-    errorMessage: '訂閱失敗，請稍後再試或直接寄信給我們。',
-};
-
-export const FAQS = [
+const FAQS_ZH = [
     {
         question: '線上課程真的可以幫助我的狗狗嗎？',
         answer:
@@ -77,12 +67,57 @@ export const FAQS = [
     },
 ];
 
-export const PRICING_PLANS = [
+const FAQS_EN = [
+    {
+        question: 'Can online lessons really help my dog?',
+        answer:
+            'For sensitive or anxious dogs, your living room is honestly the best classroom there is. No trainer can "fix" a dog in a handful of sessions — real change happens in the small moments of daily life, when you reinforce the right choices over and over. You are your dog\'s most important trainer. Nobody understands their moods, triggers, and quirks better than you do. That intimate knowledge is your biggest advantage, and online coaching is built around it. We work at your pace, in your home, with no commute and no scary new environment for your dog.',
+    },
+    {
+        question: 'What about adult dogs or dogs with no socialisation history?',
+        answer:
+            'Absolutely welcome. Behaviour change has no age limit — the question is never "how old?" but "is the method right for this dog?" Adult dogs actually have an advantage: their personality and patterns are stable, so we can tailor the plan precisely. For under-socialised dogs, we never force them to confront the world. We start inside their comfort zone, build safety and confidence first, and only widen the circle when they\'re truly ready. This is exactly what we specialise in.',
+    },
+    {
+        question: 'Do I need to buy any special equipment?',
+        answer:
+            'Almost never. We work with whatever you already have at home. If a specific aid genuinely helps, we\'ll explain exactly why, how to choose it, and how to use it correctly — so you don\'t waste money or guess on your own.',
+    },
+    {
+        question: 'Can other family members join the lessons?',
+        answer:
+            'Not only can they — we strongly recommend it. One of the biggest reasons training stalls is that different people in the household handle the dog differently. From the dog\'s perspective, the world becomes confusing: one person allows it, another forbids it; one rewards a behaviour, another punishes it. Progress slows or stops. When everyone learns together, the dog finally gets a consistent message — and that\'s when real, lasting change happens.',
+    },
+    {
+        question: 'My dog gets anxious or over-aroused easily — can you still help?',
+        answer:
+            'This is exactly what we work with most. People often label it as a "bad habit," but it\'s usually an under-developed emotional regulation system. We won\'t ask your dog to "tolerate" or "suppress." We focus on three things first: reduce stress, build safety, increase predictability. Once the nervous system settles, learning takes care of itself.',
+    },
+    {
+        question: 'My dog has bitten or shown aggression. Can we still join?',
+        answer:
+            'For these cases we recommend an in-person consultation first — not because we can\'t help, but because aggression cases require a higher level of safety and precision. We need to read subtle body-language cues, identify triggers, and design a safe, effective plan in person. Online format can\'t deliver that depth. Reach out directly and we\'ll help you find the safest, most appropriate path forward.',
+    },
+    {
+        question: 'How much daily practice will I need after the lesson?',
+        answer:
+            'About 10–15 minutes a day is enough. But the bigger shift is this: we don\'t ask you to "carve out training time." We teach you to weave training into life — walks, feeding, recall games, the moments before you leave the house. Those everyday moments are your best practice opportunities. Most owners realise the breakthrough wasn\'t about training more — it was about finally understanding their dog differently.',
+    },
+];
+
+export const FAQS = FAQS_ZH; // backward compat default
+
+export function getFAQS(locale = 'zh-TW') {
+    return locale === 'en' ? FAQS_EN : FAQS_ZH;
+}
+
+const PRICING_PLANS_ZH = [
     {
         id: 'single-session',
         name: '單次 60 分鐘課程方案',
         emoji: '🐶',
         price: 2490,
+        labelInline: '單次線上課程',
         features: [
             '60 分鐘 Google Meet 一對一深度課程',
             '完整分析你家狗狗的行為問題',
@@ -110,11 +145,59 @@ export const PRICING_PLANS = [
             '所有課程皆提供投影片',
         ],
         bonus: '加碼贈送 價值 $399 舔食墊',
+        bonusEmoji: '🎁',
+        quote: '這不只是上課，是陪你一路做到改變。',
         highlighted: true,
     },
 ];
 
-export const TESTIMONIALS = [
+const PRICING_PLANS_EN = [
+    {
+        id: 'single-session',
+        name: 'Single 60-Minute Deep-Dive Session',
+        emoji: '🐶',
+        price: 2490,
+        labelInline: '1 online session',
+        features: [
+            '60-minute 1-on-1 deep-dive session on Google Meet',
+            'Full assessment of your dog\'s specific behaviour issue',
+            'A custom training direction designed live, for your dog',
+            'Slide deck after the session for easy review',
+            'Concrete practice steps and homework you can actually use',
+            'Follow-up questions via our LINE official account',
+        ],
+        highlighted: false,
+    },
+    {
+        id: 'breakthrough-4',
+        name: 'Breakthrough Plan',
+        emoji: '🔥',
+        subtitle: '4 sessions × 60 min — coaching that sticks',
+        price: 8999,
+        originalPrice: 9960,
+        discount: '10% OFF',
+        features: [
+            '4 sessions of 1-on-1 online coaching',
+            'Strategy refined session by session — not a one-shot fix',
+            'Progress check-ins between sessions',
+            'Ongoing Q&A on LINE between sessions',
+            'Priority post-program support',
+            'Slide deck after every session',
+        ],
+        bonus: 'Bonus: lick mat (worth $399) shipped to you',
+        bonusEmoji: '🎁',
+        quote: 'This isn\'t just lessons — it\'s coaching that walks with you to the change.',
+        highlighted: true,
+    },
+];
+
+export const PRICING_PLANS = PRICING_PLANS_ZH;
+
+export function getPricingPlans(locale = 'zh-TW') {
+    return locale === 'en' ? PRICING_PLANS_EN : PRICING_PLANS_ZH;
+}
+
+const TESTIMONIALS_ZH = [
     {
         name: '波比媽媽',
         title: '波比一對一家教分享',
@@ -140,3 +223,53 @@ export const TESTIMONIALS = [
         text: 'Lulu 的吠叫問題已經困擾我們很久了，只要一出門看到人或看到狗就會大叫。<span class="text-orange-600 font-bold">試過很多方法都沒有用</span>，一度動過放棄的念頭。曾經以為養狗是一件很開心的事，卻因為不知道該怎麼訓練 Lulu，常常覺得自己是個失敗的飼主。還好遇到 Pennee 老師，<span class="text-orange-600 font-bold">老師很耐心地講解狗狗行為背後的原因，解開了我多年來的疑惑</span>，也教我用理解的角度去看待狗狗與訓練。慢慢地，<span class="text-orange-600 font-bold">Lulu 的穩定度真的進步了很多</span>。上課過程中，老師不只關心狗狗的情緒，也很在意身為毛孩媽媽的我的感受，她的耐心與鼓勵成了我最大的支持與力量，讓我重新找回陪伴狗狗的信心。',
     },
 ];
+
+const TESTIMONIALS_EN = [
+    {
+        name: 'Bobby\'s mum',
+        title: 'Bobby — 1-on-1 coaching story',
+        tag: 'Separation anxiety / barking',
+        image: 'https://iili.io/qfrpctS.jpg',
+        rating: 5,
+        text: 'Bobby had severe <span class="text-orange-600 font-bold">separation anxiety</span> — two minutes out of sight and he\'d soil the living room and even eat it. The moment we left, he\'d <span class="text-orange-600 font-bold">bark non-stop for hours</span>, drooling from stress. We were exhausted and out of ideas. Eric and Pennee broke the problem down step by step — building safety, restructuring our leaving ritual, slowly extending alone time. <span class="text-orange-600 font-bold">Bobby can now stay home alone for hours, and outside he\'s relaxed and steady.</span> I finally feel like I understand my own dog.',
+    },
+    {
+        name: 'A-Bao\'s mum',
+        title: 'A-Bao — 1-on-1 coaching story',
+        tag: 'Walk reactivity / elevator alarm',
+        image: 'https://iili.io/qf4gNyu.jpg',
+        rating: 5,
+        text: 'A-Bao is naturally timid. On walks she\'d <span class="text-orange-600 font-bold">bark at every dog and stranger, and at every guest who came home</span>. In the elevator, anyone stepping in or out would set her off. Eric\'s teaching is <span class="text-orange-600 font-bold">creative and systematic</span> — not whack-a-mole, but a full reset across food, sleep, play, and learning. <span class="text-orange-600 font-bold">The change after the program was honestly stunning.</span> A-Bao now <span class="text-orange-600 font-bold">walks calmly, ignores people in the elevator, and settles peacefully when guests visit</span>. Even behaviours we hadn\'t specifically asked about quietly improved on the way.',
+    },
+    {
+        name: 'Lulu\'s mum',
+        title: 'Lulu — behaviour change journey',
+        tag: 'Reactivity / owner mindset',
+        image: 'https://iili.io/qf6TBcb.jpg',
+        rating: 5,
+        text: 'Lulu\'s barking had haunted us for years — every walk, every dog, every stranger triggered an outburst. <span class="text-orange-600 font-bold">Nothing we tried worked</span>, and I quietly thought about giving up. I felt like a failed dog parent. Then we met Pennee. <span class="text-orange-600 font-bold">She patiently explained the why behind every behaviour</span>, and taught me to look at Lulu through a lens of understanding instead of frustration. Bit by bit, <span class="text-orange-600 font-bold">Lulu became dramatically steadier</span>. Pennee didn\'t just care about the dog — she cared about me as a dog parent. Her patience gave me back my confidence.',
+    },
+];
+
+export const TESTIMONIALS = TESTIMONIALS_ZH;
+
+export function getTestimonials(locale = 'zh-TW') {
+    return locale === 'en' ? TESTIMONIALS_EN : TESTIMONIALS_ZH;
+}
+
+// 保留 NAV_LINKS for backward compat — new code should import from @/lib/nav
+export const NAV_LINKS = [
+    { label: '關於我們', href: '/#about-section' },
+    { label: '一對一課程', href: '/#session-section' },
+    { label: '狗狗行為文章', href: '/blog' },
+    { label: '合作洽詢', href: '/contact' },
+];
+
+export const NEWSLETTER_COPY = {
+    headline: '每週獲得免費調整毛孩行為的具體方法',
+    subhead: '訂閱電子報，一起打造你與毛孩的理想生活 🐶',
+    placeholder: '輸入你的 Email',
+    button: '免費訂閱',
+    successMessage: '確認信已寄出！請到信箱點擊確認連結完成訂閱 📬（沒看到的話，請檢查「促銷內容」或垃圾郵件資料夾）',
+    errorMessage: '訂閱失敗，請稍後再試或直接寄信給我們。',
+};

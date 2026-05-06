@@ -1,0 +1,39 @@
+{
+    "root": {
+        "titleDefault": "Dori & Rito | Certified Positive Dog Training, Online",
+        "description": "KPA & CATCH-certified positive dog trainers helping owners worldwide solve barking, separation anxiety, leash reactivity and more — online, 1-on-1, no fear, no force.",
+        "keywords": "online dog training|positive reinforcement|KPA certified|separation anxiety|puppy training|reactive dog|leash reactivity|barking|virtual dog trainer"
+    },
+    "home": {
+        "title": "Dori & Rito | KPA-Certified Positive Dog Trainers",
+        "description": "KPA & CATCH-certified trainers. Online 1-on-1 coaching for sensitive, reactive, anxious dogs — from your living room."
+    },
+    "blog": {
+        "title": "Dog Behaviour Library",
+        "description": "Practical, science-backed articles on dog behaviour, training, and the inner game of being a dog parent — by Dori & Rito."
+    },
+    "booking": {
+        "title": "Book a Session",
+        "description": "Book your 1-on-1 online dog training session with Dori & Rito."
+    },
+    "contact": {
+        "title": "Work With Us",
+        "description": "Partner or collaborate with Dori & Rito. Drop us a note."
+    },
+    "about": {
+        "title": "About Dori & Rito",
+        "description": "Meet Eric & Pennee — certified positive dog trainers."
+    },
+    "privacy": {
+        "title": "Privacy Policy",
+        "description": "Dori & Rito Privacy Policy."
+    },
+    "terms": {
+        "title": "Terms of Service",
+        "description": "Dori & Rito Terms of Service."
+    },
+    "thankYou": {
+        "title": "Thank you",
+        "description": "We've received your message."
+    }
+}

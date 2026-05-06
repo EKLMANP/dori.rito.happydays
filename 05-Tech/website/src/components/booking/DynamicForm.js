@@ -1,22 +1,19 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import FormField from './FormField';
 
-/**
- * Dynamic form renderer.
- * Renders sections + fields from DB schema.
- * Supports multi-section form with section-by-section navigation.
- */
 export default function DynamicForm({ sections, responses, onChange, currentSection, onSectionChange }) {
+    const t = useTranslations('booking.form');
+
     if (!sections || sections.length === 0) {
-        return <div className="text-gray-400 text-center py-8">尚無問卷欄位</div>;
+        return <div className="text-gray-400 text-center py-8">{t('noFields')}</div>;
     }
 
     const section = sections[currentSection];
     const isFirst = currentSection === 0;
     const isLast = currentSection === sections.length - 1;
 
-    // Validate current section
     function validateSection() {
         const errors = [];
         for (const field of section.fields) {
@@ -36,7 +33,7 @@ export default function DynamicForm({ sections, responses, onChange, currentSect
     function handleNext() {
         const errors = validateSection();
         if (errors.length > 0) {
-            alert(`請填寫以下必填欄位：\n${errors.join('\n')}`);
+            alert(`${t('validationAlert')}\n${errors.join('\n')}`);
             return;
         }
         onSectionChange(currentSection + 1);
@@ -64,16 +61,17 @@ export default function DynamicForm({ sections, responses, onChange, currentSect
                 )}
             </div>
 
-            {/* Fields — already filtered (is_active) and sorted (sort_order) by API */}
+            {/* Fields */}
             <div className="space-y-5">
                 {(section.fields || []).map(field => (
-                        <FormField
-                            key={field.id}
-                            field={field}
-                            value={responses[String(field.id)]}
-                            onChange={onChange}
-                        />
-                    ))}
+                    <FormField
+                        key={field.id}
+                        field={field}
+                        value={responses[String(field.id)]}
+                        onChange={onChange}
+                        selectPlaceholder={t('selectPlaceholder')}
+                    />
+                ))}
             </div>
 
             {/* Navigation */}
@@ -87,7 +85,7 @@ export default function DynamicForm({ sections, responses, onChange, currentSect
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                 >
-                    上一步
+                    {t('back')}
                 </button>
 
                 {isLast ? (
@@ -95,21 +93,21 @@ export default function DynamicForm({ sections, responses, onChange, currentSect
                         onClick={() => {
                             const errors = validateSection();
                             if (errors.length > 0) {
-                                alert(`請填寫以下必填欄位：\n${errors.join('\n')}`);
+                                alert(`${t('validationAlert')}\n${errors.join('\n')}`);
                                 return;
                             }
                             onSectionChange('complete');
                         }}
                         className="px-6 py-2.5 bg-brand-orange text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
                     >
-                        下一步：選擇時段 →
+                        {t('nextToSchedule')}
                     </button>
                 ) : (
                     <button
                         onClick={handleNext}
                         className="px-5 py-2.5 bg-brand-orange text-white rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
                     >
-                        下一步 →
+                        {t('next')}
                     </button>
                 )}
             </div>

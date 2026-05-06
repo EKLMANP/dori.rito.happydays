@@ -1,0 +1,14 @@
+{
+    "privacy": {
+        "title": "Privacy Policy",
+        "lastUpdated": "Last updated: {date}",
+        "contactTitle": "Contact Us",
+        "contactText": "For any privacy-related questions, please reach out at:"
+    },
+    "terms": {
+        "title": "Terms of Service",
+        "lastUpdated": "Last updated: {date}",
+        "contactTitle": "Contact Us",
+        "contactText": "For any questions about these Terms, please reach out at:"
+    }
+}

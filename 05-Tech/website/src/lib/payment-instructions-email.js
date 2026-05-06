@@ -2,9 +2,60 @@
  * Payment Instructions Email — sent when ECPay assigns a deferred-payment code
  * (ATM virtual account, CVS code, BARCODE) but funds haven't arrived yet.
  *
- * This is the "請於期限內完成繳費" reminder. Once the customer actually pays,
+ * This is the "please complete payment" reminder. Once the customer pays,
  * /api/booking/notify fires and the regular booking-confirmation email is sent.
  */
+
+const COPY = {
+    'zh-TW': {
+        subject: (label) => `【Dori & Rito Happydays】請於期限內完成繳費 — ${label}`,
+        subjectLabels: { ATM: 'ATM 虛擬帳號', CVS: '超商代碼', BARCODE: '超商條碼', OTHER: '繳費資訊' },
+        heading: '請於期限內完成繳費',
+        intro: (name, service, date, time) =>
+            `Hi ${name}，感謝你預約 ${service}（${date} ${time}）。請依下方資訊完成繳費，**款項到帳後**我們會立即寄出預約確認信、Google Calendar 邀請與 Google Meet 連結。`,
+        amount: '繳費金額 Amount',
+        payBefore: '繳費期限 Pay Before',
+        bankCode: '銀行代號 Bank Code',
+        virtualAccount: '虛擬帳號 Virtual A/C',
+        atmNote: '請使用網銀 / 實體 ATM / 銀行 APP 轉帳到上方虛擬帳號。跨行轉帳將產生手續費（依各銀行公告）。',
+        cvsCode: '超商代碼 CVS Code',
+        cvsNote: '請至 7-11 / 全家 / 萊爾富 / OK 出示此代碼繳費。',
+        cvsLink: '查看繳費說明 →',
+        barcodeNote: '請至超商出示此條碼繳費（多數超商列印此 email 即可掃描）。',
+        barcodeLink: '查看條碼繳費說明 →',
+        repayNote: '想改用其他付款方式？（信用卡 / ATM / 超商）',
+        repayBtn: '重新選擇付款方式',
+        repayWarning: '點擊後將作廢上方代碼，請勿重複付款。',
+        adminLabel: '客服備註',
+        orderRef: '訂單編號 Order Reference',
+        footer: '如有任何問題，回覆此 email 即可聯絡我們，或加入 LINE 官方帳號：',
+        lineLabel: '@dori.rito',
+    },
+    en: {
+        subject: (label) => `[Dori & Rito Happydays] Complete your payment — ${label}`,
+        subjectLabels: { ATM: 'ATM transfer', CVS: 'convenience store code', BARCODE: 'barcode payment', OTHER: 'payment details' },
+        heading: 'Complete your payment',
+        intro: (name, service, date, time) =>
+            `Hi ${name}, thanks for booking ${service} (${date} at ${time}). Please use the details below to complete your payment. Once we receive your funds, we'll send your booking confirmation, Google Calendar invite, and Google Meet link right away.`,
+        amount: 'Amount due',
+        payBefore: 'Pay before',
+        bankCode: 'Bank code',
+        virtualAccount: 'Virtual account number',
+        atmNote: 'Transfer to the virtual account above via online banking, ATM, or your bank app. Inter-bank transfer fees may apply.',
+        cvsCode: 'Convenience store code',
+        cvsNote: 'Show this code at any 7-Eleven, FamilyMart, Hi-Life, or OK Mart to pay.',
+        cvsLink: 'View payment instructions →',
+        barcodeNote: 'Show this barcode at any convenience store to pay (printing this email works at most stores).',
+        barcodeLink: 'View barcode payment instructions →',
+        repayNote: 'Want to use a different payment method? (credit card / ATM / convenience store)',
+        repayBtn: 'Choose a different payment method',
+        repayWarning: 'Your current payment code will be cancelled. Do not make duplicate payments.',
+        adminLabel: 'Note from support',
+        orderRef: 'Order Reference',
+        footer: 'Questions? Reply to this email or reach us on LINE: ',
+        lineLabel: '@dori.rito',
+    },
+};
 
 function classify(paymentType) {
     if (!paymentType) return 'OTHER';
@@ -20,37 +71,37 @@ function escapeHtml(s) {
         .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-function renderInstructionsBlock(paymentInfo, price) {
+function renderInstructionsBlock(paymentInfo, price, copy) {
     const e = escapeHtml;
     const kind = classify(paymentInfo.paymentType);
     const amountRow = `
-        <tr><td style="padding:8px 12px;color:#666;width:140px;">繳費金額 Amount</td>
+        <tr><td style="padding:8px 12px;color:#666;width:140px;">${copy.amount}</td>
             <td style="padding:8px 12px;font-weight:600;">NT$ ${e(price ?? '—')}</td></tr>
-        <tr><td style="padding:8px 12px;color:#666;">繳費期限 Pay Before</td>
+        <tr><td style="padding:8px 12px;color:#666;">${copy.payBefore}</td>
             <td style="padding:8px 12px;color:#b45309;font-weight:600;">${e(paymentInfo.expireDate ?? '—')}</td></tr>`;
 
     if (kind === 'ATM') {
         return `
         <table style="width:100%;border-collapse:collapse;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;">
-            <tr><td style="padding:8px 12px;color:#666;width:140px;">銀行代號 Bank Code</td>
+            <tr><td style="padding:8px 12px;color:#666;width:140px;">${copy.bankCode}</td>
                 <td style="padding:8px 12px;font-family:monospace;font-weight:700;font-size:16px;">${e(paymentInfo.bankCode ?? '—')}</td></tr>
-            <tr><td style="padding:8px 12px;color:#666;">虛擬帳號 Virtual A/C</td>
+            <tr><td style="padding:8px 12px;color:#666;">${copy.virtualAccount}</td>
                 <td style="padding:8px 12px;font-family:monospace;font-weight:700;font-size:16px;">${e(paymentInfo.vAccount ?? '—')}</td></tr>
             ${amountRow}
         </table>
-        <p style="font-size:12px;color:#888;margin-top:8px;">請使用網銀 / 實體 ATM / 銀行 APP 轉帳到上方虛擬帳號。跨行轉帳將產生手續費（依各銀行公告）。</p>`;
+        <p style="font-size:12px;color:#888;margin-top:8px;">${copy.atmNote}</p>`;
     }
     if (kind === 'CVS') {
         const linkRow = paymentInfo.paymentURL
-            ? `<p style="margin-top:12px;"><a href="${e(paymentInfo.paymentURL)}" style="color:#f97316;">查看繳費說明 →</a></p>`
+            ? `<p style="margin-top:12px;"><a href="${e(paymentInfo.paymentURL)}" style="color:#f97316;">${copy.cvsLink}</a></p>`
             : '';
         return `
         <table style="width:100%;border-collapse:collapse;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;">
-            <tr><td style="padding:8px 12px;color:#666;width:140px;">超商代碼 CVS Code</td>
+            <tr><td style="padding:8px 12px;color:#666;width:140px;">${copy.cvsCode}</td>
                 <td style="padding:8px 12px;font-family:monospace;font-weight:700;font-size:18px;">${e(paymentInfo.paymentNo ?? '—')}</td></tr>
             ${amountRow}
         </table>
-        <p style="font-size:12px;color:#888;margin-top:8px;">請至 7-11 / 全家 / 萊爾富 / OK 出示此代碼繳費。</p>
+        <p style="font-size:12px;color:#888;margin-top:8px;">${copy.cvsNote}</p>
         ${linkRow}`;
     }
     if (kind === 'BARCODE') {
@@ -60,60 +111,61 @@ function renderInstructionsBlock(paymentInfo, price) {
                 <td style="padding:8px 12px;font-family:monospace;font-size:13px;word-break:break-all;">${e(c)}</td></tr>`
         ).join('');
         const linkRow = paymentInfo.paymentURL
-            ? `<p style="margin-top:12px;"><a href="${e(paymentInfo.paymentURL)}" style="color:#f97316;">查看條碼繳費說明 →</a></p>`
+            ? `<p style="margin-top:12px;"><a href="${e(paymentInfo.paymentURL)}" style="color:#f97316;">${copy.barcodeLink}</a></p>`
             : '';
         return `
         <table style="width:100%;border-collapse:collapse;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;">
             ${codeRows}
             ${amountRow}
         </table>
-        <p style="font-size:12px;color:#888;margin-top:8px;">請至超商出示此條碼繳費（多數超商列印此 email 即可掃描）。</p>
+        <p style="font-size:12px;color:#888;margin-top:8px;">${copy.barcodeNote}</p>
         ${linkRow}`;
     }
     return '';
 }
 
-function renderRepayButton(repayUrl) {
+function renderRepayButton(repayUrl, copy) {
     if (!repayUrl) return '';
     const e = escapeHtml;
     return `
     <div style="margin-top:20px;padding:16px;background:#f9fafb;border:1px dashed #d1d5db;border-radius:8px;text-align:center;">
-      <p style="font-size:13px;color:#555;margin:0 0 12px;">想改用其他付款方式？（信用卡 / ATM / 超商）</p>
-      <a href="${e(repayUrl)}" style="display:inline-block;padding:10px 20px;background:#f97316;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px;">重新選擇付款方式</a>
-      <p style="font-size:11px;color:#888;margin:10px 0 0;">點擊後將作廢上方代碼，請勿重複付款。</p>
+      <p style="font-size:13px;color:#555;margin:0 0 12px;">${copy.repayNote}</p>
+      <a href="${e(repayUrl)}" style="display:inline-block;padding:10px 20px;background:#f97316;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px;">${copy.repayBtn}</a>
+      <p style="font-size:11px;color:#888;margin:10px 0 0;">${copy.repayWarning}</p>
     </div>`;
 }
 
-function renderAdminNote(note) {
+function renderAdminNote(note, copy) {
     if (!note) return '';
     const e = escapeHtml;
     return `
     <div style="margin-top:20px;padding:12px 16px;background:#fef3c7;border-left:3px solid #f59e0b;border-radius:4px;">
-      <p style="font-size:12px;color:#92400e;margin:0 0 4px;font-weight:600;">客服備註</p>
+      <p style="font-size:12px;color:#92400e;margin:0 0 4px;font-weight:600;">${copy.adminLabel}</p>
       <p style="font-size:13px;color:#78350f;margin:0;white-space:pre-wrap;">${e(note)}</p>
     </div>`;
 }
 
-function renderEmailHtml({ customerName, serviceName, slotDate, slotTime, merchantTradeNo, instructionsHtml, repayUrl, adminNote }) {
+function renderEmailHtml({ customerName, serviceName, slotDate, slotTime, merchantTradeNo, instructionsHtml, repayUrl, adminNote, copy, locale }) {
     const e = escapeHtml;
+    const lang = locale === 'en' ? 'en' : 'zh-TW';
     return `<!doctype html>
-<html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fafafa;padding:24px;color:#1f2937;">
+<html lang="${lang}"><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fafafa;padding:24px;color:#1f2937;">
   <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;padding:32px;border:1px solid #f3f4f6;">
-    <h1 style="font-size:20px;color:#b45309;margin:0 0 12px;">請於期限內完成繳費</h1>
-    <p style="font-size:14px;color:#555;margin:0 0 20px;">Hi ${e(customerName)}，感謝你預約 ${e(serviceName)}（${e(slotDate)} ${e(slotTime)}）。請依下方資訊完成繳費，**款項到帳後**我們會立即寄出預約確認信、Google Calendar 邀請與 Google Meet 連結。</p>
+    <h1 style="font-size:20px;color:#b45309;margin:0 0 12px;">${copy.heading}</h1>
+    <p style="font-size:14px;color:#555;margin:0 0 20px;">${copy.intro(e(customerName), e(serviceName), e(slotDate), e(slotTime))}</p>
     ${instructionsHtml}
-    ${renderRepayButton(repayUrl)}
-    ${renderAdminNote(adminNote)}
-    <p style="font-size:12px;color:#888;margin-top:24px;">訂單編號 Order Reference：<span style="font-family:monospace;">${e(merchantTradeNo)}</span></p>
+    ${renderRepayButton(repayUrl, copy)}
+    ${renderAdminNote(adminNote, copy)}
+    <p style="font-size:12px;color:#888;margin-top:24px;">${copy.orderRef}：<span style="font-family:monospace;">${e(merchantTradeNo)}</span></p>
     <hr style="border:0;border-top:1px solid #f3f4f6;margin:24px 0;" />
-    <p style="font-size:12px;color:#888;">如有任何問題，回覆此 email 即可聯絡我們，或加入 LINE 官方帳號：<a href="https://lin.ee/j1DjGlk" style="color:#06C755;">@dori.rito</a></p>
+    <p style="font-size:12px;color:#888;">${copy.footer}<a href="https://lin.ee/j1DjGlk" style="color:#06C755;">${copy.lineLabel}</a></p>
   </div>
 </body></html>`;
 }
 
 export async function sendPaymentInstructionsEmail({
     to, customerName, serviceName, price, slotDate, slotTime, merchantTradeNo, paymentInfo,
-    repayUrl, adminNote,
+    repayUrl, adminNote, locale = 'zh-TW',
 }) {
     const apiKey = process.env.MAILGUN_API_KEY;
     const domain = process.env.MAILGUN_DOMAIN;
@@ -126,17 +178,13 @@ export async function sendPaymentInstructionsEmail({
         return;
     }
 
+    const copy = COPY[locale] || COPY['zh-TW'];
     const kind = classify(paymentInfo?.paymentType);
-    const subjectLabel = kind === 'ATM' ? 'ATM 虛擬帳號'
-        : kind === 'CVS' ? '超商代碼'
-        : kind === 'BARCODE' ? '超商條碼'
-        : '繳費資訊';
-    const subject = `【Dori & Rito Happydays】請於期限內完成繳費 — ${subjectLabel}`;
-
-    const instructionsHtml = renderInstructionsBlock(paymentInfo || {}, price);
+    const subject = copy.subject(copy.subjectLabels[kind] || copy.subjectLabels.OTHER);
+    const instructionsHtml = renderInstructionsBlock(paymentInfo || {}, price, copy);
     const html = renderEmailHtml({
         customerName, serviceName, slotDate, slotTime, merchantTradeNo, instructionsHtml,
-        repayUrl, adminNote,
+        repayUrl, adminNote, copy, locale,
     });
 
     const form = new URLSearchParams();
@@ -156,5 +204,5 @@ export async function sendPaymentInstructionsEmail({
         const err = await res.text();
         throw new Error(`Mailgun send (payment-instructions) failed: ${err}`);
     }
-    console.log(`[payment-instructions-email] Sent ${kind} instructions to ${to} for ${merchantTradeNo}`);
+    console.log(`[payment-instructions-email] Sent ${kind} instructions to ${to} for ${merchantTradeNo} (locale: ${locale})`);
 }

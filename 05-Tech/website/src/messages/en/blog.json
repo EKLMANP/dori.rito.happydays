@@ -1,0 +1,21 @@
+{
+    "hero": {
+        "title": "Dog Behaviour Blog",
+        "subtitle": "Written by KPA & CATCH certified trainers — practical guides to help you and your dog thrive together"
+    },
+    "filter": {
+        "label": "Filter:",
+        "allPosts": "All posts"
+    },
+    "pagination": {
+        "showing": "Showing {count} of {total} articles"
+    },
+    "empty": {
+        "title": "Articles coming soon!",
+        "body": "We're writing expert dog training guides. Subscribe to our newsletter to be the first to know when they go live!"
+    },
+    "card": {
+        "readMore": "Read more →",
+        "minRead": "{n} min read"
+    }
+}

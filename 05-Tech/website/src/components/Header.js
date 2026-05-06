@@ -1,10 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { NAV_LINKS } from '@/lib/constants';
+import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/navigation';
+import { NAV_LINKS } from '@/lib/nav';
+import LocaleSwitcher from '@/components/LocaleSwitcher';
 
 export default function Header() {
+    const t = useTranslations('common');
     const [scrolled, setScrolled] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -14,7 +17,6 @@ export default function Header() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // 關閉 mobile menu 當 route 改變
     useEffect(() => { setMobileOpen(false); }, []);
 
     return (
@@ -28,12 +30,18 @@ export default function Header() {
                 <div className="hidden md:flex gap-8 font-bold items-center text-gray-600">
                     {NAV_LINKS.map(link => (
                         <Link key={link.href} href={link.href} className="hover:text-brand-orange transition-colors">
-                            {link.label}
+                            {t(`nav.${link.key}`)}
                         </Link>
                     ))}
+                    <LocaleSwitcher className="ml-2" />
                 </div>
-                <div className="md:hidden flex items-center gap-4">
-                    <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2 text-[#F75000]">
+                <div className="md:hidden flex items-center gap-3">
+                    <LocaleSwitcher />
+                    <button
+                        onClick={() => setMobileOpen(!mobileOpen)}
+                        className="p-2 text-[#F75000]"
+                        aria-label={mobileOpen ? t('menu.close') : t('menu.open')}
+                    >
                         {mobileOpen ? '✕' : (
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7" />
@@ -43,7 +51,6 @@ export default function Header() {
                 </div>
             </nav>
 
-            {/* Mobile Menu Drawer */}
             {mobileOpen && (
                 <div
                     className="fixed inset-0 z-[49] bg-black/50"
@@ -55,7 +62,7 @@ export default function Header() {
                     >
                         {NAV_LINKS.map(link => (
                             <Link key={link.href} href={link.href} onClick={() => setMobileOpen(false)} className="text-xl font-bold text-gray-800 hover:text-brand-orange block text-center">
-                                {link.label}
+                                {t(`nav.${link.key}`)}
                             </Link>
                         ))}
                     </div>

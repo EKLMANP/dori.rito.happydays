@@ -80,6 +80,7 @@ export async function POST(request, { params }) {
             paymentInfo: data.paymentInfo || {},
             repayUrl,
             adminNote: adminNote || null,
+            locale: data.locale || 'zh-TW',
         });
 
         // Update last_email_sent_at + optional email override

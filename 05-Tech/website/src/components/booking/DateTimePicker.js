@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-
-const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
+import { useTranslations, useLocale } from 'next-intl';
 
 export default function DateTimePicker({ serviceId, onSelect, onBack }) {
+    const t = useTranslations('booking.calendar');
+    const locale = useLocale();
+
     const [currentMonth, setCurrentMonth] = useState(() => {
         const now = new Date();
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -29,10 +31,16 @@ export default function DateTimePicker({ serviceId, onSelect, onBack }) {
 
     useEffect(() => { fetchSlots(); }, [fetchSlots]);
 
-    // Calendar generation
     const [year, month] = currentMonth.split('-').map(Number);
     const firstDay = new Date(year, month - 1, 1).getDay();
     const daysInMonth = new Date(year, month, 0).getDate();
+
+    const weekdays = t.raw('days');
+
+    const monthLabel = new Date(year, month - 1, 1).toLocaleDateString(locale, {
+        year: 'numeric',
+        month: 'long',
+    });
 
     function prevMonth() {
         const d = new Date(year, month - 2, 1);
@@ -68,38 +76,33 @@ export default function DateTimePicker({ serviceId, onSelect, onBack }) {
                     onClick={prevMonth}
                     className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
                 >
-                    ← 上個月
+                    {t('prevMonth')}
                 </button>
-                <h3 className="text-lg font-bold text-gray-800">
-                    {year} 年 {month} 月
-                </h3>
+                <h3 className="text-lg font-bold text-gray-800">{monthLabel}</h3>
                 <button
                     onClick={nextMonth}
                     className="p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
                 >
-                    下個月 →
+                    {t('nextMonth')}
                 </button>
             </div>
 
             {loading ? (
-                <div className="text-center py-12 text-gray-400">載入可用時段...</div>
+                <div className="text-center py-12 text-gray-400">{t('loading')}</div>
             ) : (
                 <>
                     {/* Calendar grid */}
                     <div className="grid grid-cols-7 gap-1 mb-6">
-                        {/* Weekday headers */}
-                        {WEEKDAYS.map(d => (
+                        {weekdays.map(d => (
                             <div key={d} className="text-center text-xs font-medium text-gray-400 py-2">
                                 {d}
                             </div>
                         ))}
 
-                        {/* Empty cells before first day */}
                         {Array.from({ length: firstDay }).map((_, i) => (
                             <div key={`empty-${i}`} />
                         ))}
 
-                        {/* Day cells */}
                         {Array.from({ length: daysInMonth }).map((_, i) => {
                             const day = i + 1;
                             const dateStr = `${currentMonth}-${String(day).padStart(2, '0')}`;
@@ -135,7 +138,7 @@ export default function DateTimePicker({ serviceId, onSelect, onBack }) {
                     {selectedDate && (
                         <div>
                             <h4 className="text-sm font-medium text-gray-700 mb-3">
-                                {selectedDate} 可選時段
+                                {selectedDate} {t('available')}
                             </h4>
                             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                                 {(slots[selectedDate] || []).map(slot => (
@@ -163,12 +166,12 @@ export default function DateTimePicker({ serviceId, onSelect, onBack }) {
                     onClick={onBack}
                     className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
                 >
-                    ← 回到問卷
+                    {t('backToForm')}
                 </button>
 
                 {selectedDate && selectedTime && (
                     <div className="text-sm text-brand-orange font-medium py-2.5">
-                        已選：{selectedDate} {selectedTime} ✓
+                        {t('selected')} {selectedDate} {selectedTime} ✓
                     </div>
                 )}
             </div>

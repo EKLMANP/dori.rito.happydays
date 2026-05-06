@@ -1,0 +1,112 @@
+{
+    "page": {
+        "title": "Book Your 1-on-1 Session",
+        "subtitle": "Tell us about your dog and we'll find the best time to get started",
+        "loading": "Loading your booking form…",
+        "loadError": "Unable to load the form. Please refresh the page."
+    },
+    "steps": {
+        "form": "Your Details",
+        "schedule": "Choose a Time",
+        "payment": "Payment"
+    },
+    "form": {
+        "noFields": "No fields available",
+        "validationAlert": "Please fill in the required fields:",
+        "back": "Back",
+        "next": "Continue",
+        "nextToSchedule": "Choose a Time →",
+        "selectPlaceholder": "Select an option…"
+    },
+    "calendar": {
+        "backToForm": "← Back to form",
+        "loading": "Checking availability…",
+        "available": "Available times",
+        "selected": "Selected:",
+        "prevMonth": "← Previous",
+        "nextMonth": "Next →",
+        "days": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    },
+    "summary": {
+        "title": "Booking Summary",
+        "service": "Service",
+        "date": "Date",
+        "time": "Time",
+        "customer": "Name",
+        "dog": "Dog",
+        "amount": "Total",
+        "paymentMethod": "Choose payment method",
+        "ecpayLabel": "Credit card / ATM / Convenience store (ECPay — Taiwan)",
+        "paypalLabel": "International credit card (PayPal)",
+        "paypalHint": "Paying from outside Taiwan? Use PayPal.",
+        "payBtn": "Pay TWD",
+        "ecpayNote": "You'll be redirected to ECPay's secure payment page",
+        "backToCalendar": "← Change time slot",
+        "securityNote": "🔒 Payments processed securely by ECPay / PayPal. We never store your card details.",
+        "paypalNotConfigured": "PayPal is not configured. Please contact us.",
+        "paypalChargeFailed": "Payment declined",
+        "paypalError": "PayPal payment failed. Please try again or switch to ECPay.",
+        "paypalLoadError": "Unable to load PayPal. Please check your connection and try again.",
+        "paypalProcessing": "Processing your payment…"
+    },
+    "confirmation": {
+        "success": {
+            "title": "You're booked!",
+            "message": "Thanks for booking. A Google Calendar invite has been sent to your email. Please also join our LINE account so your trainer can reach you before the session.",
+            "lineBtn": "Join on LINE",
+            "orderRef": "Order Reference",
+            "nextSteps": "What's next",
+            "calendarStep": "Check your email",
+            "calendarDesc": "A Google Calendar invite with your Google Meet link has been sent to your inbox",
+            "lineStep": "Connect on LINE",
+            "lineDesc": "Send us a message or sticker so your trainer can say hello before your session",
+            "prepStep": "Get ready",
+            "prepDesc": "Make sure you have a stable internet connection. Join your session via the Google Meet link at the scheduled time.",
+            "homeBtn": "Back to home",
+            "igBtn": "Follow on Instagram",
+            "ecpayNote": "Payment processed securely by ECPay"
+        },
+        "pending": {
+            "title": "Complete your payment",
+            "bankCode": "Bank code",
+            "virtualAccount": "Virtual account number",
+            "amount": "Amount due",
+            "payBefore": "Pay before",
+            "cvsCode": "Convenience store code",
+            "barcode": "Barcode",
+            "barcodeDesc": "Show this barcode at any convenience store to pay",
+            "afterPayment": "Once payment is confirmed, we'll send your booking confirmation, Google Calendar invite, and Google Meet link to your email.",
+            "homeBtn": "Back to home",
+            "contactBtn": "Contact us"
+        },
+        "error": {
+            "notFound": "Order not found",
+            "notFoundDesc": "We couldn't find this booking. Please check the link or contact us for help.",
+            "bookAgainBtn": "Start a new booking"
+        }
+    },
+    "failed": {
+        "expired": {
+            "title": "Payment window closed",
+            "message": "The payment window for this booking has expired and the order has been cancelled. Please start a new booking if you'd still like to schedule a session."
+        },
+        "failed": {
+            "title": "Payment unsuccessful",
+            "message": "Your payment didn't go through. We've sent you an email with a link to retry or choose a different payment method. If you didn't receive it, please contact us."
+        },
+        "error": {
+            "title": "Something went wrong",
+            "message": "An unexpected error occurred during payment. Please contact us and we'll help sort it out."
+        },
+        "bookAgainBtn": "Start a new booking",
+        "contactBtn": "Contact us on LINE"
+    },
+    "repay": {
+        "title": "Choose a new payment method",
+        "warning": "Your current payment reference will be cancelled and a new order number will be generated.",
+        "loading": "Loading your order…",
+        "invalidLink": "This link is missing required information",
+        "cannotProceed": "Unable to process payment",
+        "bookAgainBtn": "Start a new booking →"
+    }
+}

@@ -1,0 +1,112 @@
+{
+    "page": {
+        "title": "預約線上課程",
+        "subtitle": "一對一線上課程，讓我們一起幫助你和毛孩",
+        "loading": "載入問卷中...",
+        "loadError": "無法載入問卷，請重新整理頁面"
+    },
+    "steps": {
+        "form": "填寫問卷",
+        "schedule": "選擇時段",
+        "payment": "確認付款"
+    },
+    "form": {
+        "noFields": "尚無問卷欄位",
+        "validationAlert": "請填寫以下必填欄位：",
+        "back": "上一步",
+        "next": "下一步",
+        "nextToSchedule": "下一步：選擇時段 →",
+        "selectPlaceholder": "請選擇..."
+    },
+    "calendar": {
+        "backToForm": "← 回到問卷",
+        "loading": "載入可用時段...",
+        "available": "可選時段",
+        "selected": "已選：",
+        "prevMonth": "← 上個月",
+        "nextMonth": "下個月 →",
+        "days": ["日", "一", "二", "三", "四", "五", "六"]
+    },
+    "summary": {
+        "title": "預約摘要",
+        "service": "服務",
+        "date": "日期",
+        "time": "時間",
+        "customer": "客戶",
+        "dog": "狗狗",
+        "amount": "金額",
+        "paymentMethod": "請選擇付款方式",
+        "ecpayLabel": "台灣信用卡 / ATM / 超商（綠界 ECPay）",
+        "paypalLabel": "海外信用卡（PayPal）",
+        "paypalHint": "海外信用卡請選擇 PayPal · 國內請選擇 ECPay",
+        "payBtn": "前往付款 NT$",
+        "ecpayNote": "點擊後將導向綠界 ECPay 安全付款頁面",
+        "backToCalendar": "← 重新選擇時段",
+        "securityNote": "🔒 付款由 ECPay 綠界 / PayPal 安全處理，本站不儲存任何信用卡資訊",
+        "paypalNotConfigured": "PayPal 尚未設定，請聯絡客服",
+        "paypalChargeFailed": "付款扣款失敗",
+        "paypalError": "PayPal 付款失敗，請重試或改選 ECPay",
+        "paypalLoadError": "無法載入 PayPal，請檢查網路後重試",
+        "paypalProcessing": "付款處理中，請稍候..."
+    },
+    "confirmation": {
+        "success": {
+            "title": "付款成功！",
+            "message": "感謝你的預約，已同步發送 Google 日曆邀請。請加入 LINE 官方帳號並傳訊息，方便老師與你聯繫。",
+            "lineBtn": "加入 LINE 官方帳號",
+            "orderRef": "訂單編號",
+            "nextSteps": "接下來",
+            "calendarStep": "Google 日曆邀請",
+            "calendarDesc": "已發送含 Google Meet 連結的日曆邀請，請查看 Email",
+            "lineStep": "加入 LINE 官方帳號",
+            "lineDesc": "傳個訊息或貼圖，方便老師跟你聯繫",
+            "prepStep": "準備課程",
+            "prepDesc": "上課前請確保網路穩定，透過 Google Meet 連結加入",
+            "homeBtn": "回到首頁",
+            "igBtn": "追蹤 IG",
+            "ecpayNote": "付款由綠界科技 ECPay 安全處理"
+        },
+        "pending": {
+            "title": "請於期限內完成繳費",
+            "bankCode": "銀行代號",
+            "virtualAccount": "虛擬帳號",
+            "amount": "繳費金額",
+            "payBefore": "繳費期限",
+            "cvsCode": "超商代碼",
+            "barcode": "超商條碼",
+            "barcodeDesc": "請至超商出示繳費",
+            "afterPayment": "繳費完成後，系統會自動寄送預約確認信、Google Calendar 邀請與 Google Meet 連結到你的 Email。",
+            "homeBtn": "回到首頁",
+            "contactBtn": "聯繫我們"
+        },
+        "error": {
+            "notFound": "找不到訂單",
+            "notFoundDesc": "無法找到對應的預約訂單，請確認連結是否正確。",
+            "bookAgainBtn": "重新預約"
+        }
+    },
+    "failed": {
+        "expired": {
+            "title": "繳費期限已過",
+            "message": "很抱歉，您的繳費期限已過，訂單已自動取消。如仍需預約，請重新填寫預約表單。"
+        },
+        "failed": {
+            "title": "付款未成功",
+            "message": "您的付款未成功完成。我們已寄出包含「重新選擇付款方式」按鈕的 email，請查收並依指示完成付款。如未收到，請聯絡我們。"
+        },
+        "error": {
+            "title": "付款發生問題",
+            "message": "付款過程中發生未知錯誤，請聯絡我們以協助處理。"
+        },
+        "bookAgainBtn": "重新預約",
+        "contactBtn": "LINE 聯絡客服"
+    },
+    "repay": {
+        "title": "重新選擇付款方式",
+        "warning": "確認後，原本的付款代碼將作廢，並產生新的訂單編號。",
+        "loading": "載入訂單中…",
+        "invalidLink": "連結缺少必要參數",
+        "cannotProceed": "無法繼續付款",
+        "bookAgainBtn": "重新預約 →"
+    }
+}
