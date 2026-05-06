@@ -1,0 +1,28 @@
+{
+    "hero": {
+        "title": "合作洽詢",
+        "subtitle": "歡迎各類合作提案！請填寫以下表單，我們將在 3 個工作天內回覆。"
+    },
+    "form": {
+        "nameLabel": "怎麼稱呼您",
+        "namePlaceholder": "您的稱呼",
+        "phoneLabel": "聯絡電話",
+        "phonePlaceholder": "09xx-xxx-xxx",
+        "emailLabel": "聯絡 Email",
+        "emailPlaceholder": "your@email.com",
+        "typesLabel": "合作類型",
+        "messageLabel": "關於合作想法",
+        "messagePlaceholder": "請簡述您的合作想法...",
+        "submit": "送出",
+        "submitting": "送出中...",
+        "successTitle": "感謝您的合作提案！",
+        "successMessage": "我們將在 3 個工作天內回覆您。",
+        "errorMessage": "送出失敗，請稍後再試。",
+        "collabTypes": [
+            "品牌合作(寵物用品、飼料、保健食品等)",
+            "媒體採訪",
+            "活動邀約(演講、工作坊、Podcast等)",
+            "其他"
+        ]
+    }
+}

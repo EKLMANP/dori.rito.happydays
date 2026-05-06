@@ -1,0 +1,28 @@
+{
+    "hero": {
+        "title": "Work With Us",
+        "subtitle": "Open to brand partnerships, media features, and speaking invitations. Fill in the form below and we'll get back to you within 3 business days."
+    },
+    "form": {
+        "nameLabel": "Your name",
+        "namePlaceholder": "Your name",
+        "phoneLabel": "Phone number",
+        "phonePlaceholder": "+60 / +852 / +65 / other",
+        "emailLabel": "Email address",
+        "emailPlaceholder": "your@email.com",
+        "typesLabel": "Type of collaboration",
+        "messageLabel": "Tell us about your idea",
+        "messagePlaceholder": "Give us a quick overview of your collaboration idea...",
+        "submit": "Send",
+        "submitting": "Sending...",
+        "successTitle": "Thanks for reaching out!",
+        "successMessage": "We'll get back to you within 3 business days.",
+        "errorMessage": "Something went wrong. Please try again.",
+        "collabTypes": [
+            "Brand partnership (pet food, accessories, supplements, etc.)",
+            "Media feature or interview",
+            "Speaking / workshop / podcast invitation",
+            "Other"
+        ]
+    }
+}

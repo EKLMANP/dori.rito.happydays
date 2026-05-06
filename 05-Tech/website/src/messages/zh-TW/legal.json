@@ -1,0 +1,14 @@
+{
+    "privacy": {
+        "title": "隱私權政策",
+        "lastUpdated": "最後更新：{date}",
+        "contactTitle": "聯絡我們",
+        "contactText": "如有任何隱私權相關問題，請聯繫："
+    },
+    "terms": {
+        "title": "服務條款",
+        "lastUpdated": "最後更新：{date}",
+        "contactTitle": "聯絡我們",
+        "contactText": "如有任何服務條款相關問題，請聯繫："
+    }
+}

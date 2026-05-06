@@ -139,6 +139,7 @@ export async function POST(request) {
                     merchantTradeNo,
                     paymentInfo,
                     repayUrl: buildRepayUrl(merchantTradeNo),
+                    locale: data.locale || 'zh-TW',
                 });
                 await sql`
                     UPDATE processed_orders SET last_email_sent_at = NOW()

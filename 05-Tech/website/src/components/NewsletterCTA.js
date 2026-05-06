@@ -1,15 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { NEWSLETTER_COPY } from '@/lib/constants';
+import { useTranslations } from 'next-intl';
 
 /**
  * 電子報訂閱 CTA 元件
  * variant: 'inline' (文章中間嵌入) | 'full' (文末/首頁大區塊)
  */
 export default function NewsletterCTA({ variant = 'full' }) {
+    const t = useTranslations('common.newsletter');
     const [email, setEmail] = useState('');
-    const [status, setStatus] = useState('idle'); // idle | loading | success | error
+    const [status, setStatus] = useState('idle');
     const isInline = variant === 'inline';
 
     const handleSubmit = async (e) => {
@@ -18,7 +19,6 @@ export default function NewsletterCTA({ variant = 'full' }) {
         setStatus('loading');
 
         try {
-            // Track newsletter subscription event in GA4
             if (typeof gtag !== 'undefined') {
                 gtag('event', 'newsletter_subscribe', {
                     event_category: 'engagement',
@@ -56,15 +56,13 @@ export default function NewsletterCTA({ variant = 'full' }) {
                 }}
             >
                 <p style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text)', opacity: 0.7, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    訂閱電子報
+                    {t('button')}
                 </p>
-                <h3 style={{ marginBottom: '0.5rem', fontSize: '1.3rem' }}>
-                    {NEWSLETTER_COPY.headline}
-                </h3>
+                <h3 style={{ marginBottom: '0.5rem', fontSize: '1.3rem' }}>{t('headline')}</h3>
                 <p style={{ color: 'var(--color-text-muted)', marginBottom: '1.25rem', fontSize: '0.95rem' }}>
-                    {NEWSLETTER_COPY.subhead}
+                    {t('subhead')}
                 </p>
-                <SubscribeForm email={email} setEmail={setEmail} status={status} handleSubmit={handleSubmit} />
+                <SubscribeForm t={t} email={email} setEmail={setEmail} status={status} handleSubmit={handleSubmit} />
             </div>
         );
     }
@@ -76,19 +74,17 @@ export default function NewsletterCTA({ variant = 'full' }) {
         >
             <div className="container" style={{ maxWidth: '600px' }}>
                 <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📩</div>
-                <h2 style={{ marginBottom: '0.75rem' }}>{NEWSLETTER_COPY.headline}</h2>
+                <h2 style={{ marginBottom: '0.75rem' }}>{t('headline')}</h2>
                 <p style={{ color: 'var(--color-text-muted)', marginBottom: '2rem', fontSize: '1.05rem' }}>
-                    {NEWSLETTER_COPY.subhead}
+                    {t('subhead')}
                 </p>
-                <SubscribeForm email={email} setEmail={setEmail} status={status} handleSubmit={handleSubmit} large />
+                <SubscribeForm t={t} email={email} setEmail={setEmail} status={status} handleSubmit={handleSubmit} large />
             </div>
         </section>
     );
 }
 
-function SubscribeForm({ email, setEmail, status, handleSubmit, large }) {
-    const { placeholder, button, successMessage, errorMessage } = NEWSLETTER_COPY;
-
+function SubscribeForm({ t, email, setEmail, status, handleSubmit, large }) {
     if (status === 'success') {
         return (
             <div style={{
@@ -99,7 +95,7 @@ function SubscribeForm({ email, setEmail, status, handleSubmit, large }) {
                 fontWeight: 600,
                 fontSize: '1rem',
             }}>
-                ✅ {successMessage}
+                ✅ {t('successMessage')}
             </div>
         );
     }
@@ -120,10 +116,10 @@ function SubscribeForm({ email, setEmail, status, handleSubmit, large }) {
                     className="input"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder={placeholder}
+                    placeholder={t('placeholder')}
                     required
                     style={{ flex: '1', minWidth: '220px', maxWidth: large ? '380px' : '280px' }}
-                    aria-label="電子郵件地址"
+                    aria-label={t('placeholder')}
                 />
                 <button
                     type="submit"
@@ -132,12 +128,12 @@ function SubscribeForm({ email, setEmail, status, handleSubmit, large }) {
                     id="newsletter-subscribe-btn"
                     style={{ padding: large ? '0.875rem 2rem' : '0.75rem 1.5rem' }}
                 >
-                    {status === 'loading' ? '訂閱中...' : button}
+                    {status === 'loading' ? t('submitting') : t('button')}
                 </button>
             </form>
             {status === 'error' && (
                 <p style={{ marginTop: '0.75rem', color: '#c0392b', fontSize: '0.875rem' }}>
-                    ❌ {errorMessage}
+                    ❌ {t('errorMessage')}
                 </p>
             )}
         </>

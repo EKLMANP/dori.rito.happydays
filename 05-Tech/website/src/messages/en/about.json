@@ -1,0 +1,45 @@
+{
+    "hero": {
+        "title": "About Dori & Rito",
+        "subtitle": "We're a KPA and CATCH certified positive-training team who believes every dog deserves to be understood — not just commanded."
+    },
+    "mission": {
+        "title": "Our Philosophy",
+        "p1": "We believe dog training should never rely on punishment or fear. Lasting behaviour change happens when dogs can actively choose the right behaviour in a positive, safe environment.",
+        "p2": "Using scientifically validated positive reinforcement, we don't just help your dog change — we help you understand your dog, and build a bond that runs deeper than compliance.",
+        "tags": ["100% Force-Free", "Science-Backed", "Tailored Plans", "Ongoing Support"]
+    },
+    "stats": [
+        { "number": "2+", "label": "years of hands-on training" },
+        { "number": "100+", "label": "families helped" },
+        { "number": "100%", "label": "positive reinforcement" }
+    ],
+    "trainers": {
+        "title": "Meet the Trainers",
+        "certLabel": "🏅 Certifications",
+        "specialtyLabel": "🎯 Specialties"
+    },
+    "trainerProfiles": [
+        {
+            "name": "Pennee",
+            "title": "KPA Certified Training Partner",
+            "certifications": ["KPA CTP (Karen Pryor Academy Certified Training Partner)", "CATCH CTC (Certified Training & Counseling Program)"],
+            "specialty": "Separation anxiety, puppy education, multi-dog households",
+            "bio": "With years of hands-on positive training experience, Pennee specialises in highly sensitive dogs and separation anxiety cases. She believes every dog is capable of learning — and every behaviour has a reason behind it.",
+            "emoji": "🧡"
+        },
+        {
+            "name": "Eric",
+            "title": "KPA Certified Training Partner",
+            "certifications": ["KPA CTP (Karen Pryor Academy Certified Training Partner)"],
+            "specialty": "Reactive dogs, leash pulling, foundation training",
+            "bio": "Eric focuses on helping reactive and leash-reactive dogs. Through scientifically grounded positive reinforcement, he creates a relaxed, joyful learning environment where dogs can genuinely thrive.",
+            "emoji": "💙"
+        }
+    ],
+    "cta": {
+        "title": "Like what you see? Let's meet your dog.",
+        "subtitle": "Fill in our free consultation questionnaire so we can understand your dog's situation.",
+        "button": "🐶 Book a Free Consultation"
+    }
+}

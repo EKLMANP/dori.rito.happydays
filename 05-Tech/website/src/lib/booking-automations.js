@@ -10,19 +10,31 @@ import { renderEmailTemplate, renderSubject } from '@/lib/email-renderer';
 import { updateCustomerPayment, createCustomerPageWithPayment, createNotionOrder as createNotionOrderFn, linkOrderToCustomer, updateOrderPaid } from '@/lib/notion-crm';
 import { createEvent } from '@/lib/google-calendar';
 
-/** Service-specific display names for emails and calendar events */
+/** Service-specific display names for emails and calendar events, by locale */
 const SERVICE_DISPLAY = {
-    'single-session': {
-        emailSubject: '【Dori & Rito Happydays】線上課程預約確認：單次 60 分鐘',
-        calendarTitle: (name) => `【Dori & Rito Happydays】線上課程：單次 60 分鐘 - ${name}`,
-        calendarNote: '無',
-        isMultiSession: false,
+    'zh-TW': {
+        'single-session': {
+            emailSubject: '【Dori & Rito Happydays】線上課程預約確認：單次 60 分鐘',
+            calendarTitle: (name) => `【Dori & Rito Happydays】線上課程：單次 60 分鐘 - ${name}`,
+            calendarNote: '無',
+        },
+        'breakthrough-4': {
+            emailSubject: '【Dori & Rito Happydays】線上課程預約確認：突破成長方案 4堂',
+            calendarTitle: (name) => `【Dori & Rito Happydays】線上課程：突破成長方案4堂(W1/4) - ${name}`,
+            calendarNote: '此為第一堂課，後續課程將另外再與老師協調時間',
+        },
     },
-    'breakthrough-4': {
-        emailSubject: '【Dori & Rito Happydays】線上課程預約確認：突破成長方案 4堂',
-        calendarTitle: (name) => `【Dori & Rito Happydays】線上課程：突破成長方案4堂(W1/4) - ${name}`,
-        calendarNote: '此為第一堂課，後續課程將另外再與老師協調時間',
-        isMultiSession: true,
+    en: {
+        'single-session': {
+            emailSubject: '[Dori & Rito Happydays] Booking confirmed — 1-on-1 Online Session (60 min)',
+            calendarTitle: (name) => `[Dori & Rito Happydays] Online Session: 1-on-1 60 min — ${name}`,
+            calendarNote: 'n/a',
+        },
+        'breakthrough-4': {
+            emailSubject: '[Dori & Rito Happydays] Booking confirmed — Breakthrough Plan (4 Sessions)',
+            calendarTitle: (name) => `[Dori & Rito Happydays] Online Session: Breakthrough Plan (Session 1/4) — ${name}`,
+            calendarNote: 'This is your first session. Your trainer will coordinate the schedule for sessions 2–4.',
+        },
     },
 };
 
@@ -44,7 +56,9 @@ async function notifyEmail(bookingData) {
     }
     const template = templates[0];
 
-    const serviceDisplay = SERVICE_DISPLAY[bookingData.serviceId];
+    const locale = bookingData.locale === 'en' ? 'en' : 'zh-TW';
+    const serviceDisplayByLocale = SERVICE_DISPLAY[locale] || SERVICE_DISPLAY['zh-TW'];
+    const serviceDisplay = serviceDisplayByLocale[bookingData.serviceId];
 
     const data = {
         customer_name: bookingData.customerName,
@@ -57,7 +71,7 @@ async function notifyEmail(bookingData) {
         meet_link: bookingData.meetLink || '',
     };
 
-    const html = renderEmailTemplate(template, data, bookingData.serviceId);
+    const html = renderEmailTemplate(template, data, bookingData.serviceId, locale);
     // Use service-specific subject if available, otherwise fallback to template
     const subject = serviceDisplay?.emailSubject || renderSubject(template, data);
 
@@ -164,20 +178,30 @@ async function createGCalEvent(bookingData) {
     const endM = String(totalMin % 60).padStart(2, '0');
     const endDateTime = `${bookingData.slotDate}T${endH}:${endM}:00+08:00`;
 
-    const serviceDisplay = SERVICE_DISPLAY[bookingData.serviceId];
-    const calendarNote = serviceDisplay?.calendarNote || '無';
+    const gcalLocale = bookingData.locale === 'en' ? 'en' : 'zh-TW';
+    const gcalServiceDisplay = (SERVICE_DISPLAY[gcalLocale] || SERVICE_DISPLAY['zh-TW'])[bookingData.serviceId];
+    const calendarNote = gcalServiceDisplay?.calendarNote || (gcalLocale === 'en' ? 'n/a' : '無');
 
-    const description = [
-        `客戶姓名：${bookingData.customerName}`,
-        `毛寶貝姓名：${bookingData.dogName}`,
-        `Email：${bookingData.email}`,
-        `電話：${bookingData.phone || ''}`,
-        `訂單編號：${bookingData.merchantTradeNo}`,
-        `備註：${calendarNote}`,
-    ].join('\n');
+    const description = gcalLocale === 'en'
+        ? [
+            `Customer: ${bookingData.customerName}`,
+            `Dog: ${bookingData.dogName}`,
+            `Email: ${bookingData.email}`,
+            `Phone: ${bookingData.phone || ''}`,
+            `Order: ${bookingData.merchantTradeNo}`,
+            `Note: ${calendarNote}`,
+          ].join('\n')
+        : [
+            `客戶姓名：${bookingData.customerName}`,
+            `毛寶貝姓名：${bookingData.dogName}`,
+            `Email：${bookingData.email}`,
+            `電話：${bookingData.phone || ''}`,
+            `訂單編號：${bookingData.merchantTradeNo}`,
+            `備註：${calendarNote}`,
+          ].join('\n');
 
-    const summary = serviceDisplay?.calendarTitle
-        ? serviceDisplay.calendarTitle(bookingData.customerName)
+    const summary = gcalServiceDisplay?.calendarTitle
+        ? gcalServiceDisplay.calendarTitle(bookingData.customerName)
         : `${bookingData.serviceName} - ${bookingData.customerName}`;
 
     const attendeeEmails = [bookingData.email].filter(Boolean);

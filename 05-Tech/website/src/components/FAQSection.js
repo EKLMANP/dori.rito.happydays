@@ -1,17 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { FAQS } from '@/lib/constants';
+import { useLocale } from 'next-intl';
+import { getFAQS } from '@/lib/constants';
 
-export default function FAQSection({ faqs = FAQS, title = '常見問題' }) {
+export default function FAQSection({ faqs, title }) {
+    const locale = useLocale();
     const [openIndex, setOpenIndex] = useState(null);
+
+    const items = faqs ?? getFAQS(locale);
+    const heading = title ?? (locale === 'en' ? 'Frequently asked questions' : '常見問題');
 
     return (
         <section className="section bg-white">
             <div className="container" style={{ maxWidth: '800px' }}>
-                <h2 style={{ textAlign: 'center', marginBottom: '2.5rem' }}>{title}</h2>
+                <h2 style={{ textAlign: 'center', marginBottom: '2.5rem' }}>{heading}</h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {faqs.map((faq, i) => (
+                    {items.map((faq, i) => (
                         <div
                             key={i}
                             style={{

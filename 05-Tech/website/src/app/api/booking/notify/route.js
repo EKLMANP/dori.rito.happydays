@@ -58,6 +58,7 @@ async function handlePaymentFailure(merchantTradeNo, rtnCode, rtnMsg) {
     const data = typeof row.booking_data === 'string' ? JSON.parse(row.booking_data) : row.booking_data || {};
     if (data.email) {
         try {
+            const locale = data.locale || 'zh-TW';
             await sendPaymentInstructionsEmail({
                 to: data.email,
                 customerName: data.customerName,
@@ -68,7 +69,10 @@ async function handlePaymentFailure(merchantTradeNo, rtnCode, rtnMsg) {
                 merchantTradeNo,
                 paymentInfo: data.paymentInfo || {},
                 repayUrl: buildRepayUrl(merchantTradeNo),
-                adminNote: `付款未成功（代碼 ${rtnCode}），請點擊按鈕重新選擇付款方式。`,
+                adminNote: locale === 'en'
+                    ? `Payment failed (code ${rtnCode}). Click the button below to choose a different payment method.`
+                    : `付款未成功（代碼 ${rtnCode}），請點擊按鈕重新選擇付款方式。`,
+                locale,
             });
             await sql`UPDATE processed_orders SET last_email_sent_at = NOW() WHERE merchant_trade_no = ${merchantTradeNo}`;
         } catch (err) {

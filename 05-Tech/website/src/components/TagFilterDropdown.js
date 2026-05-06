@@ -1,8 +1,8 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/navigation';
 
-export default function TagFilterDropdown({ tags, currentTag }) {
+export default function TagFilterDropdown({ tags, currentTag, allPostsLabel = '所有文章' }) {
     const router = useRouter();
 
     const handleChange = (e) => {
@@ -30,7 +30,7 @@ export default function TagFilterDropdown({ tags, currentTag }) {
                 minWidth: '160px',
             }}
         >
-            <option value="">所有文章</option>
+            <option value="">{allPostsLabel}</option>
             {tags.map((tag) => (
                 <option key={tag.value} value={tag.value}>
                     {tag.label}

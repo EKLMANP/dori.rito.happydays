@@ -1,7 +1,11 @@
-import Link from 'next/link';
+import { useTranslations } from 'next-intl';
+import { Link } from '@/i18n/navigation';
+import { NAV_LINKS } from '@/lib/nav';
 import { BRAND } from '@/lib/constants';
 
 export default function Footer() {
+    const t = useTranslations('common.footer');
+    const tNav = useTranslations('common.nav');
     const year = new Date().getFullYear();
 
     return (
@@ -11,32 +15,36 @@ export default function Footer() {
                     <div className="flex items-center justify-center md:justify-start">
                         <img src="https://iili.io/qf6QsVe.png" alt="Eric & Pennee Logo" className="h-14 brightness-0 invert opacity-80 mb-8" />
                     </div>
-                    <p className="max-w-xs mx-auto md:mx-0 font-medium leading-relaxed">我們致力於透過科學與愛心，幫助每一對人犬找到最舒適的生活節奏。透過理解，看見行為背後的真實需求。</p>
+                    <p className="max-w-xs mx-auto md:mx-0 font-medium leading-relaxed">{t('tagline')}</p>
                 </div>
                 <div>
-                    <h5 className="text-white font-black mb-8 text-lg tracking-widest">快速連結</h5>
+                    <h5 className="text-white font-black mb-8 text-lg tracking-widest">{t('quickLinks')}</h5>
                     <ul className="space-y-4 font-bold">
-                        <li><Link href="/#session-section" className="hover:text-brand-orange transition-colors">一對一課程</Link></li>
-                        <li><Link href="/blog" className="hover:text-brand-orange transition-colors">狗狗行為文章</Link></li>
-                        <li><Link href="/contact" className="hover:text-brand-orange transition-colors">合作洽詢</Link></li>
+                        {NAV_LINKS.filter(l => l.key !== 'about').map(link => (
+                            <li key={link.href}>
+                                <Link href={link.href} className="hover:text-brand-orange transition-colors">
+                                    {tNav(link.key)}
+                                </Link>
+                            </li>
+                        ))}
                     </ul>
                 </div>
                 <div>
-                    <h5 className="text-white font-black mb-8 text-lg tracking-widest">Follow Us</h5>
+                    <h5 className="text-white font-black mb-8 text-lg tracking-widest">{t('followUs')}</h5>
                     <a href={BRAND.instagram} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-3 bg-slate-800 hover:bg-brand-orange hover:text-white px-8 py-4 rounded-3xl transition-all group mx-auto md:mx-0">
                         <img src="/images/ig-logo.png" alt="Instagram" className="w-8 h-8 group-hover:rotate-12 transition-transform" />
                     </a>
                     <div className="mt-10 space-y-2">
                         <p className="text-sm">✉️ {BRAND.email}</p>
-                        <p className="text-sm">📍 北北基地區及線上諮詢</p>
+                        <p className="text-sm">{t('location')}</p>
                     </div>
                 </div>
             </div>
             <div className="container mx-auto px-6 mt-20 pt-10 border-t border-slate-800 text-center text-xs tracking-[0.3em] opacity-40 uppercase font-black">
-                © {year} DORI & RITO HAPPYDAYS. ALL RIGHTS RESERVED.
+                {t('copyright', { year })}
                 <div className="mt-4 flex justify-center gap-4 lowercase tracking-normal font-normal">
-                    <Link href="/privacy" className="hover:text-white transition-colors">隱私權政策</Link>
-                    <Link href="/terms" className="hover:text-white transition-colors">服務條款</Link>
+                    <Link href="/privacy" className="hover:text-white transition-colors">{t('privacy')}</Link>
+                    <Link href="/terms" className="hover:text-white transition-colors">{t('terms')}</Link>
                 </div>
             </div>
         </footer>

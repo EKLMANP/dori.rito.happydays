@@ -59,8 +59,9 @@ export function extractCustomerFromForm(sections, responses) {
             const val = responses[String(field.id)];
             if (!val) continue;
 
+            const matchLabel = field._notion_label || field.label;
             for (const [pattern, prop] of Object.entries(labelMap)) {
-                if (field.label.includes(pattern)) {
+                if (matchLabel.includes(pattern)) {
                     if (prop === 'name') name = val;
                     if (prop === 'email') email = val;
                     if (prop === 'phone') phone = val;
@@ -109,16 +110,23 @@ function buildQABlocks(sections, responses) {
     for (let i = 0; i < sections.length; i++) {
         const section = sections[i];
 
+        const sectionHeading = section._notion_title || section.title || `第 ${i + 1} 部分`;
         children.push({
             object: 'block', type: 'heading_2',
-            heading_2: { rich_text: [{ type: 'text', text: { content: section.title || `第 ${i + 1} 部分` } }] },
+            heading_2: { rich_text: [{ type: 'text', text: { content: sectionHeading } }] },
         });
 
         for (const field of section.fields || []) {
-            const answer = formatAnswer(responses[String(field.id)], field);
+            // Use Chinese label/options for Notion blocks even if UI was in English
+            const notionField = {
+                ...field,
+                options: field._notion_options || field.options,
+            };
+            const answer = formatAnswer(responses[String(field.id)], notionField);
+            const notionLabel = field._notion_label || field.label;
             children.push({
                 object: 'block', type: 'paragraph',
-                paragraph: { rich_text: [{ type: 'text', text: { content: field.label }, annotations: { bold: true } }] },
+                paragraph: { rich_text: [{ type: 'text', text: { content: notionLabel }, annotations: { bold: true } }] },
             });
             children.push({
                 object: 'block', type: 'paragraph',

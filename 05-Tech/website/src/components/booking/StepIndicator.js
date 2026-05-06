@@ -1,12 +1,14 @@
 'use client';
 
-const STEPS = [
-    { label: '填寫問卷', icon: '📋' },
-    { label: '選擇時段', icon: '📅' },
-    { label: '確認付款', icon: '💳' },
-];
+import { useTranslations } from 'next-intl';
 
 export default function StepIndicator({ currentStep }) {
+    const t = useTranslations('booking.steps');
+    const STEPS = [
+        { label: t('form'), icon: '📋' },
+        { label: t('schedule'), icon: '📅' },
+        { label: t('payment'), icon: '💳' },
+    ];
     return (
         <div className="flex items-center justify-center gap-0 mb-8">
             {STEPS.map((step, i) => {

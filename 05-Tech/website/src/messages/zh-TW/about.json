@@ -1,0 +1,45 @@
+{
+    "hero": {
+        "title": "關於 Dori & Rito",
+        "subtitle": "我們是一個以正向訓練為核心的訓犬師團隊，相信每隻狗都值得被理解，而不只是被服從。"
+    },
+    "mission": {
+        "title": "我們的理念",
+        "p1": "我們相信，訓犬不應該依賴懲罰和恐懼。真正穩定的行為改變，來自於讓狗狗在正向的環境中主動選擇正確的行為。",
+        "p2": "透過科學驗證的正向強化訓練法，我們不只幫助毛孩改變行為，更幫助你理解毛孩，建立更深厚的信任關係。",
+        "tags": ["純正向訓練", "科學基礎", "個別化方案", "持續支援"]
+    },
+    "stats": [
+        { "number": "2+", "label": "年訓犬實務經驗" },
+        { "number": "100+", "label": "服務毛孩家庭" },
+        { "number": "100%", "label": "正向強化訓練" }
+    ],
+    "trainers": {
+        "title": "訓犬師團隊",
+        "certLabel": "🏅 認證資格",
+        "specialtyLabel": "🎯 專長領域"
+    },
+    "trainerProfiles": [
+        {
+            "name": "Pennee（潘老師）",
+            "title": "KPA CTP 認證訓犬師",
+            "certifications": ["KPA CTP（Karen Pryor Academy Certified Training Partner）", "CATCH CTC（Certified Training & Counseling Program）"],
+            "specialty": "分離焦慮、幼犬教育、多犬家庭",
+            "bio": "擁有多年正向訓練實務經驗，專精於高敏感犬與分離焦慮案例。相信每隻狗都有能力學習，每個行為背後都有原因。",
+            "emoji": "🧡"
+        },
+        {
+            "name": "Eric（艾瑞克）",
+            "title": "KPA CTP 認證訓犬師",
+            "certifications": ["KPA CTP（Karen Pryor Academy Certified Training Partner）"],
+            "specialty": "反應性犬、暴衝、基礎訓練",
+            "bio": "專注於幫助反應性犬與暴衝問題，透過科學化的正向強化方法，讓狗狗在輕鬆愉快的環境中學習新行為。",
+            "emoji": "💙"
+        }
+    ],
+    "cta": {
+        "title": "認識我們之後，想見見你的毛孩嗎？",
+        "subtitle": "填寫免費諮詢問卷，讓我們了解你家毛孩的情況",
+        "button": "🐶 預約免費諮詢"
+    }
+}

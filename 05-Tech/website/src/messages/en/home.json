@@ -1,0 +1,117 @@
+{
+    "hero": {
+        "badge": "Science-backed · Force-free · Fun 🐾",
+        "headline1": "At last — your",
+        "headlineHighlight": "sensitive dog",
+        "headline2": "can walk calmly and live happily with you",
+        "subhead": "Stop guessing your way through training.\nGet 1-on-1 expert coaching designed around YOUR dog.",
+        "cta": "Book your session",
+        "imageAlt": "Eric & Pennee with their dogs",
+        "badgeKicker": "Certified · Positive · Joyful",
+        "badgeTitle": "100% Fear-Free Training"
+    },
+    "pain": {
+        "title": "You've tried everything,",
+        "titleBreak": "so why isn't it working?",
+        "lead": "It's not because you aren't trying hard enough.",
+        "p1": "It's because those methods ",
+        "p1Highlight": "weren't designed for YOUR dog",
+        "p1End": ".",
+        "p2Pre": "You've watched videos, run drills, copied tips. But unless someone has actually looked at your dog's ",
+        "p2Inline": "daily routine, history, breed traits, and current emotional state",
+        "p2End": ", the real root cause stays hidden.",
+        "boxTitle": "Stuck training isn't your fault. It's information that doesn't fit your situation.",
+        "boxBody": "That's why this online program is different from anything you've tried.",
+        "p3Pre": "This isn't a webinar. It starts with a ",
+        "p3Em1": "full behaviour assessment",
+        "p3Mid": ", and then we hand you a ",
+        "p3Em2": "plan made just for your dog",
+        "p3End": " — what's wrong now, why it's happening, and exactly what to do next.",
+        "p4": "No vague \"go practice more at home.\" You leave with direction."
+    },
+    "expectations": {
+        "title": "✨ What you can expect to change",
+        "subtitle": "After this program, you'll feel:",
+        "ribbon": "60-min online 1-on-1 session",
+        "items": [
+            { "title": "No more being dragged around by your dog's emotions", "desc": "You'll know why they react — and exactly what to do." },
+            { "title": "A real, doable approach to lunging and barking", "desc": "Not theory — practical skills you'll use every single day." },
+            { "title": "You'll start reading your dog's signals", "desc": "Less guessing, less trial-and-error, far less frustration." },
+            { "title": "A calmer, more secure relationship with your dog", "desc": "Not control — real, two-way trust." },
+            { "title": "You'll feel confident again", "desc": "Because you finally know you're on the right track." }
+        ],
+        "summaryPre": "If you've tried everything and nothing's worked,",
+        "summaryMid": "this time, I'll show you ",
+        "summaryEm": "exactly where the real problem is",
+        "summaryEnd": "."
+    },
+    "guarantee": {
+        "label": "Our Promise 🛡️",
+        "title": "If 60 minutes goes by and you still feel unclear,",
+        "titleBreak": "or unsure of what to do next —",
+        "body": "Keep asking. We'll keep explaining until every question is fully answered.",
+        "bodyBreak": "You will not leave this session with doubts. We'll walk with you and your dog until you can:",
+        "items": [
+            "See the real problem clearly",
+            "Feel confident facing your dog",
+            "Know your next step"
+        ]
+    },
+    "flow": {
+        "title": "How the session works",
+        "steps": [
+            { "step": "1", "title": "We learn about your dog first", "desc": "You fill out a short intake form." },
+            { "step": "2", "title": "Pick your time", "desc": "Choose a slot that works for you\nand check out securely." },
+            { "step": "3", "title": "We meet (online)", "desc": "We coach live on Google Meet —\na fresh start with your dog." }
+        ]
+    },
+    "testimonials": {
+        "title": "They found their calm — together"
+    },
+    "philosophy": {
+        "kicker": "Our Philosophy",
+        "title": "Why work with us?",
+        "items": [
+            { "emoji": "🔬", "title": "Science-backed", "desc": "Built on animal behaviour and learning science. No outdated punishment, no aversive tools — just a safe environment where your dog can actually learn." },
+            { "emoji": "🧡", "title": "Positive reinforcement", "desc": "Reward over punishment. We grow your dog's confidence and trust so training becomes something you both look forward to." },
+            { "emoji": "🤝", "title": "Two-way communication", "desc": "We don't just train the dog — we teach you to read calming signals and body language, so you finally understand each other." }
+        ]
+    },
+    "about": {
+        "background": "BOND",
+        "coachAlt": "Coach",
+        "titleEm": "The smart way to train a dog",
+        "titleBreak": "and change your life with them, for good.",
+        "p1Pre": "We're ",
+        "p1Em": "Eric & Pennee",
+        "p1End": ", US-certified professional dog trainers — and parents to Dori & Rito.",
+        "p2": "We know exactly what it feels like to live with a sensitive, reactive dog. The barking, the lunging, the anxiety, the dread of going outside. We've been there.",
+        "p3": "Living with a dog should be joy — not daily breakdowns.",
+        "boxTitle": "Things we'll work on with you:",
+        "boxItems": [
+            "Reactivity / barking at people or dogs",
+            "Resource guarding / separation anxiety / nipping",
+            "Pulling on leash / can't focus outside",
+            "Fearful, easily startled in new places",
+            "Can't be alone / clingy anxiety",
+            "Rebuilding the trust between you"
+        ],
+        "outro": "We're not chasing \"obedient.\" We're after a calmer dog, an easier life, and the real trust between you that makes everything else possible.",
+        "credentials": "Certified Professional Trainers"
+    },
+    "cta": {
+        "title": "Ready for a fresh start",
+        "titleBreak": "with your dog?",
+        "body": "Book your 1-on-1 session today and let's bring back the easy, joyful relationship you deserve.",
+        "button": "Book your session ➔"
+    },
+    "latestPosts": {
+        "title": "From the dog behaviour blog",
+        "viewAll": "Read all articles →"
+    },
+    "pricing": {
+        "tagSingle": "1 online session",
+        "labelGuide": "🎁",
+        "courseHeader": "60-min online 1-on-1 session"
+    }
+}

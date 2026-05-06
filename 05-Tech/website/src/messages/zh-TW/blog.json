@@ -1,0 +1,21 @@
+{
+    "hero": {
+        "title": "狗狗行為文章",
+        "subtitle": "由 KPA / CATCH 認證訓犬師撰寫，幫助你用正向方法一起打造你與毛孩的理想生活"
+    },
+    "filter": {
+        "label": "篩選：",
+        "allPosts": "所有文章"
+    },
+    "pagination": {
+        "showing": "顯示 {count} 篇，共 {total} 篇文章"
+    },
+    "empty": {
+        "title": "文章即將上線！",
+        "body": "我們正在撰寫專業的訓犬知識文章，敬請期待。\n先訂閱電子報，第一時間收到更新通知！"
+    },
+    "card": {
+        "readMore": "閱讀更多 →",
+        "minRead": "{n} 分鐘"
+    }
+}

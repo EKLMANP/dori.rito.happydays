@@ -1,0 +1,39 @@
+{
+    "root": {
+        "titleDefault": "Dori & Rito | 專業正向訓犬服務",
+        "description": "台灣專業 KPA、CATCH 認證正向訓犬師。協助改善吠叫、分離焦慮、暴衝等行為問題，一對一到府與線上服務。",
+        "keywords": "正向訓犬|訓犬師|KPA認證|分離焦慮|幼犬訓練|反應性犬|暴衝|吠叫|台北訓犬"
+    },
+    "home": {
+        "title": "Dori & Rito | KPA 認證正向訓犬師",
+        "description": "台灣專業 KPA、CATCH 認證正向訓犬師。協助改善吠叫、分離焦慮、暴衝等行為問題，一對一到府與線上服務。"
+    },
+    "blog": {
+        "title": "毛孩知識",
+        "description": "Dori & Rito 訓犬師的專業文章 — 行為解析、訓練方法、飼主心法。"
+    },
+    "booking": {
+        "title": "預約課程",
+        "description": "預約 Dori & Rito 一對一線上訓犬課程。"
+    },
+    "contact": {
+        "title": "合作洽詢",
+        "description": "想找 Dori & Rito 合作？歡迎留下訊息。"
+    },
+    "about": {
+        "title": "關於 Dori & Rito",
+        "description": "認識 Dori & Rito 訓犬師團隊。"
+    },
+    "privacy": {
+        "title": "隱私權政策",
+        "description": "Dori & Rito 隱私權政策。"
+    },
+    "terms": {
+        "title": "服務條款",
+        "description": "Dori & Rito 服務條款。"
+    },
+    "thankYou": {
+        "title": "感謝您的訊息",
+        "description": "我們已收到您的訊息。"
+    }
+}
