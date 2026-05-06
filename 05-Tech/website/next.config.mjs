@@ -29,6 +29,8 @@ const nextConfig = {
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          // Allow unload event listeners (needed by PayPal SDK; suppresses Chrome Violation warning).
+          { key: 'Permissions-Policy', value: 'unload=*' },
           // TODO: 正式上線後移除此 header
           { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
         ],

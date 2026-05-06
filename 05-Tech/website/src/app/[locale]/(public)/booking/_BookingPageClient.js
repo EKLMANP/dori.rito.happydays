@@ -154,7 +154,7 @@ function BookingWizard() {
 
             setBookingData(data.bookingData);
             if (data.paymentProvider === 'paypal') {
-                setPaypalInfo({ merchantTradeNo: data.merchantTradeNo, ...data.paypal });
+                setPaypalInfo({ merchantTradeNo: data.merchantTradeNo, ...data.paypal, locale });
             } else {
                 setPaymentFormHtml(data.paymentFormHtml);
             }

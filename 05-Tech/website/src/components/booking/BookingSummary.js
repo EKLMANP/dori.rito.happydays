@@ -169,7 +169,9 @@ function PaypalButtons({ paypalInfo, t }) {
             return;
         }
 
-        const sdkSrc = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=${encodeURIComponent(paypalInfo.currency)}&intent=capture`;
+        // Map next-intl locale → PayPal locale code
+        const paypalLocale = paypalInfo.locale === 'en' ? 'en_US' : 'zh_TW';
+        const sdkSrc = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=${encodeURIComponent(paypalInfo.currency)}&intent=capture&locale=${paypalLocale}`;
 
         let canceled = false;
 
