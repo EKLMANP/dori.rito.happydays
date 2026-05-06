@@ -77,8 +77,9 @@ export function buildNotionProperties(formSections, formResponses) {
             const value = formResponses[String(field.id)];
             if (value === undefined || value === null || value === '') continue;
 
-            // Find matching Notion property mapping
-            const mapping = FIELD_MAPPING.find((m) => field.label.includes(m.match));
+            // Find matching Notion property mapping (use _notion_label when locale=en, fallback to label)
+            const notionLabel = field._notion_label || field.label;
+            const mapping = FIELD_MAPPING.find((m) => notionLabel.includes(m.match));
             if (!mapping) continue;
 
             switch (mapping.type) {

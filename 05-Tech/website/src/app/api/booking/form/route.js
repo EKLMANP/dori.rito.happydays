@@ -6,6 +6,8 @@ import { SEED_FORM_SECTIONS } from '@/lib/seed-data';
 export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const serviceId = searchParams.get('service_id') || 'online-consult';
+    const locale = searchParams.get('locale') === 'en' ? 'en' : 'zh-TW';
+    const isEn = locale === 'en';
 
     try {
         const sections = await sql`
@@ -27,22 +29,39 @@ export async function GET(request) {
             ORDER BY sort_order
         `;
 
-        const result = sections.map((section) => ({
-            id: section.id,
-            title: section.title,
-            description: section.description,
-            fields: fields
-                .filter((f) => f.section_id === section.id)
-                .map((f) => ({
-                    id: f.id,
-                    field_type: f.field_type,
-                    label: f.label,
-                    description: f.description,
-                    placeholder: f.placeholder,
-                    options: f.options,
-                    is_required: f.is_required,
-                })),
-        }));
+        const result = sections.map((section) => {
+            const sectionTitle = isEn && section.en_title ? section.en_title : section.title;
+            const sectionDesc = isEn && section.en_description ? section.en_description : section.description;
+
+            return {
+                id: section.id,
+                title: sectionTitle,
+                description: sectionDesc,
+                // _notion_title preserved for Notion block heading (always Chinese)
+                ...(isEn && section.en_title ? { _notion_title: section.title } : {}),
+                fields: fields
+                    .filter((f) => f.section_id === section.id)
+                    .map((f) => {
+                        const label = isEn && f.en_label ? f.en_label : f.label;
+                        const description = isEn && f.en_description ? f.en_description : f.description;
+                        const placeholder = isEn && f.en_placeholder ? f.en_placeholder : f.placeholder;
+                        const options = isEn && f.en_options ? f.en_options : f.options;
+
+                        return {
+                            id: f.id,
+                            field_type: f.field_type,
+                            label,
+                            description,
+                            placeholder,
+                            options,
+                            is_required: f.is_required,
+                            // _notion_* preserved for Notion property matching (always Chinese)
+                            ...(isEn && f.en_label ? { _notion_label: f.label } : {}),
+                            ...(isEn && f.en_options ? { _notion_options: f.options } : {}),
+                        };
+                    }),
+            };
+        });
 
         return NextResponse.json(result);
     } catch (err) {

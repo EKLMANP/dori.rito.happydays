@@ -51,7 +51,7 @@ function BookingWizard() {
 
         async function loadForm() {
             try {
-                const res = await fetch(`/api/booking/form?service_id=${serviceId}`);
+                const res = await fetch(`/api/booking/form?service_id=${serviceId}&locale=${locale}`);
                 if (!res.ok) throw new Error(`API returned ${res.status}`);
                 const data = await res.json();
                 setFormSections(data);
@@ -296,8 +296,9 @@ function extractCustomerInfo(sections, responses) {
         for (const field of section.fields || []) {
             const val = responses[String(field.id)];
             if (!val) continue;
+            const matchLabel = field._notion_label || field.label;
             for (const [pattern, prop] of Object.entries(labelMap)) {
-                if (field.label.includes(pattern)) {
+                if (matchLabel.includes(pattern)) {
                     if (prop === 'name') name = val;
                     if (prop === 'email') email = val;
                     if (prop === 'phone') phone = val;
