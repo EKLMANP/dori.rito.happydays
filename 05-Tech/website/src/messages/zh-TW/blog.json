@@ -17,5 +17,11 @@
     "card": {
         "readMore": "閱讀更多 →",
         "minRead": "{n} 分鐘"
+    },
+    "post": {
+        "home": "首頁",
+        "blogSection": "狗狗行為文章",
+        "readingTime": "約 {n} 分鐘閱讀",
+        "relatedTopics": "相關主題："
     }
 }

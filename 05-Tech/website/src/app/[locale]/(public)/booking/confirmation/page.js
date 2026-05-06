@@ -73,7 +73,7 @@ function PendingPaymentView({ orderNo, orderData }) {
                             {info.paymentURL && (
                                 <a href={info.paymentURL} target="_blank" rel="noopener noreferrer"
                                     className="inline-block mt-3 text-sm text-brand-orange underline">
-                                    查看繳費說明 →
+                                    {t('viewInstructions')}
                                 </a>
                             )}
                         </div>
@@ -94,7 +94,7 @@ function PendingPaymentView({ orderNo, orderData }) {
                             {info.paymentURL && (
                                 <a href={info.paymentURL} target="_blank" rel="noopener noreferrer"
                                     className="inline-block mt-3 text-sm text-brand-orange underline">
-                                    查看繳費說明 →
+                                    {t('viewInstructions')}
                                 </a>
                             )}
                         </div>

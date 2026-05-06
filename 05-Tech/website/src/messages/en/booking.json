@@ -75,6 +75,7 @@
             "cvsCode": "Convenience store code",
             "barcode": "Barcode",
             "barcodeDesc": "Show this barcode at any convenience store to pay",
+            "viewInstructions": "View payment instructions →",
             "afterPayment": "Once payment is confirmed, we'll send your booking confirmation, Google Calendar invite, and Google Meet link to your email.",
             "homeBtn": "Back to home",
             "contactBtn": "Contact us"

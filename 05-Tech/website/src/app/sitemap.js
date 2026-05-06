@@ -1,29 +1,41 @@
 import { getAllPostSlugs } from '@/lib/ghost';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://doriritohappydays.com';
+const LOCALES = ['zh-TW', 'en'];
 
-// Static pages
-const STATIC_PAGES = [
-    { url: SITE_URL, priority: 1.0, changeFrequency: 'weekly' },
-    { url: `${SITE_URL}/about`, priority: 0.8, changeFrequency: 'monthly' },
-    { url: `${SITE_URL}/services`, priority: 0.9, changeFrequency: 'monthly' },
-    { url: `${SITE_URL}/blog`, priority: 0.9, changeFrequency: 'daily' },
-    { url: `${SITE_URL}/contact`, priority: 0.7, changeFrequency: 'monthly' },
+const STATIC_PATHS = [
+    { path: '', priority: 1.0, changeFrequency: 'weekly' },
+    { path: '/about', priority: 0.8, changeFrequency: 'monthly' },
+    { path: '/services', priority: 0.9, changeFrequency: 'monthly' },
+    { path: '/blog', priority: 0.9, changeFrequency: 'daily' },
+    { path: '/contact', priority: 0.7, changeFrequency: 'monthly' },
 ];
 
-export default async function sitemap() {
-    let blogPages = [];
+function localeEntries(path, priority, changeFrequency) {
+    return LOCALES.map((locale) => ({
+        url: `${SITE_URL}/${locale}${path}`,
+        priority,
+        changeFrequency,
+        alternates: {
+            languages: Object.fromEntries(LOCALES.map((l) => [l, `${SITE_URL}/${l}${path}`])),
+        },
+    }));
+}
 
+export default async function sitemap() {
+    const staticEntries = STATIC_PATHS.flatMap(({ path, priority, changeFrequency }) =>
+        localeEntries(path, priority, changeFrequency)
+    );
+
+    let blogEntries = [];
     try {
         const slugs = await getAllPostSlugs();
-        blogPages = slugs.map(({ slug }) => ({
-            url: `${SITE_URL}/blog/${slug}`,
-            priority: 0.8,
-            changeFrequency: 'monthly',
-        }));
+        blogEntries = slugs.flatMap(({ slug }) =>
+            localeEntries(`/blog/${slug}`, 0.8, 'monthly')
+        );
     } catch {
         // Ghost not yet deployed — return static pages only
     }
 
-    return [...STATIC_PAGES, ...blogPages];
+    return [...staticEntries, ...blogEntries];
 }

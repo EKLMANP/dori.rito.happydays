@@ -1,15 +1,16 @@
+import { setRequestLocale, getTranslations } from 'next-intl/server';
 import { getPostBySlug, getAllPostSlugs, getRelatedPosts } from '@/lib/ghost';
 import { extractHeadings, injectHeadingIds } from '@/lib/toc';
 import { articleSchema } from '@/lib/schema';
 import { BRAND } from '@/lib/constants';
+import { buildAlternates } from '@/lib/metadata';
+import { Link } from '@/i18n/navigation';
 import NewsletterCTA from '@/components/NewsletterCTA';
-import BlogCard from '@/components/BlogCard';
 import RelatedPosts from '@/components/RelatedPosts';
 import GhostVideoPlayer from '@/components/GhostVideoPlayer';
 
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
-import Link from 'next/link';
 
 export const revalidate = 300;
 
@@ -19,9 +20,9 @@ export async function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }) {
-    const resolvedParams = await params;
-    const post = await getPostBySlug(resolvedParams.slug);
-    if (!post) return { title: '文章不存在' };
+    const { locale, slug } = await params;
+    const post = await getPostBySlug(slug);
+    if (!post) return { title: locale === 'en' ? 'Post not found' : '文章不存在' };
     return {
         title: post.title,
         description: post.excerpt,
@@ -32,19 +33,22 @@ export async function generateMetadata({ params }) {
             type: 'article',
             publishedTime: post.published_at,
         },
-        alternates: { canonical: `/blog/${post.slug}` },
+        alternates: buildAlternates({ locale, path: `/blog/${post.slug}` }),
     };
 }
 
 export default async function BlogPostPage({ params }) {
-    const resolvedParams = await params;
-    const post = await getPostBySlug(resolvedParams.slug);
+    const { locale, slug } = await params;
+    setRequestLocale(locale);
+    const t = await getTranslations({ locale, namespace: 'blog' });
+
+    const post = await getPostBySlug(slug);
     if (!post) notFound();
 
     const relatedPosts = await getRelatedPosts(post.slug, post.tags);
 
     const formattedDate = post.published_at
-        ? new Date(post.published_at).toLocaleDateString('zh-TW', {
+        ? new Date(post.published_at).toLocaleDateString(locale, {
             year: 'numeric', month: 'long', day: 'numeric',
         })
         : '';
@@ -68,9 +72,9 @@ export default async function BlogPostPage({ params }) {
             <article style={{ maxWidth: '760px', margin: '0 auto', padding: '3rem 1.5rem 2rem' }}>
                 {/* Breadcrumb */}
                 <nav style={{ marginBottom: '1.5rem', fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
-                    <Link href="/">首頁</Link>
+                    <Link href="/">{t('post.home')}</Link>
                     {' / '}
-                    <Link href="/blog">毛孩知識</Link>
+                    <Link href="/blog">{t('post.blogSection')}</Link>
                     {post.primary_tag && (
                         <>
                             {' / '}
@@ -90,7 +94,7 @@ export default async function BlogPostPage({ params }) {
                     borderBottom: '1px solid var(--color-border)',
                 }}>
                     <span>📅 {formattedDate}</span>
-                    {post.reading_time && <span>⏱️ 約 {post.reading_time} 分鐘閱讀</span>}
+                    {post.reading_time && <span>⏱️ {t('post.readingTime', { n: post.reading_time })}</span>}
                     <span>✍️ {BRAND.nameShort}</span>
                 </div>
 
@@ -129,7 +133,7 @@ export default async function BlogPostPage({ params }) {
                 {/* Tags */}
                 {post.tags && post.tags.length > 0 && (
                     <div style={{ marginTop: '3rem', paddingTop: '1.5rem', borderTop: '1px solid var(--color-border)' }}>
-                        <span style={{ fontWeight: 700, fontSize: '0.9rem', marginRight: '0.75rem' }}>相關主題：</span>
+                        <span style={{ fontWeight: 700, fontSize: '0.9rem', marginRight: '0.75rem' }}>{t('post.relatedTopics')}</span>
                         {post.tags
                             .filter((tag) => tag.visibility === 'public' && !tag.name.startsWith('#'))
                             .map((tag) => (
