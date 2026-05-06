@@ -2,6 +2,42 @@ import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { SEED_FORM_SECTIONS } from '@/lib/seed-data';
 
+// Applies locale overlay to sections (works for both DB rows and fallback seed data).
+// Always strips en_* fields from the response to keep the API payload clean.
+function applyLocale(sections, isEn) {
+    return sections.map((section) => {
+        const title = (isEn && section.en_title) ? section.en_title : section.title;
+        const description = (isEn && section.en_description) ? section.en_description : section.description;
+        return {
+            ...section,
+            title,
+            description,
+            ...(isEn && section.en_title ? { _notion_title: section.title } : {}),
+            en_title: undefined,
+            en_description: undefined,
+            fields: (section.fields || []).map((f) => {
+                const label = (isEn && f.en_label) ? f.en_label : f.label;
+                const desc = (isEn && f.en_description) ? f.en_description : f.description;
+                const placeholder = (isEn && f.en_placeholder) ? f.en_placeholder : f.placeholder;
+                const options = (isEn && f.en_options) ? f.en_options : f.options;
+                return {
+                    ...f,
+                    label,
+                    description: desc,
+                    placeholder,
+                    options,
+                    ...(isEn && f.en_label ? { _notion_label: f.label } : {}),
+                    ...(isEn && f.en_options ? { _notion_options: f.options } : {}),
+                    en_label: undefined,
+                    en_description: undefined,
+                    en_placeholder: undefined,
+                    en_options: undefined,
+                };
+            }),
+        };
+    });
+}
+
 // GET: Public — get form schema for a service
 export async function GET(request) {
     const { searchParams } = new URL(request.url);
@@ -17,9 +53,8 @@ export async function GET(request) {
         `;
 
         if (sections.length === 0) {
-            return NextResponse.json(
-                SEED_FORM_SECTIONS.filter(s => s.service_id === serviceId)
-            );
+            const fallback = SEED_FORM_SECTIONS.filter(s => s.service_id === serviceId);
+            return NextResponse.json(applyLocale(fallback, isEn));
         }
 
         const sectionIds = sections.map((s) => s.id);
@@ -29,45 +64,30 @@ export async function GET(request) {
             ORDER BY sort_order
         `;
 
-        const result = sections.map((section) => {
-            const sectionTitle = isEn && section.en_title ? section.en_title : section.title;
-            const sectionDesc = isEn && section.en_description ? section.en_description : section.description;
-
-            return {
-                id: section.id,
-                title: sectionTitle,
-                description: sectionDesc,
-                // _notion_title preserved for Notion block heading (always Chinese)
-                ...(isEn && section.en_title ? { _notion_title: section.title } : {}),
-                fields: fields
-                    .filter((f) => f.section_id === section.id)
-                    .map((f) => {
-                        const label = isEn && f.en_label ? f.en_label : f.label;
-                        const description = isEn && f.en_description ? f.en_description : f.description;
-                        const placeholder = isEn && f.en_placeholder ? f.en_placeholder : f.placeholder;
-                        const options = isEn && f.en_options ? f.en_options : f.options;
-
-                        return {
-                            id: f.id,
-                            field_type: f.field_type,
-                            label,
-                            description,
-                            placeholder,
-                            options,
-                            is_required: f.is_required,
-                            // _notion_* preserved for Notion property matching (always Chinese)
-                            ...(isEn && f.en_label ? { _notion_label: f.label } : {}),
-                            ...(isEn && f.en_options ? { _notion_options: f.options } : {}),
-                        };
-                    }),
-            };
-        });
+        const result = sections.map((section) => ({
+            id: section.id,
+            title: isEn && section.en_title ? section.en_title : section.title,
+            description: isEn && section.en_description ? section.en_description : section.description,
+            ...(isEn && section.en_title ? { _notion_title: section.title } : {}),
+            fields: fields
+                .filter((f) => f.section_id === section.id)
+                .map((f) => ({
+                    id: f.id,
+                    field_type: f.field_type,
+                    label: isEn && f.en_label ? f.en_label : f.label,
+                    description: isEn && f.en_description ? f.en_description : f.description,
+                    placeholder: isEn && f.en_placeholder ? f.en_placeholder : f.placeholder,
+                    options: isEn && f.en_options ? f.en_options : f.options,
+                    is_required: f.is_required,
+                    ...(isEn && f.en_label ? { _notion_label: f.label } : {}),
+                    ...(isEn && f.en_options ? { _notion_options: f.options } : {}),
+                })),
+        }));
 
         return NextResponse.json(result);
     } catch (err) {
         console.error('[form API] DB query failed, using fallback:', err.message);
-        return NextResponse.json(
-            SEED_FORM_SECTIONS.filter(s => s.service_id === serviceId)
-        );
+        const fallback = SEED_FORM_SECTIONS.filter(s => s.service_id === serviceId);
+        return NextResponse.json(applyLocale(fallback, isEn));
     }
 }

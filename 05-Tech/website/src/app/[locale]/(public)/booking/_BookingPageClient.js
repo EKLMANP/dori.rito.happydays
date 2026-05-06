@@ -30,6 +30,7 @@ export default function BookingPageClient() {
 
 function BookingWizard() {
     const t = useTranslations('booking');
+    const locale = useLocale();
     const searchParams = useSearchParams();
     const serviceId = searchParams.get('service') || DEFAULT_SERVICE;
 
@@ -62,7 +63,7 @@ function BookingWizard() {
             setFormLoading(false);
         }
         loadForm();
-    }, [serviceId, t]);
+    }, [serviceId, locale, t]);
 
     const handleFieldChange = useCallback((fieldId, value) => {
         setFormResponses(prev => ({ ...prev, [String(fieldId)]: value }));
