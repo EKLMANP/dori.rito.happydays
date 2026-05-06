@@ -79,13 +79,17 @@ export async function GET(request) {
     }));
 
     // 5. Check for availability calendar (new: single source of truth)
+    // Skipped when slot_rules.use_availability_calendar = false (e.g. test services using DB rules).
     let availabilityWindows = null;
     let availabilityMode = false;
-    try {
-        availabilityWindows = await getAvailabilityWindows(calendarStart, calendarEnd);
-        if (availabilityWindows !== null) availabilityMode = true;
-    } catch (err) {
-        console.error('[booking/slots] Availability calendar failed:', err);
+    const skipAvailabilityCalendar = rule.use_availability_calendar === false;
+    if (!skipAvailabilityCalendar) {
+        try {
+            availabilityWindows = await getAvailabilityWindows(calendarStart, calendarEnd);
+            if (availabilityWindows !== null) availabilityMode = true;
+        } catch (err) {
+            console.error('[booking/slots] Availability calendar failed:', err);
+        }
     }
 
     // 6. Generate slots
