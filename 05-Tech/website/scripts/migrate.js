@@ -147,6 +147,15 @@ async function migrate() {
     await sql`CREATE INDEX IF NOT EXISTS idx_processed_orders_expire ON processed_orders (payment_expire_at) WHERE payment_status = 'in_progress'`;
     console.log('✅ processed_orders payment lifecycle columns ensured');
 
+    // Phase 2 — multi-provider payment columns (ECPay + PayPal)
+    await sql`ALTER TABLE processed_orders ADD COLUMN IF NOT EXISTS payment_provider TEXT DEFAULT 'ecpay'`;
+    await sql`ALTER TABLE processed_orders ADD COLUMN IF NOT EXISTS paypal_order_id TEXT`;
+    await sql`ALTER TABLE processed_orders ADD COLUMN IF NOT EXISTS paypal_capture_id TEXT`;
+    await sql`ALTER TABLE processed_orders ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'TWD'`;
+    await sql`ALTER TABLE processed_orders ADD COLUMN IF NOT EXISTS amount_charged INTEGER`;
+    await sql`CREATE INDEX IF NOT EXISTS idx_processed_orders_paypal ON processed_orders (paypal_order_id) WHERE paypal_order_id IS NOT NULL`;
+    console.log('✅ processed_orders multi-provider columns ensured');
+
     console.log('\n🎉 Migration complete — all 7 tables created.');
 }
 

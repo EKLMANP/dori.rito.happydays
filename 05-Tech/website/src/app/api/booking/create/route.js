@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { validateFormResponses } from '@/lib/form-validator';
 import { generateTradeNo, createPaymentOrder } from '@/lib/ecpay';
+import { createPaypalOrder, convertTwdToPaypalAmount } from '@/lib/paypal';
 import { generateBookingToken } from '@/lib/booking-token';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
+
+const VALID_PROVIDERS = new Set(['ecpay', 'paypal']);
 
 /**
  * POST /api/booking/create
@@ -34,6 +37,7 @@ export async function POST(request) {
 
     const body = await request.json();
     const { serviceId, slotDate, slotTime, formResponses, formSections, customerName, email, phone, dogName, notionPageId } = body;
+    const paymentProvider = VALID_PROVIDERS.has(body.paymentProvider) ? body.paymentProvider : 'ecpay';
 
     // Basic validation
     if (!serviceId || !slotDate || !slotTime || !customerName || !email) {
@@ -88,14 +92,29 @@ export async function POST(request) {
         createdAt: new Date().toISOString(),
     };
 
+    // Compute PayPal-side currency/amount up-front so it can be persisted alongside the order.
+    let paypalAmount = null;
+    if (paymentProvider === 'paypal') {
+        try {
+            paypalAmount = convertTwdToPaypalAmount(service.price);
+        } catch (err) {
+            console.error('[booking/create] PayPal currency conversion failed:', err.message);
+            return NextResponse.json({ error: '海外金流設定錯誤，請聯絡客服' }, { status: 500 });
+        }
+    }
+
     // 5b. Persist pending booking data (processed_at = NULL means awaiting payment)
     // Initial state: payment_status='pending', order_status='not_started'
     try {
         await sql`
             INSERT INTO processed_orders
-                (merchant_trade_no, booking_data, processed_at, payment_status, order_status)
+                (merchant_trade_no, booking_data, processed_at, payment_status, order_status,
+                 payment_provider, currency, amount_charged)
             VALUES
-                (${merchantTradeNo}, ${JSON.stringify(bookingData)}, NULL, 'pending', 'not_started')
+                (${merchantTradeNo}, ${JSON.stringify(bookingData)}, NULL, 'pending', 'not_started',
+                 ${paymentProvider},
+                 ${paypalAmount?.currency || 'TWD'},
+                 ${paypalAmount ? Math.round(parseFloat(paypalAmount.value) * 100) : service.price})
             ON CONFLICT (merchant_trade_no) DO NOTHING
         `;
     } catch (dbErr) {
@@ -136,14 +155,64 @@ export async function POST(request) {
         })();
     }
 
-    // 6. Create ECPay payment order
+    // 6. Create payment order (branched by provider)
     // clientBackUrl: use request origin so browser redirects back to the same host
     // (localhost in dev, production domain in prod)
     const requestUrl = new URL(request.url);
     const clientBackBase = `${requestUrl.protocol}//${requestUrl.host}`;
-    // returnUrl (webhook): must be publicly accessible — ECPay server calls this
+    // returnUrl (webhook): must be publicly accessible — gateway server calls this
     const webhookBase = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
+    const summaryPayload = {
+        customerName,
+        dogName,
+        slotDate,
+        slotTime,
+        serviceName: service.name,
+        price: service.price,
+    };
+
+    if (paymentProvider === 'paypal') {
+        try {
+            const order = await createPaypalOrder({
+                merchantTradeNo,
+                twdPrice: service.price,
+                itemName: service.name,
+                description: `Dori & Rito ${service.name}`,
+                returnUrl: `${clientBackBase}/booking/confirmation?order=${merchantTradeNo}`,
+                cancelUrl: `${clientBackBase}/booking?canceled=${merchantTradeNo}`,
+            });
+
+            await sql`
+                UPDATE processed_orders
+                SET paypal_order_id = ${order.id}
+                WHERE merchant_trade_no = ${merchantTradeNo}
+            `;
+
+            return NextResponse.json({
+                success: true,
+                merchantTradeNo,
+                price: service.price,
+                serviceName: service.name,
+                paymentProvider: 'paypal',
+                paypal: {
+                    orderId: order.id,
+                    clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '',
+                    currency: order.amount.currency,
+                    value: order.amount.value,
+                },
+                bookingData: { ...summaryPayload, paypalAmount: order.amount },
+            });
+        } catch (err) {
+            console.error('[booking/create] PayPal error:', err);
+            return NextResponse.json(
+                { error: '建立 PayPal 訂單失敗，請稍後再試' },
+                { status: 500 }
+            );
+        }
+    }
+
+    // Default: ECPay
     try {
         const { html } = await createPaymentOrder({
             merchantTradeNo,
@@ -163,15 +232,9 @@ export async function POST(request) {
             merchantTradeNo,
             price: service.price,
             serviceName: service.name,
+            paymentProvider: 'ecpay',
             paymentFormHtml: html,
-            bookingData: {
-                customerName,
-                dogName,
-                slotDate,
-                slotTime,
-                serviceName: service.name,
-                price: service.price,
-            },
+            bookingData: summaryPayload,
         });
     } catch (err) {
         console.error('[booking/create] ECPay error:', err);

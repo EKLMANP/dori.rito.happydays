@@ -55,6 +55,7 @@ function BookingWizard() {
 
     // Step 3: Payment
     const [paymentFormHtml, setPaymentFormHtml] = useState(null);
+    const [paypalInfo, setPaypalInfo] = useState(null);
     const [bookingData, setBookingData] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState(null);
@@ -139,24 +140,30 @@ function BookingWizard() {
             datetime: `${date} ${time}`,
         });
         setSelectedSlot({ date, time, start, end });
-        // Auto-advance to step 3
-        advanceToPayment(date, time);
+        // Advance to step 3 — order is created when user picks a payment method
+        setStep(3);
+        const customerInfo = extractCustomerInfo(formSections, formResponses);
+        setBookingData({
+            serviceName: '',
+            slotDate: date,
+            slotTime: time,
+            customerName: customerInfo.name,
+            dogName: customerInfo.dogName,
+            price: 0,
+        });
+        trackEvent('payment_view', { service_id: serviceId });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // Advance to payment step
-    async function advanceToPayment(date, time) {
-        setStep(3);
+    // Create payment order with the chosen provider (called from BookingSummary)
+    async function handleSelectProvider(paymentProvider) {
+        if (!selectedSlot) return;
         setIsProcessing(true);
         setError(null);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setPaymentFormHtml(null);
+        setPaypalInfo(null);
 
-        // Extract customer info from form responses
         const customerInfo = extractCustomerInfo(formSections, formResponses);
-
-        trackEvent('payment_view', {
-            service_id: serviceId,
-            price: customerInfo.price,
-        });
 
         try {
             const res = await fetch('/api/booking/create', {
@@ -164,8 +171,8 @@ function BookingWizard() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     serviceId,
-                    slotDate: date,
-                    slotTime: time,
+                    slotDate: selectedSlot.date,
+                    slotTime: selectedSlot.time,
                     formResponses,
                     formSections,
                     customerName: customerInfo.name,
@@ -173,6 +180,7 @@ function BookingWizard() {
                     phone: customerInfo.phone,
                     dogName: customerInfo.dogName,
                     notionPageId,
+                    paymentProvider,
                 }),
             });
 
@@ -182,8 +190,19 @@ function BookingWizard() {
                 throw new Error(data.error || '建立訂單失敗');
             }
 
-            setPaymentFormHtml(data.paymentFormHtml);
             setBookingData(data.bookingData);
+            if (data.paymentProvider === 'paypal') {
+                setPaypalInfo({
+                    merchantTradeNo: data.merchantTradeNo,
+                    ...data.paypal,
+                });
+            } else {
+                setPaymentFormHtml(data.paymentFormHtml);
+            }
+            trackEvent('payment_provider_select', {
+                provider: data.paymentProvider,
+                merchant_trade_no: data.merchantTradeNo,
+            });
         } catch (err) {
             console.error('Failed to create booking:', err);
             setError(err.message || '建立訂單時發生錯誤，請重試');
@@ -208,6 +227,7 @@ function BookingWizard() {
         setStep(1);
         setSelectedSlot(null);
         setPaymentFormHtml(null);
+        setPaypalInfo(null);
         setBookingData(null);
         setError(null);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -216,6 +236,7 @@ function BookingWizard() {
     function goBackToSlots() {
         setStep(2);
         setPaymentFormHtml(null);
+        setPaypalInfo(null);
         setBookingData(null);
         setError(null);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -292,7 +313,9 @@ function BookingWizard() {
                                 price: 0,
                             }}
                             paymentFormHtml={paymentFormHtml}
+                            paypalInfo={paypalInfo}
                             isProcessing={isProcessing}
+                            onSelectProvider={handleSelectProvider}
                             onBack={goBackToSlots}
                             onSubmitPayment={handleSubmitPayment}
                         />
