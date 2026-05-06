@@ -247,15 +247,7 @@ const FIELD_TRANSLATIONS = [
 
 async function runSeed() {
     console.log('Running form English translation seed...\n');
-
-    // Run migration first
-    try {
-        await sql.unsafe(migration());
-        console.log('✓ Migration: en_ columns added (or already existed)');
-    } catch (err) {
-        console.error('Migration failed:', err.message);
-        process.exit(1);
-    }
+    console.log('(Migration assumed already run — skipping ALTER TABLE)\n');
 
     // Seed sections
     let sectionUpdated = 0;
@@ -266,24 +258,37 @@ async function runSeed() {
                 en_title = ${t.en_title},
                 en_description = ${t.en_description}
             WHERE title ILIKE ${'%' + t.match + '%'}
+            RETURNING id
         `;
-        sectionUpdated += result.count;
+        sectionUpdated += result.length;
     }
     console.log(`✓ Sections: ${sectionUpdated} row(s) updated`);
 
     // Seed fields
     let fieldUpdated = 0;
     for (const t of FIELD_TRANSLATIONS) {
-        const result = await sql`
-            UPDATE form_fields
-            SET
-                en_label = ${t.en_label},
-                en_description = ${t.en_description},
-                en_placeholder = ${t.en_placeholder},
-                en_options = ${t.en_options ? sql.json(JSON.parse(t.en_options)) : null}
-            WHERE label ILIKE ${'%' + t.match + '%'}
-        `;
-        fieldUpdated += result.count;
+        const result = t.en_options
+            ? await sql`
+                UPDATE form_fields
+                SET
+                    en_label = ${t.en_label},
+                    en_description = ${t.en_description},
+                    en_placeholder = ${t.en_placeholder},
+                    en_options = ${t.en_options}::jsonb
+                WHERE label ILIKE ${'%' + t.match + '%'}
+                RETURNING id
+              `
+            : await sql`
+                UPDATE form_fields
+                SET
+                    en_label = ${t.en_label},
+                    en_description = ${t.en_description},
+                    en_placeholder = ${t.en_placeholder},
+                    en_options = NULL
+                WHERE label ILIKE ${'%' + t.match + '%'}
+                RETURNING id
+              `;
+        fieldUpdated += result.length;
     }
     console.log(`✓ Fields: ${fieldUpdated} row(s) updated`);
 
