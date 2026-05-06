@@ -9,7 +9,7 @@
  * Env vars:
  *   PAYPAL_CLIENT_ID
  *   PAYPAL_CLIENT_SECRET
- *   PAYPAL_API_BASE         (default: https://api-m.sandbox.paypal.com)
+ *   PAYPAL_API_BASE         (default: https://api-m.paypal.com — set to sandbox URL in .env.local for local dev)
  *   PAYPAL_WEBHOOK_ID       (used for webhook verify)
  *   PAYPAL_CURRENCY         (default: USD)
  *   PAYPAL_TWD_TO_USD_RATE  (default: 33)  — TWD per 1 USD; bake buffer in here
@@ -21,7 +21,8 @@ const stripEnv = (v) => {
     return s.endsWith('\\n') ? s.slice(0, -2) : s;
 };
 
-const API_BASE = () => stripEnv(process.env.PAYPAL_API_BASE) || 'https://api-m.sandbox.paypal.com';
+// Default to Live. Set PAYPAL_API_BASE=https://api-m.sandbox.paypal.com in .env.local for Sandbox.
+const API_BASE = () => stripEnv(process.env.PAYPAL_API_BASE) || 'https://api-m.paypal.com';
 const CLIENT_ID = () => stripEnv(process.env.PAYPAL_CLIENT_ID);
 const CLIENT_SECRET = () => stripEnv(process.env.PAYPAL_CLIENT_SECRET);
 const WEBHOOK_ID = () => stripEnv(process.env.PAYPAL_WEBHOOK_ID);
