@@ -23,5 +23,9 @@
         "blogSection": "狗狗行為文章",
         "readingTime": "約 {n} 分鐘閱讀",
         "relatedTopics": "相關主題："
+    },
+    "fallbackBanner": {
+        "title": "尚未提供英文版",
+        "body": "此篇文章目前僅有繁體中文版本，英文翻譯正在準備中。"
     }
 }

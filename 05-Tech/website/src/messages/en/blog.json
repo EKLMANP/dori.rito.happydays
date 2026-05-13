@@ -23,5 +23,9 @@
         "blogSection": "Blog",
         "readingTime": "~{n} min read",
         "relatedTopics": "Related topics:"
+    },
+    "fallbackBanner": {
+        "title": "Not yet available in English",
+        "body": "This article hasn't been translated yet. Showing the original Chinese version."
     }
 }

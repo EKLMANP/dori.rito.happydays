@@ -1,4 +1,4 @@
-import { getAllPostSlugs } from '@/lib/ghost';
+import { getAllPostsForSitemap } from '@/lib/ghost';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://doriritohappydays.com';
 const LOCALES = ['zh-TW', 'en'];
@@ -29,10 +29,23 @@ export default async function sitemap() {
 
     let blogEntries = [];
     try {
-        const slugs = await getAllPostSlugs();
-        blogEntries = slugs.flatMap(({ slug }) =>
-            localeEntries(`/blog/${slug}`, 0.8, 'monthly')
-        );
+        const posts = await getAllPostsForSitemap();
+        // Each post is emitted only for its own locale.
+        // If a paired slug exists, alternates.languages includes both locales.
+        blogEntries = posts.map(({ slug, locale, pairedSlugs }) => {
+            const languages = {};
+            for (const [l, s] of Object.entries(pairedSlugs)) {
+                languages[l] = `${SITE_URL}/${l}/blog/${s}`;
+            }
+            // Always include the post's own locale
+            languages[locale] = `${SITE_URL}/${locale}/blog/${slug}`;
+            return {
+                url: `${SITE_URL}/${locale}/blog/${slug}`,
+                priority: 0.8,
+                changeFrequency: 'monthly',
+                alternates: Object.keys(languages).length > 1 ? { languages } : undefined,
+            };
+        });
     } catch {
         // Ghost not yet deployed — return static pages only
     }

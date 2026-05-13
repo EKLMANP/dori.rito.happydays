@@ -1,5 +1,5 @@
 import { setRequestLocale, getTranslations } from 'next-intl/server';
-import { getPostBySlug, getAllPostSlugs, getRelatedPosts } from '@/lib/ghost';
+import { getPostBySlug, getAllPostSlugs, getRelatedPosts, getPairedSlug } from '@/lib/ghost';
 import { extractHeadings, injectHeadingIds } from '@/lib/toc';
 import { articleSchema } from '@/lib/schema';
 import { BRAND } from '@/lib/constants';
@@ -9,20 +9,31 @@ import NewsletterCTA from '@/components/NewsletterCTA';
 import RelatedPosts from '@/components/RelatedPosts';
 import GhostVideoPlayer from '@/components/GhostVideoPlayer';
 
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import Image from 'next/image';
 
 export const revalidate = 300;
 
 export async function generateStaticParams() {
-    const slugs = await getAllPostSlugs();
-    return slugs;
+    // Returns [{ locale, slug }] — only emit the correct locale per post
+    const slugsWithLocale = await getAllPostSlugs();
+    return slugsWithLocale;
 }
 
 export async function generateMetadata({ params }) {
     const { locale, slug } = await params;
-    const post = await getPostBySlug(slug);
+
+    // Fetch without locale check so metadata always has content (redirect handled in page component)
+    const raw = await getPostBySlug(slug);
+    const post = raw?.post ?? raw; // support both { post } shape and direct post
     if (!post) return { title: locale === 'en' ? 'Post not found' : '文章不存在' };
+
+    // Build slugsByLocale for correct per-locale hreflang alternates
+    const otherLocale = locale === 'zh-TW' ? 'en' : 'zh-TW';
+    const pairedSlug = await getPairedSlug(post, otherLocale);
+    const slugsByLocale = { [locale]: post.slug };
+    if (pairedSlug) slugsByLocale[otherLocale] = pairedSlug;
+
     return {
         title: post.title,
         description: post.excerpt,
@@ -33,7 +44,7 @@ export async function generateMetadata({ params }) {
             type: 'article',
             publishedTime: post.published_at,
         },
-        alternates: buildAlternates({ locale, path: `/blog/${post.slug}` }),
+        alternates: buildAlternates({ locale, slugsByLocale }),
     };
 }
 
@@ -42,10 +53,21 @@ export default async function BlogPostPage({ params }) {
     setRequestLocale(locale);
     const t = await getTranslations({ locale, namespace: 'blog' });
 
-    const post = await getPostBySlug(slug);
-    if (!post) notFound();
+    // Locale-aware fetch:
+    //   { post, isFallback: false } — correct locale ✓
+    //   { post, isFallback: true }  — no translation exists; show fallback banner
+    //   { shouldRedirect, targetSlug } — slug belongs to another locale; redirect
+    //   null — post not found
+    const result = await getPostBySlug(slug, locale);
+    if (!result) notFound();
 
-    const relatedPosts = await getRelatedPosts(post.slug, post.tags);
+    if (result.shouldRedirect) {
+        redirect(`/${locale}/blog/${result.targetSlug}`);
+    }
+
+    const { post, isFallback } = result;
+
+    const relatedPosts = await getRelatedPosts(post.slug, post.tags, locale);
 
     const formattedDate = post.published_at
         ? new Date(post.published_at).toLocaleDateString(locale, {
@@ -70,6 +92,29 @@ export default async function BlogPostPage({ params }) {
             />
 
             <article style={{ maxWidth: '760px', margin: '0 auto', padding: '3rem 1.5rem 2rem' }}>
+                {/* Fallback banner — shown when no translation exists for the requested locale */}
+                {isFallback && (
+                    <div style={{
+                        marginBottom: '1.5rem',
+                        padding: '0.875rem 1.25rem',
+                        background: '#FFF8F0',
+                        border: '1px solid #FDDCB5',
+                        borderRadius: '8px',
+                        display: 'flex',
+                        gap: '0.75rem',
+                        alignItems: 'flex-start',
+                        fontSize: '0.9rem',
+                    }}>
+                        <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>🌐</span>
+                        <div>
+                            <strong>{t('fallbackBanner.title')}</strong>
+                            <p style={{ margin: '0.25rem 0 0', color: 'var(--color-text-muted)' }}>
+                                {t('fallbackBanner.body')}
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 {/* Breadcrumb */}
                 <nav style={{ marginBottom: '1.5rem', fontSize: '0.875rem', color: 'var(--color-text-muted)' }}>
                     <Link href="/">{t('post.home')}</Link>

@@ -26,7 +26,7 @@ export default async function BlogListPage({ params, searchParams }) {
     const tagFilter = resolvedSearchParams?.tag || '';
 
     const [{ posts, meta }, tags] = await Promise.all([
-        getPosts({ limit: 12, tag: tagFilter }),
+        getPosts({ locale, limit: 12, tag: tagFilter }),
         getTags(),
     ]);
 
