@@ -1,5 +1,41 @@
 import GhostContentAPI from '@tryghost/content-api';
 
+// ---------------------------------------------------------------------------
+// Locale helpers
+// Ghost internal tag slugs for language detection.
+// In Ghost, internal tags (#name) are stored with slugs starting with "hash-".
+// ---------------------------------------------------------------------------
+const LOCALE_TAG_SLUG = {
+    'zh-TW': 'hash-lang-zh-tw',
+    'en': 'hash-lang-en',
+};
+
+function getLocaleTagSlug(locale) {
+    return LOCALE_TAG_SLUG[locale] || 'hash-lang-zh-tw';
+}
+
+/**
+ * Infer the language of a post from its tags.
+ * Posts with no lang tag are treated as zh-TW (migration fallback).
+ */
+function getPostLocale(post) {
+    if (!post?.tags) return 'zh-TW';
+    for (const [locale, tagSlug] of Object.entries(LOCALE_TAG_SLUG)) {
+        if (post.tags.some(t => t.slug === tagSlug)) return locale;
+    }
+    return 'zh-TW';
+}
+
+/**
+ * Return the #pair-xxx tag slug from a post, if any.
+ * Paired posts share the same pair tag across languages.
+ */
+function getPairTagSlug(post) {
+    return post?.tags?.find(t => t.slug?.startsWith('hash-pair-'))?.slug ?? null;
+}
+
+// ---------------------------------------------------------------------------
+
 // Lazy Ghost API initialization — only creates the client when the key is valid
 // This prevents build errors when Ghost is not yet deployed
 function getApi() {
@@ -69,15 +105,28 @@ async function withRetry(fn, maxRetries = 3) {
 }
 
 // 取得所有文章（列表頁用）
+// options.locale — filters to posts tagged with the matching #lang-xxx internal tag
+// options.tag    — additional public tag slug to filter by
 export async function getPosts(options = {}) {
     const api = getApi();
     if (!api) return { posts: [], meta: { pagination: { total: 0, pages: 1 } } };
+
+    const localeTag = options.locale ? getLocaleTagSlug(options.locale) : null;
+    let filter;
+    if (localeTag && options.tag) {
+        filter = `tag:${localeTag}+tag:${options.tag}`;
+    } else if (localeTag) {
+        filter = `tag:${localeTag}`;
+    } else if (options.tag) {
+        filter = `tag:${options.tag}`;
+    }
+
     try {
         const posts = await withRetry(() =>
             api.posts.browse({
                 limit: options.limit || 'all',
                 page: options.page || 1,
-                filter: options.tag ? `tag:${options.tag}` : undefined,
+                filter,
                 include: 'tags,authors',
                 order: 'published_at DESC',
             })
@@ -89,38 +138,143 @@ export async function getPosts(options = {}) {
     }
 }
 
-// 取得單篇文章（文章內頁用）
-export async function getPostBySlug(slug) {
+/**
+ * 取得單篇文章（文章內頁用）
+ *
+ * Without locale: returns the post directly (backward-compatible).
+ *
+ * With locale, returns one of:
+ *   { post, isFallback: false }             — post belongs to requested locale ✓
+ *   { post, isFallback: true }              — no paired version; showing fallback content
+ *   { shouldRedirect: true, targetSlug }    — slug belongs to different locale; caller should redirect
+ *   null                                    — post not found at all
+ */
+export async function getPostBySlug(slug, locale) {
     const api = getApi();
     if (!api) return null;
     try {
         const post = await withRetry(() =>
             api.posts.read({ slug }, { include: 'tags,authors' })
         );
-        return rewriteImageUrls(post);
+        if (!post) return null;
+
+        const rewritten = rewriteImageUrls(post);
+
+        // No locale check requested → backward-compatible return
+        if (!locale) return rewritten;
+
+        const postLocale = getPostLocale(post);
+
+        // Post belongs to the right locale ✓
+        if (postLocale === locale) return { post: rewritten, isFallback: false };
+
+        // Wrong locale — try to find the paired version in the target locale
+        const pairTagSlug = getPairTagSlug(post);
+        if (pairTagSlug) {
+            try {
+                const paired = await withRetry(() =>
+                    api.posts.browse({
+                        limit: 1,
+                        filter: `tag:${pairTagSlug}+tag:${getLocaleTagSlug(locale)}`,
+                        fields: 'slug',
+                    })
+                );
+                if (paired?.length > 0) {
+                    return { shouldRedirect: true, targetSlug: paired[0].slug };
+                }
+            } catch { /* paired post not found; fall through to fallback */ }
+        }
+
+        // No paired version exists → show fallback with a banner
+        return { post: rewritten, isFallback: true };
     } catch (err) {
         console.error(`Ghost getPostBySlug(${slug}) error:`, err?.message || err);
         return null;
     }
 }
 
-// 取得所有文章的 slug（用於 generateStaticParams）
+/**
+ * Given a post and a target locale, return the slug of the paired version.
+ * Returns null if no pair exists or Ghost is unavailable.
+ */
+export async function getPairedSlug(post, targetLocale) {
+    const api = getApi();
+    if (!api || !post) return null;
+    const pairTagSlug = getPairTagSlug(post);
+    if (!pairTagSlug) return null;
+    try {
+        const paired = await withRetry(() =>
+            api.posts.browse({
+                limit: 1,
+                filter: `tag:${pairTagSlug}+tag:${getLocaleTagSlug(targetLocale)}`,
+                fields: 'slug',
+            })
+        );
+        return paired?.[0]?.slug ?? null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * 取得所有文章的 slug（用於 generateStaticParams）
+ * Returns [{ slug, locale }] where locale is inferred from #lang-xxx tags.
+ * Posts without a lang tag are treated as 'zh-TW' (migration fallback).
+ */
 export async function getAllPostSlugs() {
     const api = getApi();
     if (!api) return [];
     try {
         const posts = await withRetry(() =>
-            api.posts.browse({ limit: 'all', fields: 'slug' })
+            api.posts.browse({ limit: 'all', include: 'tags', fields: 'slug,id' })
         );
-        return posts.map((p) => ({ slug: p.slug }));
+        return posts.map((p) => ({ slug: p.slug, locale: getPostLocale(p) }));
     } catch (err) {
         console.error('Ghost getAllPostSlugs error:', err?.message || err);
         return [];
     }
 }
 
+/**
+ * 取得所有文章 + locale + pairing 資訊（用於 sitemap）
+ * Returns [{ slug, locale, pairedSlugs: { 'zh-TW': slug, 'en': slug } }]
+ * Computed entirely in JS from one API call (no N+1 queries).
+ */
+export async function getAllPostsForSitemap() {
+    const api = getApi();
+    if (!api) return [];
+    try {
+        const posts = await withRetry(() =>
+            api.posts.browse({ limit: 'all', include: 'tags', fields: 'slug,id' })
+        );
+
+        // Build pairKey → { locale: slug } map
+        const pairMap = {};
+        for (const post of posts) {
+            const pairKey = getPairTagSlug(post);
+            if (pairKey) {
+                if (!pairMap[pairKey]) pairMap[pairKey] = {};
+                pairMap[pairKey][getPostLocale(post)] = post.slug;
+            }
+        }
+
+        return posts.map((post) => {
+            const pairKey = getPairTagSlug(post);
+            return {
+                slug: post.slug,
+                locale: getPostLocale(post),
+                pairedSlugs: pairKey ? pairMap[pairKey] : {},
+            };
+        });
+    } catch (err) {
+        console.error('Ghost getAllPostsForSitemap error:', err?.message || err);
+        return [];
+    }
+}
+
 // 取得相關文章（按 Tag 重疊度排序）
-export async function getRelatedPosts(slug, tags) {
+// locale — when provided, only returns posts in the same language
+export async function getRelatedPosts(slug, tags, locale) {
     const api = getApi();
     if (!api || !Array.isArray(tags) || tags.length === 0) return [];
 
@@ -135,9 +289,11 @@ export async function getRelatedPosts(slug, tags) {
     try {
         // Fetch all posts with tags, then filter/sort in JS
         // (Ghost OR filter with Chinese tag slugs can be unreliable)
+        const localeFilter = locale ? `tag:${getLocaleTagSlug(locale)}` : undefined;
         const allPosts = await withRetry(() =>
             api.posts.browse({
                 limit: 'all',
+                filter: localeFilter,
                 include: 'tags',
                 order: 'published_at DESC',
             })
@@ -170,13 +326,15 @@ export async function getRelatedPosts(slug, tags) {
 }
 
 // 取得最新 N 篇文章（首頁用）
-export async function getLatestPosts(limit = 3) {
+// locale — when provided, only returns posts in the matching language
+export async function getLatestPosts(limit = 3, locale) {
     const api = getApi();
     if (!api) return [];
     try {
         const posts = await withRetry(() =>
             api.posts.browse({
                 limit,
+                filter: locale ? `tag:${getLocaleTagSlug(locale)}` : undefined,
                 include: 'tags',
                 order: 'published_at DESC',
             })

@@ -27,7 +27,7 @@ export default async function HomePage({ params }) {
     setRequestLocale(locale);
 
     const t = await getTranslations({ locale, namespace: 'home' });
-    const latestPosts = await getLatestPosts(3);
+    const latestPosts = await getLatestPosts(3, locale);
     const faqs = getFAQS(locale);
     const pricingPlans = getPricingPlans(locale);
     const testimonials = getTestimonials(locale);
